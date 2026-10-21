@@ -3,11 +3,19 @@ import { createServer, type Server } from "node:http";
 import { createApp } from "./app.js";
 
 describe("GET /api/health", () => {
+  const config = {
+    entraTenantId: "tenant-123",
+    entraApiAudience: "api://game-api",
+    cosmosEndpoint: "",
+    cosmosDatabase: "card-roguelike",
+    cosmosContainer: "active-runs",
+    port: 3001,
+  };
   let server: Server;
   let baseUrl: string;
 
   beforeAll(async () => {
-    server = createServer(createApp());
+    server = createServer(createApp(config));
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
     if (!address || typeof address === "string") {

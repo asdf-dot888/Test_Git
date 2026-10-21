@@ -140,6 +140,15 @@
 .outcome-stats b { color: #efe1c7; font-size: 13px; }
 .outcome-victory .eyebrow { color: var(--teal); }
 .outcome-defeat .eyebrow { color: #ef9589; }
+.auth-screen { min-height: 100vh; padding: 20px; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 30%, #302a22, #121315 72%); }
+.auth-screen > p[role="status"] { color: #e6d9bf; font-size: 14px; }
+.auth-card { width: min(100%, 520px); padding: clamp(24px, 5vw, 44px); border: 1px solid var(--line); border-radius: 16px; background: #201f21; box-shadow: 0 20px 60px rgb(0 0 0 / 38%); text-align: center; }
+.auth-card h1 { margin: 10px 0; color: #fff2d9; font-size: clamp(24px, 5vw, 34px); }
+.auth-card p { color: #c5baaa; font-size: 13px; line-height: 1.6; }
+.auth-card ul { padding: 0; list-style: none; }
+.auth-card li { margin: 7px 0; color: var(--gold-bright); font-size: 12px; }
+.auth-card code { font-family: ui-monospace, Consolas, monospace; }
+.auth-note { margin-top: 20px; color: #989084 !important; font-size: 11px !important; }
 
 @media (max-width: 760px) {
   .game-shell { grid-template-rows: 56px minmax(360px, 1fr) auto; }
