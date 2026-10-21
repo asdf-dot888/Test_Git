@@ -1,6 +1,6 @@
 # Task: T01 사내 Entra ID 로그인
 
-## Status: pending
+## Status: done
 
 ## Goal
 사내 단일 Entra ID 테넌트 사용자만 React 게임과 API를 사용할 수 있도록 MSAL 로그인, API bearer token 검증, Azure App Service Authentication 설정 계약을 구현한다.
@@ -51,10 +51,10 @@
 - Azure Easy Auth provides host-level redirect/block for the deployed app. Express token verification remains mandatory on APIs to bind Cosmos operations to a verified `oid` in both local and production paths.
 
 ## Acceptance Criteria
-- [ ] No API game route accepts anonymous requests.
-- [ ] Valid token from configured tenant yields `req.authUser.userId` from `oid`.
-- [ ] Wrong tenant, audience, issuer, expired token, and missing token fail closed.
-- [ ] Frontend redirects to company tenant and can get an API access token.
+- [x] No API game route accepts anonymous requests.
+- [x] Valid token from configured tenant yields `req.authUser.userId` from `oid`.
+- [x] Wrong tenant, audience, issuer, expired token, and missing token fail closed.
+- [x] Frontend redirects to company tenant and can get an API access token.
 
 ## Validation
 - `npm run test --workspace @board-game/api` — valid/invalid token middleware cases pass with mocked remote key set.
@@ -74,6 +74,6 @@ Task: T01-entra-auth
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (`npm test`, `npm run build`, `npm run lint`)
+- commit: `c5b07cb`
