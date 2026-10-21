@@ -11,9 +11,14 @@ describe("GameBoard", () => {
         selectedCardInstanceId={null}
         selectedAttackerId={null}
         targetMode="none"
+        isResolving={false}
+        error={null}
         onSelectCard={vi.fn()}
         onSelectTarget={vi.fn()}
+        onDiscardCard={vi.fn()}
+        onCancelTarget={vi.fn()}
         onEndTurn={vi.fn()}
+        onMenu={vi.fn()}
       />,
     );
 

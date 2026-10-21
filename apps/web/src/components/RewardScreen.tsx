@@ -1,0 +1,35 @@
+import { CARD_BY_ID, type RewardState } from "@board-game/game-core";
+
+interface RewardScreenProps {
+  reward: RewardState;
+  onChoose(cardId: string): void;
+  onSkip(): void;
+}
+
+export function RewardScreen({ reward, onChoose, onSkip }: RewardScreenProps) {
+  return (
+    <main className="run-screen">
+      <section className="run-card reward-screen">
+        <span className="eyebrow">{reward.tier === "boss" ? "BOSS REWARD" : "BATTLE REWARD"}</span>
+        <h1>전리품을 선택하세요</h1>
+        <p>덱에 추가할 카드 한 장을 고르거나 보상을 건너뛸 수 있습니다.</p>
+        <div className="reward-options">
+          {reward.choices.map((cardId) => {
+            const card = CARD_BY_ID.get(cardId);
+            if (!card) return null;
+            return <button className={`reward-card card-${card.kind}`} type="button" key={cardId} onClick={() => onChoose(cardId)}>
+              <span className="card-cost">{card.cost}</span>
+              <img src={`/art/cards/${card.artKey}.svg`} alt="" />
+              <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
+              <strong>{card.name}</strong>
+              {card.minion && <span>공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}
+              <small>{card.description}</small>
+            </button>;
+          })}
+          {reward.choices.length === 0 && <p className="empty-reward">추가할 수 있는 카드가 없습니다.</p>}
+        </div>
+        <button className="skip-reward" type="button" onClick={onSkip}>보상 건너뛰기</button>
+      </section>
+    </main>
+  );
+}

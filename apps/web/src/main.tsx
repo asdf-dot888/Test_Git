@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
+import { GameErrorBoundary } from "./components/GameErrorBoundary.js";
 import "./styles/tokens.css";
 import "./styles/board.css";
 
@@ -12,6 +13,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <GameErrorBoundary>
+      <App />
+    </GameErrorBoundary>
   </StrictMode>,
 );

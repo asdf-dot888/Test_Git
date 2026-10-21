@@ -1,0 +1,120 @@
+import {
+  GameRuleError,
+  advanceRun,
+  attackWithMinion,
+  castSpell,
+  chooseReward,
+  createRun,
+  discardBeforeDraw,
+  endPlayerTurn,
+  playMinion,
+  skipReward,
+  type RunState,
+} from "@board-game/game-core";
+
+export type GameAction =
+  | { type: "start-run"; seed: number }
+  | { type: "select-card"; instanceId: string }
+  | { type: "select-attacker"; instanceId: string }
+  | { type: "cancel-selection" }
+  | { type: "play-minion"; instanceId: string }
+  | { type: "cast-spell"; instanceId: string; targetId?: string }
+  | { type: "attack"; attackerId: string; targetId: string }
+  | { type: "end-turn" }
+  | { type: "discard-before-draw"; instanceId: string }
+  | { type: "choose-reward"; cardId: string }
+  | { type: "skip-reward" }
+  | { type: "continue-run"; nextSeed?: number }
+  | { type: "clear-error" };
+
+export interface GameSession {
+  run: RunState | null;
+  error: string | null;
+  selectedCardInstanceId: string | null;
+  selectedAttackerId: string | null;
+  targetMode: "none" | "spell" | "attack";
+  pendingDiscard: boolean;
+  resolving: boolean;
+}
+
+export const initialGameSession: GameSession = {
+  run: null,
+  error: null,
+  selectedCardInstanceId: null,
+  selectedAttackerId: null,
+  targetMode: "none",
+  pendingDiscard: false,
+  resolving: false,
+};
+
+type InternalAction = GameAction | { type: "resolution-start" };
+
+function sessionForRun(run: RunState, previous: GameSession): GameSession {
+  return {
+    ...previous,
+    run,
+    error: null,
+    selectedCardInstanceId: null,
+    selectedAttackerId: null,
+    targetMode: "none",
+    pendingDiscard: run.battle?.pendingDiscardBeforeDraw ?? false,
+    resolving: false,
+  };
+}
+
+function ruleMessage(error: GameRuleError): string {
+  const messages: Record<GameRuleError["code"], string> = {
+    INVALID_ACTION: "지금은 할 수 없는 행동입니다.",
+    INSUFFICIENT_MANA: "마나가 부족합니다.",
+    INVALID_TARGET: "현재 선택할 수 없는 대상입니다.",
+    MAX_BOARD: "전장에는 하수인을 5명까지만 둘 수 있습니다.",
+    MAX_COPIES: "같은 카드는 덱에 2장까지만 넣을 수 있습니다.",
+    WRONG_TURN: "지금은 플레이어의 행동 차례가 아닙니다.",
+    TERMINAL_RUN: "진행 중인 전투가 없습니다.",
+    CARD_NOT_FOUND: "선택한 카드를 찾을 수 없습니다.",
+    REWARD_NOT_PENDING: "선택할 보상이 없습니다.",
+    ENCOUNTER_NOT_READY: "다음 전투를 시작할 수 없습니다.",
+    DISCARD_NOT_PENDING: "지금은 버릴 카드를 선택할 수 없습니다.",
+  };
+  return messages[error.code];
+}
+
+export function reduceGameAction(session: GameSession, action: InternalAction): GameSession {
+  if (action.type === "clear-error") return { ...session, error: null };
+  if (action.type === "resolution-start") return { ...session, resolving: true, error: null };
+  if (action.type === "start-run") return sessionForRun(createRun(action.seed), session);
+  if (action.type === "cancel-selection") {
+    return { ...session, selectedCardInstanceId: null, selectedAttackerId: null, targetMode: "none", error: null };
+  }
+  if (action.type === "select-card") {
+    if (!session.run?.battle || session.pendingDiscard || session.resolving) return session;
+    return { ...session, selectedCardInstanceId: action.instanceId, selectedAttackerId: null, targetMode: "spell", error: null };
+  }
+  if (action.type === "select-attacker") {
+    const battle = session.run?.battle;
+    const attacker = battle?.playerBoard.find((minion) => minion.instanceId === action.instanceId);
+    if (!attacker || !battle || battle.status !== "active" || battle.activeSide !== "player" || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) {
+      return { ...session, error: "이 하수인은 이번 턴에 공격할 수 없습니다." };
+    }
+    return { ...session, selectedCardInstanceId: null, selectedAttackerId: attacker.instanceId, targetMode: "attack", error: null };
+  }
+
+  if (!session.run) return { ...session, error: "먼저 새 원정을 시작하세요." };
+  try {
+    if (action.type === "play-minion") return sessionForRun(playMinion(session.run, action.instanceId), session);
+    if (action.type === "cast-spell") return sessionForRun(castSpell(session.run, action.instanceId, action.targetId), session);
+    if (action.type === "attack") return sessionForRun(attackWithMinion(session.run, action.attackerId, action.targetId), session);
+    if (action.type === "end-turn") return sessionForRun(endPlayerTurn(session.run), session);
+    if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);
+    if (action.type === "choose-reward") return sessionForRun(chooseReward(session.run, action.cardId), session);
+    if (action.type === "skip-reward") return sessionForRun(skipReward(session.run), session);
+    if (action.type === "continue-run") {
+      if (action.nextSeed === undefined) return { ...session, error: "다음 전투의 시드를 준비하지 못했습니다." };
+      return sessionForRun(advanceRun(session.run, action.nextSeed), session);
+    }
+  } catch (error) {
+    if (error instanceof GameRuleError) return { ...session, error: ruleMessage(error), resolving: false };
+    throw error;
+  }
+  return session;
+}

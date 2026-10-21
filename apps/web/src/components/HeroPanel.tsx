@@ -5,15 +5,15 @@ interface HeroPanelProps {
   side: PlayerSide;
   artKey: string;
   name: string;
-  targetMode: "none" | "spell" | "attack";
+  targetable: boolean;
   onSelectTarget(targetId: string): void;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetMode, onSelectTarget }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, onSelectTarget }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
-    <section className={`hero-panel hero-${side}${targetMode !== "none" ? " is-targetable" : ""}`} aria-label={`${name} 영웅`}>
-      {targetMode !== "none" && <button className="hero-target-button" type="button" aria-label={`${name}을(를) 대상으로 선택`} onClick={() => onSelectTarget(hero.id)} />}
+    <section className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}`} aria-label={`${name} 영웅`}>
+      {targetable && <button className="hero-target-button" type="button" aria-label={`${name}을(를) 대상으로 선택`} onClick={() => onSelectTarget(hero.id)} />}
       <div className="hero-portrait-wrap">
         <img className="hero-portrait" src={`/art/${isPlayer ? "heroes" : "enemies"}/${artKey}.svg`} alt={`${name} 초상화`} />
         <span className="hero-side-mark" aria-hidden="true">{isPlayer ? "✦" : "☠"}</span>
