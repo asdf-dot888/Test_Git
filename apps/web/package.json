@@ -9,6 +9,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@board-game/game-core": "*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

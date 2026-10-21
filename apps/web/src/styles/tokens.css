@@ -1,0 +1,23 @@
+:root {
+  font-family: "DM Sans", "Noto Sans KR", system-ui, sans-serif;
+  color: #f2ebda;
+  background: #131417;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --ink: #f2ebda;
+  --muted: #aaa394;
+  --gold: #d9ad65;
+  --gold-bright: #f1cc83;
+  --panel: #1b1b1d;
+  --panel-light: #272528;
+  --line: rgb(226 193 129 / 22%);
+  --teal: #5fd2c5;
+  --danger: #e77369;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, a { font: inherit; }
+button { color: inherit; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
