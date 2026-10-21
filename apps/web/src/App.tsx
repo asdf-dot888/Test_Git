@@ -1,19 +1,69 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CARD_BY_ID } from "@board-game/game-core";
+import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { GameBoard } from "./components/GameBoard.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
+import { RunLockNotice } from "./components/RunLockNotice.js";
 import { useGameSession } from "./game/useGameSession.js";
+import { useRunSync } from "./game/useRunSync.js";
+
+function secureSeed(): number {
+  const seed = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(seed);
+  return seed[0] ?? 1;
+}
 
 export function App() {
-  const { session, dispatch, startNewRun } = useGameSession();
+  const { session, dispatch } = useGameSession();
+  const sync = useRunSync();
+  const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "game">("menu");
+  const [abandonOpen, setAbandonOpen] = useState(false);
+  const appliedLoadVersion = useRef(0);
+  const restoringRemoteRun = useRef(false);
+  const pendingReplacement = useRef(false);
   const run = session.run;
   const battle = run?.battle;
 
+  useEffect(() => {
+    if (sync.loadVersion <= appliedLoadVersion.current) return;
+    appliedLoadVersion.current = sync.loadVersion;
+    restoringRemoteRun.current = true;
+    dispatch(sync.run ? { type: "restore-run", run: sync.run } : { type: "clear-run" });
+  }, [dispatch, sync.loadVersion, sync.run]);
+
+  useEffect(() => {
+    if (pendingReplacement.current) return;
+    if (restoringRemoteRun.current) {
+      restoringRemoteRun.current = false;
+      return;
+    }
+    if (!syncLoaded || (syncStatus !== "ready" && syncStatus !== "saving") || !session.run || session.run === syncedRun) return;
+    void saveRun(session.run).catch(() => undefined);
+  }, [saveRun, session.run, syncLoaded, syncStatus, syncedRun]);
+
+  const startNewServerRun = async (reason: "completed" | "abandoned") => {
+    pendingReplacement.current = true;
+    try {
+      const seed = secureSeed();
+      const created = sync.etag
+        ? await sync.replaceRun(reason, seed)
+        : await sync.createRun(seed);
+      dispatch({ type: "restore-run", run: created });
+      setAbandonOpen(false);
+      setScreen("game");
+    } finally {
+      pendingReplacement.current = false;
+    }
+  };
+
   const beginRun = () => {
-    startNewRun();
-    setScreen("game");
+    if (run?.status === "active" && sync.etag) {
+      setAbandonOpen(true);
+      return;
+    }
+    void startNewServerRun(run ? "completed" : "abandoned").catch(() => undefined);
   };
 
   const selectCard = (instanceId: string) => {
@@ -50,12 +100,32 @@ export function App() {
     if (session.selectedAttackerId) dispatch({ type: "attack", attackerId: session.selectedAttackerId, targetId });
   };
 
+  if (sync.status === "locked" || sync.status === "conflict" || sync.status === "error") {
+    const isConflict = sync.status === "conflict";
+    const isLocked = sync.status === "locked";
+    return <RunLockNotice
+      title={isLocked ? "다른 기기에서 진행 중입니다" : isConflict ? "저장 내용이 달라졌습니다" : "저장 상태를 확인할 수 없습니다"}
+      message={sync.message ?? "저장 상태를 확인해 주세요."}
+      expiresAt={sync.expiresAt}
+      retryLabel={isConflict || isLocked ? "서버 저장본 다시 확인" : "저장 다시 시도"}
+      onRetry={() => { void (isConflict || isLocked ? sync.reload() : session.run ? sync.retrySave(session.run) : sync.retry()).catch(() => undefined); }}
+    />;
+  }
+
   if (screen === "menu" || !run) {
-    return <MainMenu canContinue={run?.status === "active"} onStart={beginRun} onContinue={() => setScreen("game")} />;
+    if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
+    return <>
+      <MainMenu canContinue={run?.status === "active"} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen("game")} />
+      {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
+      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
+    </>;
   }
 
   if (run.pendingReward) {
-    return <RewardScreen reward={run.pendingReward} onChoose={(cardId) => dispatch({ type: "choose-reward", cardId })} onSkip={() => dispatch({ type: "skip-reward" })} />;
+    return <>
+      <RewardScreen reward={run.pendingReward} disabled={sync.status !== "ready" && sync.status !== "saving"} onChoose={(cardId) => dispatch({ type: "choose-reward", cardId })} onSkip={() => dispatch({ type: "skip-reward" })} />
+      {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
+    </>;
   }
 
   if (run.status === "victory" || run.status === "defeat") {
@@ -66,7 +136,7 @@ export function App() {
         <h1>{victory ? "어둠의 군주를 물리쳤습니다" : "원정이 끝났습니다"}</h1>
         <p>{victory ? "세 페이즈를 모두 돌파했습니다." : "영웅의 체력이 다했습니다. 고정된 시작 덱으로 다시 도전하세요."}</p>
         <div className="outcome-stats"><span>완료한 전투 <b>{run.completedBattles} / 12</b></span><span>덱 카드 <b>{run.deck.length}장</b></span></div>
-        <button className="menu-primary" type="button" onClick={beginRun}>새 원정 시작</button>
+        <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => { void startNewServerRun("completed").catch(() => undefined); }}>새 원정 시작</button>
       </section>
     </main>;
   }
@@ -76,7 +146,8 @@ export function App() {
       <span className="eyebrow">BATTLE CLEARED</span><h1>전투에서 승리했습니다</h1>
       <p>영웅의 체력과 마나가 다음 전투를 위해 회복됩니다.</p>
       <div className="outcome-stats"><span>진행 <b>PHASE {run.phase} · {run.completedBattles} / 12</b></span><span>현재 덱 <b>{run.deck.length}장</b></span></div>
-      <button className="menu-primary" type="button" onClick={() => dispatch({ type: "continue-run" })}>다음 전투</button>
+      <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => dispatch({ type: "continue-run" })}>다음 전투</button>
+      {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
     </section></main>;
   }
 
@@ -90,6 +161,7 @@ export function App() {
           selectedAttackerId={session.selectedAttackerId}
           targetMode={session.targetMode}
           isResolving={session.resolving}
+          actionsDisabled={sync.status !== "ready" && sync.status !== "saving"}
           error={session.error}
           onSelectCard={selectCard}
           onSelectTarget={selectTarget}
@@ -98,6 +170,8 @@ export function App() {
           onEndTurn={() => dispatch({ type: "end-turn" })}
           onMenu={() => setScreen("menu")}
         />
+      {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
+      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
       {session.error && <p className="sr-only" role="alert">{session.error}</p>}
     </>
   );

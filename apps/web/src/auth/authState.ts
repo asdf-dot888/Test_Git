@@ -1,4 +1,4 @@
-import { InteractionRequiredAuthError, type AccountInfo, type IPublicClientApplication, type SilentRequest } from "@azure/msal-browser";
+import type { AccountInfo, IPublicClientApplication, SilentRequest } from "@azure/msal-browser";
 import { createContext } from "react";
 
 export interface AuthContextValue {
@@ -19,13 +19,17 @@ export class AuthRequiredError extends Error {
 
 export type TokenClient = Pick<IPublicClientApplication, "acquireTokenSilent" | "acquireTokenRedirect">;
 
+function isInteractionRequired(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "name" in error && error.name === "InteractionRequiredAuthError";
+}
+
 export async function getApiAccessToken(client: TokenClient, account: AccountInfo | null, request: SilentRequest): Promise<string> {
   if (!account) throw new AuthRequiredError();
   try {
     const result = await client.acquireTokenSilent({ ...request, account });
     return result.accessToken;
   } catch (error) {
-    if (error instanceof InteractionRequiredAuthError) {
+    if (isInteractionRequired(error)) {
       await client.acquireTokenRedirect({ ...request, account });
       throw new AuthRequiredError("Complete the company sign-in to continue.");
     }

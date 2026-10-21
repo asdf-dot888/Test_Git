@@ -15,7 +15,13 @@ export interface AuthenticatedRequest extends Request {
 export type EntraAuthOptions = Pick<AppConfig, "entraTenantId" | "entraApiAudience">;
 export type JwtKeyResolver = JWTVerifyGetKey;
 
-const unauthorized = (response: Response) => response.status(401).set("WWW-Authenticate", "Bearer").json({ error: "unauthorized" });
+const unauthorized = (response: Response) => response.status(401).set("WWW-Authenticate", "Bearer").json({
+  error: { code: "UNAUTHENTICATED", message: "A valid company access token is required." },
+});
+
+const forbidden = (response: Response, code: string) => response.status(403).json({
+  error: { code, message: "This company account cannot access the API." },
+});
 
 export function createEntraAuth(config: EntraAuthOptions, keyResolver?: JwtKeyResolver): RequestHandler {
   const issuer = `https://login.microsoftonline.com/${config.entraTenantId}/v2.0`;
@@ -37,7 +43,7 @@ export function createEntraAuth(config: EntraAuthOptions, keyResolver?: JwtKeyRe
       });
       const tokenTenant = payload.tid;
       const objectId = payload.oid;
-      if (tokenTenant !== config.entraTenantId) return response.status(403).json({ error: "forbidden" });
+      if (tokenTenant !== config.entraTenantId) return forbidden(response, "TENANT_MISMATCH");
       if (typeof objectId !== "string" || objectId.length === 0) return unauthorized(response);
 
       const authUser: AuthenticatedPrincipal = {
@@ -49,7 +55,7 @@ export function createEntraAuth(config: EntraAuthOptions, keyResolver?: JwtKeyRe
       return next();
     } catch (error) {
       if (error instanceof errors.JWTClaimValidationFailed && error.claim === "aud") {
-        return response.status(403).json({ error: "forbidden" });
+        return forbidden(response, "INVALID_AUDIENCE");
       }
       return unauthorized(response);
     }

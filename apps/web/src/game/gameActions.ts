@@ -14,6 +14,8 @@ import {
 
 export type GameAction =
   | { type: "start-run"; seed: number }
+  | { type: "restore-run"; run: RunState }
+  | { type: "clear-run" }
   | { type: "select-card"; instanceId: string }
   | { type: "select-attacker"; instanceId: string }
   | { type: "cancel-selection" }
@@ -81,8 +83,10 @@ function ruleMessage(error: GameRuleError): string {
 
 export function reduceGameAction(session: GameSession, action: InternalAction): GameSession {
   if (action.type === "clear-error") return { ...session, error: null };
+  if (action.type === "clear-run") return { ...initialGameSession };
   if (action.type === "resolution-start") return { ...session, resolving: true, error: null };
   if (action.type === "start-run") return sessionForRun(createRun(action.seed), session);
+  if (action.type === "restore-run") return sessionForRun(action.run, session);
   if (action.type === "cancel-selection") {
     return { ...session, selectedCardInstanceId: null, selectedAttackerId: null, targetMode: "none", error: null };
   }

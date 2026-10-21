@@ -1,6 +1,6 @@
 # Task: T03 Run API와 자동 저장 UI
 
-## Status: pending
+## Status: done
 
 ## Goal
 로그인한 플레이어의 현재 판을 불러오고 주요 전투 행동 후 저장하며, 다른 기기의 잠금·저장 충돌·새 판 교체 확인을 사용자에게 안전하게 표시한다.
@@ -91,6 +91,6 @@ Task: T03-run-api-sync
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending

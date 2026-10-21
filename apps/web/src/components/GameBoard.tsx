@@ -16,6 +16,7 @@ export interface GameBoardProps {
   selectedAttackerId: string | null;
   targetMode: "none" | "spell" | "attack";
   isResolving: boolean;
+  actionsDisabled?: boolean;
   error: string | null;
   onSelectCard(instanceId: string): void;
   onSelectTarget(targetId: string): void;
@@ -38,11 +39,11 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
+export function GameBoard({ run, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
-  const actionsDisabled = isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
+  const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
   const targetSide = targetMode === "spell"
     ? spellTargetSide(selectedCardInstanceId, run)
     : targetMode === "attack"
@@ -89,7 +90,7 @@ export function GameBoard({ run, selectedCardInstanceId, selectedAttackerId, tar
         <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />
       </footer>
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
-      {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={isResolving} onDiscard={onDiscardCard} />}
+      {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}
     </main>
   );
 }

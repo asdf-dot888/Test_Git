@@ -2,11 +2,12 @@ import { CARD_BY_ID, type RewardState } from "@board-game/game-core";
 
 interface RewardScreenProps {
   reward: RewardState;
+  disabled?: boolean;
   onChoose(cardId: string): void;
   onSkip(): void;
 }
 
-export function RewardScreen({ reward, onChoose, onSkip }: RewardScreenProps) {
+export function RewardScreen({ reward, disabled = false, onChoose, onSkip }: RewardScreenProps) {
   return (
     <main className="run-screen">
       <section className="run-card reward-screen">
@@ -17,7 +18,7 @@ export function RewardScreen({ reward, onChoose, onSkip }: RewardScreenProps) {
           {reward.choices.map((cardId) => {
             const card = CARD_BY_ID.get(cardId);
             if (!card) return null;
-            return <button className={`reward-card card-${card.kind}`} type="button" key={cardId} onClick={() => onChoose(cardId)}>
+            return <button className={`reward-card card-${card.kind}`} type="button" key={cardId} disabled={disabled} onClick={() => onChoose(cardId)}>
               <span className="card-cost">{card.cost}</span>
               <img src={`/art/cards/${card.artKey}.svg`} alt="" />
               <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
@@ -28,7 +29,7 @@ export function RewardScreen({ reward, onChoose, onSkip }: RewardScreenProps) {
           })}
           {reward.choices.length === 0 && <p className="empty-reward">추가할 수 있는 카드가 없습니다.</p>}
         </div>
-        <button className="skip-reward" type="button" onClick={onSkip}>보상 건너뛰기</button>
+        <button className="skip-reward" type="button" disabled={disabled} onClick={onSkip}>보상 건너뛰기</button>
       </section>
     </main>
   );

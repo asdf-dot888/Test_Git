@@ -55,4 +55,15 @@ describe("company account authentication", () => {
     await expect(getApiAccessToken(client, account, { scopes: [authConfigValues.VITE_ENTRA_API_SCOPE] })).resolves.toBe("valid-api-token");
     expect(client.acquireTokenRedirect).not.toHaveBeenCalled();
   });
+
+  it("starts an interactive redirect when silent API token acquisition requires user interaction", async () => {
+    const account = { homeAccountId: "home", environment: "login.microsoftonline.com", tenantId: "company-tenant", username: "player@example.com", localAccountId: "employee-oid" };
+    const client = {
+      acquireTokenSilent: vi.fn().mockRejectedValue(Object.assign(new Error("interaction required"), { name: "InteractionRequiredAuthError" })),
+      acquireTokenRedirect: vi.fn().mockResolvedValue(undefined),
+    } as unknown as TokenClient;
+
+    await expect(getApiAccessToken(client, account, { scopes: [authConfigValues.VITE_ENTRA_API_SCOPE] })).rejects.toBeInstanceOf(AuthRequiredError);
+    expect(client.acquireTokenRedirect).toHaveBeenCalledOnce();
+  });
 });
