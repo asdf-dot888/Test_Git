@@ -1,6 +1,6 @@
 # Task: T01 반응형 보드와 카드 화면
 
-## Status: pending
+## Status: done
 
 ## Goal
 React 앱에 어두운 판타지 보드, 양쪽 영웅, 5칸 하수인 전장, 손패 및 마나 표시를 구현해 실제 게임 상태를 읽을 수 있는 PC·모바일 화면을 제공한다.
@@ -57,10 +57,10 @@ React 앱에 어두운 판타지 보드, 양쪽 영웅, 5칸 하수인 전장, �
 - Color contrast must meet readable text contrast; selection/attack state uses icon/outline plus color so color alone does not convey state.
 
 ## Acceptance Criteria
-- [ ] Both hero panels, both 5-slot lanes, mana, hand, card text, and turn control render from fixture `RunState`.
-- [ ] PC and narrow mobile viewport have no clipped health, cost, text, or unreachable hand cards.
-- [ ] Selecting/target-ready/friendly/disabled states have visible and keyboard-readable indicators.
-- [ ] No external image URL or copyrighted game branding is included.
+- [x] Both hero panels, both 5-slot lanes, mana, hand, card text, and turn control render from fixture `RunState`.
+- [x] PC and narrow mobile viewport have no clipped health, cost, text, or unreachable hand cards.
+- [x] Selecting/target-ready/friendly/disabled states have visible and keyboard-readable indicators.
+- [x] No external image URL or copyrighted game branding is included.
 
 ## Validation
 - `npm run test --workspace @board-game/web` — component render and accessible labels pass.
@@ -80,6 +80,6 @@ Task: T01-board-visuals
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (`test`, `build`, `lint`, Edge viewport review)
+- commit: `25cee30`
