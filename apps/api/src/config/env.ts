@@ -25,7 +25,7 @@ export function loadConfig(environment: Environment = process.env): AppConfig {
   ];
   if (missing.length > 0) throw new ConfigurationError(missing);
 
-  const port = Number(environment.PORT ?? "3001");
+  const port = Number(environment.PORT ?? "8080");
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error("PORT must be an integer from 1 to 65535.");
   }

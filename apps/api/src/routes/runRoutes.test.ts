@@ -73,7 +73,7 @@ describe("authenticated Run API", () => {
       (request as AuthenticatedRequest).authUser = { userId, tenantId: config.entraTenantId };
       next();
     };
-    server = createServer(createApp(config, authenticate, repository, { now: () => instant, newOwnerId: () => ownerId }));
+    server = createServer(createApp({ config, authenticate, repository, runDependencies: { now: () => instant, newOwnerId: () => ownerId } }));
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Test server did not bind to a TCP port.");
@@ -188,7 +188,7 @@ describe("authenticated Run API", () => {
 
   it("rejects absent verified principals and handles typed lock, conflict, and missing errors", async () => {
     const noPrincipal: RequestHandler = (_request, _response, next) => next();
-    const noAuthServer = createServer(createApp(config, noPrincipal, repository));
+    const noAuthServer = createServer(createApp({ config, authenticate: noPrincipal, repository }));
     await new Promise<void>((resolve) => noAuthServer.listen(0, "127.0.0.1", resolve));
     const address = noAuthServer.address();
     if (!address || typeof address === "string") throw new Error("Test server did not bind to a TCP port.");

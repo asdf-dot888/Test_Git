@@ -16,8 +16,25 @@ export function startServer(port?: number): Server {
   const config = loadConfig();
   const cosmosClient = createCosmosClient(config);
   const repository = new CosmosRunRepository(getActiveRunContainer(cosmosClient, config));
-  const server = createServer(createApp(config, undefined, repository));
-  server.listen(port ?? config.port);
+  const webDistPath = fileURLToPath(new URL("../../web/dist/", import.meta.url));
+  const server = createServer(createApp({ config, repository, webDistPath }));
+  const listenPort = port ?? config.port;
+  let disposed = false;
+  const disposeResources = () => {
+    if (disposed) return;
+    disposed = true;
+    process.off("SIGTERM", shutdown);
+    process.off("SIGINT", shutdown);
+    cosmosClient.dispose();
+  };
+  const shutdown = () => {
+    if (server.listening) server.close(disposeResources);
+    else disposeResources();
+  };
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
+  server.once("close", disposeResources);
+  server.listen(listenPort, "0.0.0.0");
   return server;
 }
 

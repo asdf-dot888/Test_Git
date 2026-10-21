@@ -1,6 +1,6 @@
 # Task: T01 단일 App Service production 실행
 
-## Status: pending
+## Status: done
 
 ## Goal
 웹 build와 API를 하나의 Node.js 24 LTS Azure App Service 프로세스로 패키징해 동일 origin의 React 화면과 인증된 `/api`를 제공한다.
@@ -55,6 +55,6 @@ Task: T01-app-service-build
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending
