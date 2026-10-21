@@ -1,6 +1,6 @@
 # Task: T02 Cosmos 활성 런 저장소와 잠금
 
-## Status: pending
+## Status: done
 
 ## Goal
 계정당 Cosmos DB에 활성 판 문서 하나를 저장하고, 15분 동안 실제 입력이 없는 경우에만 다른 기기가 같은 판의 편집권을 얻도록 하는 저장소 계층을 만든다.
@@ -75,6 +75,6 @@ Task: T02-cosmos-run-repository
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과
+- commit: `a7b01fd`
