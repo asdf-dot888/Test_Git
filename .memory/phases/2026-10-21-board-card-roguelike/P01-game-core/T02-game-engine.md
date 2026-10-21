@@ -1,6 +1,6 @@
 # Task: T02 게임 엔진과 카드 카탈로그
 
-## Status: pending
+## Status: done
 
 ## Goal
 30종 카드, 플레이어·적 전투, 12전투/3페이즈 런 진행을 UI·API와 분리된 순수 TypeScript 상태 전이로 구현해, 동일 입력과 seed가 동일한 게임 결과를 만들게 한다.
@@ -42,9 +42,11 @@
     hand: CardInstance[]; drawPile: CardInstance[]; discardPile: CardInstance[];
     playerBoard: MinionState[]; enemyBoard: MinionState[];
     enemyId: string; rngState: number; status: "active" | "playerWon" | "playerLost";
+    pendingDiscardBeforeDraw?: boolean;
   }
   export interface RunState {
-    runId: string; seed: number; phase: 1 | 2 | 3; encounterInPhase: 0 | 1 | 2 | 3;
+    runId: string; seed: number; nextInstanceNumber: number;
+    phase: 1 | 2 | 3; encounterInPhase: 0 | 1 | 2 | 3;
     completedBattles: number; status: "active" | "victory" | "defeat";
     deck: CardInstance[]; starterDeck: CardInstance[];
     battle: BattleState | null; pendingReward: RewardState | null;
@@ -80,6 +82,7 @@
   export function playMinion(run: RunState, handInstanceId: string): RunState;
   export function castSpell(run: RunState, handInstanceId: string, targetId?: string): RunState;
   export function attackWithMinion(run: RunState, attackerId: string, targetId: string): RunState;
+  export function discardBeforeDraw(run: RunState, handInstanceId: string): RunState;
   export function endPlayerTurn(run: RunState): RunState;
   export function resolveEnemyTurn(run: RunState): RunState;
   export function chooseReward(run: RunState, cardId: string): RunState;
@@ -94,6 +97,7 @@
 - `castSpell` checks target against that card's `SpellEffect`; if target required, missing/invalid target fails without state mutation. Full board invalidates summon; it never overfills the five-slot lane.
 - End player turn resolves one hidden seeded random enemy action from currently valid actions (hero damage or summon; no summon if enemy lane full), then surviving enemy minions act by the same minion rules, then begins next player turn. Enemy action selection is not surfaced in `RunState` UI fields.
 - When draw pile is empty, create fresh `CardInstance` IDs for all 30 entries in immutable `starterDeck`, shuffle those instances using the saved seeded RNG, and append them to the remaining draw pile before drawing. Leave hand, board, and discard pile untouched; this intentionally makes a new copy of the original starter set even when its previous instances remain elsewhere. Acquired reward cards remain in `deck` and enter each new battle's initial shuffle, but are not part of this mid-battle refill. Keep the refill deterministic from `rngState` and serializable.
+- `BattleState.pendingDiscardBeforeDraw` records a full-hand turn draw; `discardBeforeDraw` moves the selected hand instance to discard and completes the draw. Extra cards drawn by spell effects while the hand is full are burned to discard.
 - On normal win set pending normal reward with 3 eligible normal-tier cards; on boss win set 3 boss-tier choices. Filter IDs already at 2 copies. `chooseReward` adds a new `CardInstance`; `skipReward` adds none. After each fight restore player HP to 30 and reset next encounter mana to 5; preserve deck for all 3 phases. Defeat clears active battle and marks run `defeat`.
 - **Execution Flow / Logic**:
   1. Validate run status, actor, target, costs, card copies, and lane/hand capacity.
@@ -103,10 +107,10 @@
   5. Return JSON-serializable state with updated RNG seed.
 
 ## Acceptance Criteria
-- [ ] Catalog counts, IDs, costs, stats and card-copy rules satisfy the confirmed decision.
-- [ ] A seeded run progresses through 9 normal encounters and 3 bosses, ending on defeat or final boss victory.
-- [ ] Mana, draw/hand, minion, spell, AI and reward rules match the decision document.
-- [ ] Engine has no UI, browser, Express, or Cosmos imports and never mutates prior state.
+- [x] Catalog counts, IDs, costs, stats and card-copy rules satisfy the confirmed decision.
+- [x] A seeded run progresses through 9 normal encounters and 3 bosses, ending on defeat or final boss victory.
+- [x] Mana, draw/hand, minion, spell, AI and reward rules match the decision document.
+- [x] Engine has no UI, browser, Express, or Cosmos imports and never mutates prior state.
 
 ## Validation
 - `npm run test --workspace @board-game/game-core` — deterministic unit cases pass for every state transition and listed edge case.
@@ -126,6 +130,6 @@ Task: T02-game-engine
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending
