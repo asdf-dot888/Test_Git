@@ -1,6 +1,6 @@
 # Task: T02 플레이 가능한 전투와 런 진행
 
-## Status: pending
+## Status: done
 
 ## Goal
 보드 UI 입력을 순수 게임 엔진에 연결해 시작 덱부터 3페이즈 보스 승리/패배까지 플레이 가능한 게임 흐름을 완성한다.
@@ -55,10 +55,10 @@
 - Cases: insufficient mana prevents card play; full 5-minion lane disables minion card; player minion attacks at most once; no hero attack with enemy minion present; spell targets match card rules; AI action remains hidden; reward skip does not add a copy; phase 3 boss victory displays final outcome.
 
 ## Acceptance Criteria
-- [ ] A player can start, play cards, attack, end turns, earn/skip rewards, defeat 9 normal enemies + 3 bosses, or lose.
-- [ ] UI cannot create state that violates engine constraints.
-- [ ] Mobile player can select a card and target without hover-only controls.
-- [ ] No network save is required in this Task; P03 will attach persistence without changing engine rules.
+- [x] A player can start, play cards, attack, end turns, earn/skip rewards, defeat 9 normal enemies + 3 bosses, or lose.
+- [x] UI cannot create state that violates engine constraints.
+- [x] Mobile player can select a card and target without hover-only controls.
+- [x] No network save is required in this Task; P03 will attach persistence without changing engine rules.
 
 ## Validation
 - `npm run test --workspace @board-game/web` — hook and interaction tests pass.
@@ -78,6 +78,6 @@ Task: T02-playable-run
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (`web test`, `game-core test`, `web build`, `web lint`)
+- commit: `48ee9ef`
