@@ -10,8 +10,8 @@ React로 PC·모바일에서 플레이할 수 있는 어두운 판타지 보드�
 | :--- | :--- | :--- | :--- |
 | P01 | `done` | npm workspace와 공유 카드 전투 엔진을 만든다. | [P01](../phases/2026-10-21-board-card-roguelike/P01-game-core/phase.md) |
 | P02 | `done` | 반응형 보드 UI와 플레이 가능한 전투·페이즈 진행 화면을 만든다. | [P02](../phases/2026-10-21-board-card-roguelike/P02-game-ui/phase.md) |
-| P03 | `in_progress` | Entra ID 인증, Cosmos DB 진행 저장, 단일 기기 세션 잠금을 연결한다. | [P03](../phases/2026-10-21-board-card-roguelike/P03-cloud-auth-save/phase.md) |
-| P04 | `pending` | 하나의 Azure App Service에서 프런트엔드와 API를 실행하고 운영 설정을 문서화한다. | [P04](../phases/2026-10-21-board-card-roguelike/P04-app-service-release/phase.md) |
+| P03 | `done` | Entra ID 인증, Cosmos DB 진행 저장, 단일 기기 세션 잠금을 연결한다. | [P03](../phases/2026-10-21-board-card-roguelike/P03-cloud-auth-save/phase.md) |
+| P04 | `in_progress` | 하나의 Azure App Service에서 프런트엔드와 API를 실행하고 운영 설정을 문서화한다. | [P04](../phases/2026-10-21-board-card-roguelike/P04-app-service-release/phase.md) |
 
 ## Architecture
 

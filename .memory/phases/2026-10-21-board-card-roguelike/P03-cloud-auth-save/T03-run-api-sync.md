@@ -93,4 +93,4 @@ Task: T03-run-api-sync
 ## Progress
 - [x] 구현 완료
 - [x] 검증 통과
-- commit: pending
+- commit: `c9c42e6`
