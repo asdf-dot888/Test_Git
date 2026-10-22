@@ -299,8 +299,9 @@ function startPlayerTurn(run: RunState): RunState {
   if (!battle || battle.status !== "active") return run;
   battle.turnNumber += 1;
   battle.activeSide = "player";
-  battle.playerMana.max = Math.min(MAX_MANA, battle.playerMana.max + 1);
-  battle.playerMana.current = battle.playerMana.max;
+  // Normalize saved runs created under the previous, growing-cap rule.
+  battle.playerMana.max = MAX_MANA;
+  battle.playerMana.current = Math.min(MAX_MANA, battle.playerMana.current + 1);
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   drawForPlayerTurn(run, battle);
   return run;
@@ -466,7 +467,7 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     activeSide: "player",
     playerHero: { id: "player", health: HERO_HEALTH, maxHealth: HERO_HEALTH },
     enemyHero: { id: "enemy", health: enemy.maxHealth, maxHealth: enemy.maxHealth },
-    playerMana: { current: INITIAL_MANA, max: INITIAL_MANA },
+    playerMana: { current: INITIAL_MANA, max: MAX_MANA },
     hand: shuffled.items.slice(0, 3),
     drawPile: shuffled.items.slice(3),
     discardPile: [],

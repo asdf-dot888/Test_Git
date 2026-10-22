@@ -129,7 +129,7 @@ describe("seeded run setup and random helpers", () => {
       expect(encounters[3]?.enemyId).toBe(BOSSES[phase - 1]?.id);
     }
     expect(first.battle?.hand).toHaveLength(3);
-    expect(first.battle?.playerMana).toEqual({ current: 5, max: 5 });
+    expect(first.battle?.playerMana).toEqual({ current: 5, max: 10 });
     expect(first.battle?.playerHero.health).toBe(30);
     expect(first.battle?.pendingEnemyCharge).toBeNull();
     expect(first.starterDeck).toHaveLength(30);
@@ -163,7 +163,7 @@ describe("player actions and battle rules", () => {
     expect(played.battle?.playerMana.current).toBe(2);
     expect(played.battle?.hand).toHaveLength(0);
     expect(played.battle?.playerBoard[0]).toMatchObject({ attack: 3, health: 4, hasAttacked: false });
-    expect(next.battle?.playerMana.current).toBe(5);
+    expect(next.battle?.playerMana).toEqual({ current: 5, max: 10 });
     expect(() => attackWithMinion(played, handCard.instanceId, played.battle!.enemyHero.id)).toThrow(GameRuleError);
   });
 
@@ -184,22 +184,37 @@ describe("player actions and battle rules", () => {
     expect(() => playMinion(run, "sixth")).toThrowError(expect.objectContaining({ code: "MAX_BOARD" }));
   });
 
-  it("grows and refills mana each turn up to ten", () => {
+  it("regenerates one remaining mana each turn up to ten", () => {
     let run = createRun(22);
-    for (let turn = 2; turn <= 7; turn += 1) {
+    for (let turn = 2; turn <= 12; turn += 1) {
       activeBattle(run).playerHero.health = 30;
       activeBattle(run).hand = [];
       run = endPlayerTurn(run);
-      const expectedMana = Math.min(10, turn + 4);
-      expect(run.battle?.playerMana).toEqual({ current: expectedMana, max: expectedMana });
-    }
-    for (let turn = 8; turn <= 12; turn += 1) {
-      activeBattle(run).playerHero.health = 30;
-      activeBattle(run).hand = [];
-      run = endPlayerTurn(run);
+      const expectedMana = Math.min(10, 5 + turn - 1);
+      expect(run.battle?.playerMana).toEqual({ current: expectedMana, max: 10 });
     }
     expect(run.battle?.playerMana).toEqual({ current: 10, max: 10 });
     expect(run.battle?.turnNumber).toBe(12);
+  });
+
+  it("preserves unspent mana, regenerates from zero, and normalizes legacy caps", () => {
+    const preserved = copyRun(createRun(221));
+    activeBattle(preserved).playerHero.health = 30;
+    activeBattle(preserved).hand = [];
+    const next = endPlayerTurn(preserved);
+    expect(next.battle?.playerMana).toEqual({ current: 6, max: 10 });
+
+    const empty = copyRun(createRun(222));
+    activeBattle(empty).playerMana.current = 0;
+    activeBattle(empty).playerHero.health = 30;
+    activeBattle(empty).hand = [];
+    expect(endPlayerTurn(empty).battle?.playerMana).toEqual({ current: 1, max: 10 });
+
+    const legacy = copyRun(createRun(223));
+    activeBattle(legacy).playerMana = { current: 5, max: 6 };
+    activeBattle(legacy).playerHero.health = 30;
+    activeBattle(legacy).hand = [];
+    expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 6, max: 10 });
   });
 
   it("enforces minion target priority, once-per-turn attacks, and no retaliation", () => {
@@ -548,7 +563,7 @@ describe("enemy turns, rewards, and run progression", () => {
     const next = startBattle(waiting, nextEncounter!.enemyId);
     expect(next.battle?.enemyId).toBe(nextEncounter!.enemyId);
     expect(next.battle?.playerHero.health).toBe(30);
-    expect(next.battle?.playerMana).toEqual({ current: 5, max: 5 });
+    expect(next.battle?.playerMana).toEqual({ current: 5, max: 10 });
     expect(next.battle?.hand).toHaveLength(3);
     expect(next.battle?.playerBoard).toHaveLength(0);
     expect(next.encounters[next.completedBattles]?.status).toBe("active");
