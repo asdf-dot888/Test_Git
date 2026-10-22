@@ -9,7 +9,7 @@ import { RunLockNotice } from "./components/RunLockNotice.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
-import { createAudioController, type AudioSettings } from "./game/audio.js";
+import { createAudioController, type AudioController, type AudioSettings } from "./game/audio.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 
 function secureSeed(): number {
@@ -32,7 +32,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const [abandonToMenuOpen, setAbandonToMenuOpen] = useState(false);
   const [abandonToMenuBusy, setAbandonToMenuBusy] = useState(false);
   const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => loadAudioSettings());
-  const [audioController] = useState(() => createAudioController());
+  const [audioController, setAudioController] = useState<AudioController | null>(null);
   const appliedLoadVersion = useRef(0);
   const restoringRemoteRun = useRef(false);
   const pendingReplacement = useRef(false);
@@ -41,18 +41,30 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const battle = run?.battle;
   const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
 
-  useEffect(() => () => audioController.dispose(), [audioController]);
+  useEffect(() => {
+    const controller = createAudioController();
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setAudioController(controller);
+    });
+    return () => {
+      active = false;
+      controller.dispose();
+    };
+  }, []);
 
   useEffect(() => {
-    audioController.setSettings(audioSettings);
+    audioController?.setSettings(audioSettings);
     saveAudioSettings(audioSettings);
   }, [audioController, audioSettings]);
 
   useEffect(() => {
+    if (!audioController) return;
     audioController.playMusic(enemyKind === "boss" ? "boss" : "normal");
   }, [audioController, enemyKind]);
 
   useEffect(() => {
+    if (!audioController) return;
     for (const event of session.combatEffects) {
       if (playedAudioEventIds.current.has(event.id)) continue;
       playedAudioEventIds.current.add(event.id);
@@ -61,6 +73,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   }, [audioController, session.combatEffects]);
 
   useEffect(() => {
+    if (!audioController) return;
     const unlockAudio = () => { void audioController.unlock(); };
     document.addEventListener("pointerdown", unlockAudio, { capture: true, once: true });
     document.addEventListener("keydown", unlockAudio, { capture: true, once: true });
