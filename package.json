@@ -11,7 +11,8 @@
     "packages/game-core"
   ],
   "scripts": {
-    "dev": "concurrently -k -n api,web \"npm run dev --workspace @board-game/api\" \"npm run dev --workspace @board-game/web\"",
+    "dev": "node scripts/dev.mjs",
+    "dev:azure": "concurrently -k -n api,web \"npm run dev --workspace @board-game/api\" \"npm run dev --workspace @board-game/web\"",
     "build": "npm run build --workspace @board-game/game-core && npm run build --workspace @board-game/api && npm run build --workspace @board-game/web",
     "test": "vitest run",
     "lint": "eslint .",

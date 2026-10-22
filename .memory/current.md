@@ -1,16 +1,16 @@
 # Current Context
 
 ## Active Plan
-[보드형 카드 로그라이크](./plans/2026-10-21-board-card-roguelike.md) — 완료
+[로컬 브라우저 데모 모드](./plans/2026-10-22-local-browser-demo.md)
 
 ## Active Phase
-모든 Phase 완료
+[P01 로컬 데모 모드](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/phase.md)
 
 ## Active Task
-없음
+[T01 개발 모드 선택과 실행 launcher](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/T01-dev-mode-selection.md)
 
 ## Status
-- P04-T02 완료, commit `31e8d3d`; P04-T01 `2f091e7`; 전체 계획 완료
+- 인터뷰 결정: [로컬 브라우저 데모 모드](./decisions/2026-10-22-local-browser-demo.md)
 
 ## Next Step (IMPORTANT)
-현재 계획의 모든 작업이 완료되었습니다. 새 기능 요청이 있으면 `/grill-me`부터 시작하세요.
+T01 청사진을 읽고 root `npm run dev` launcher와 Azure 설정 판별 함수를 구현한 뒤 해당 검증 명령을 실행하세요.
