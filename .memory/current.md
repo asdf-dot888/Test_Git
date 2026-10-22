@@ -7,10 +7,10 @@
 [P01 로컬 데모 모드](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/phase.md)
 
 ## Active Task
-[T01 개발 모드 선택과 실행 launcher](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/T01-dev-mode-selection.md)
+[T02 브라우저 메모리 데모 게임 흐름](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/T02-demo-game-flow.md)
 
 ## Status
-- 인터뷰 결정: [로컬 브라우저 데모 모드](./decisions/2026-10-22-local-browser-demo.md)
+- T01 완료, commit `e3fbf0e`
 
 ## Next Step (IMPORTANT)
-T01 청사진을 읽고 root `npm run dev` launcher와 Azure 설정 판별 함수를 구현한 뒤 해당 검증 명령을 실행하세요.
+T02 청사진을 읽고 `main.tsx` 데모 진입, 메모리 전용 sync adapter, 전 화면 안내 배너를 구현한 뒤 지정 검증을 실행하세요.

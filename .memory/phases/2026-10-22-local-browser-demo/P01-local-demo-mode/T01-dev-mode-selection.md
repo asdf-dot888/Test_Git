@@ -87,4 +87,4 @@ Task: T01-dev-mode-selection
 ## Progress
 - [x] 구현 완료
 - [x] 검증 통과
-- commit: pending
+- commit: `e3fbf0e`
