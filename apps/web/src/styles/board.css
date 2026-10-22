@@ -42,15 +42,17 @@
 .health-track { height: 4px; margin-top: 2px; overflow: hidden; background: rgb(255 255 255 / 12%); border-radius: 5px; }
 .health-track span { display: block; height: 100%; background: linear-gradient(90deg, #d75d58, #f6a278); border-radius: inherit; }
 .hero-player .health-track span { background: linear-gradient(90deg, #318b83, #74e0cb); }
-.minion-lane { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; justify-items: center; gap: clamp(4px, 1vw, 14px); min-width: 0; }
-.lane-slot { width: 100%; min-width: 0; display: grid; place-items: center; }
+.minion-lane { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; justify-items: center; gap: clamp(4px, 1vw, 14px); min-width: 0; }
+.lane-enemy::before { position: absolute; z-index: 0; right: 1%; bottom: 2%; left: 1%; height: 30%; border-radius: 50%; background: radial-gradient(ellipse, rgb(139 34 31 / 24%), rgb(139 34 31 / 9%) 54%, transparent 76%); content: ""; pointer-events: none; }
+.lane-slot { position: relative; z-index: 1; width: 100%; min-width: 0; display: grid; place-items: center; }
 .empty-slot { width: min(100%, 82px); aspect-ratio: .72; border: 1px dashed rgb(60 46 29 / 24%); border-radius: 12px; background: rgb(50 41 29 / 9%); }
 .minion-card { position: relative; width: min(100%, 96px); min-width: 54px; padding: 4px 4px 6px; display: grid; justify-items: center; gap: 3px; color: #f9efdc; border: 1px solid rgb(247 212 151 / 66%); border-radius: 13px; background: linear-gradient(160deg, #645141, #26242a 72%); box-shadow: 0 6px 13px rgb(0 0 0 / 33%); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
 .minion-card:hover { transform: translateY(-3px); }
 .minion-card:disabled { opacity: .62; filter: saturate(.55); cursor: not-allowed; }
 .minion-art-frame { position: relative; display: block; width: 100%; aspect-ratio: 1 / .9; overflow: hidden; border: 1px solid rgb(238 219 179 / 54%); border-radius: 9px; background: #30292a; box-shadow: inset 0 0 12px #0008; }
 .minion-art-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.minion-enemy { border-color: rgb(232 134 117 / 68%); }
+.minion-enemy { border-color: rgb(232 134 117 / 78%); box-shadow: 0 0 0 1px rgb(151 37 31 / 46%), 0 0 14px rgb(151 37 31 / 30%), 0 6px 13px rgb(0 0 0 / 33%); }
+.minion-enemy:disabled { opacity: 1; filter: none; }
 .minion-name { max-width: 100%; color: #fff5df; font-size: clamp(9px, .9vw, 11px); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .minion-stats { position: absolute; top: 4px; left: 0; z-index: 1; width: 100%; padding: 0 2px; display: flex; justify-content: space-between; font-size: 11px; pointer-events: none; }
 .minion-stats b { min-width: 23px; color: #231e18; text-align: center; background: #edbe69; border-radius: 20px; }
