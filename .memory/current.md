@@ -7,11 +7,12 @@
 [P01 카드 아트와 전투 AI](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/phase.md)
 
 ## Active Task
-[T01 카드 아트 자산 생성](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/T02-card-and-minion-views.md)
+[T03 카드 전투 애니메이션](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/T03-card-combat-animation.md)
 
 ## Status
-- T01 완료: 카드 카탈로그의 30개 artKey에 대응하는 512×512 PNG 그림을 생성하고 검증했다.
+- T02 완료: 손패·보상·전장 하수인이 PNG 카드 원화를 사용하며 카드 상호작용과 접근성 상태를 유지한다.
 
 ## Next Step (IMPORTANT)
-T02 청사진을 읽고 손패·보상·전장 하수인의 카드 시각 구성을 PNG 원화 기준으로 개선한다.
+T03 청사진을 읽고 카드/하수인 공격과 주문 사용에 해당 그림을 활용한 이동 연출을 구현한다.
+
 

@@ -20,11 +20,11 @@ export function RewardScreen({ reward, disabled = false, onChoose, onSkip }: Rew
             if (!card) return null;
             return <button className={`reward-card card-${card.kind}`} type="button" key={cardId} disabled={disabled} onClick={() => onChoose(cardId)}>
               <span className="card-cost">{card.cost}</span>
-              <img src={`/art/cards/${card.artKey}.svg`} alt="" />
+              <span className="reward-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
+              <strong className="reward-name">{card.name}</strong>
               <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
-              <strong>{card.name}</strong>
-              {card.minion && <span>공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}
-              <small>{card.description}</small>
+              {card.minion && <span className="reward-stats">공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}
+              <small className="reward-description">{card.description}</small>
             </button>;
           })}
           {reward.choices.length === 0 && <p className="empty-reward">추가할 수 있는 카드가 없습니다.</p>}

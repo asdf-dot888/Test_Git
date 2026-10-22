@@ -21,7 +21,7 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect }:
       aria-label={`${name}, 공격력 ${minion.attack}, 체력 ${minion.health}/${minion.maxHealth}${minion.hasAttacked ? ", 이번 턴 공격함" : ""}${selected ? ", 공격자로 선택됨" : ""}`}
       onClick={onSelect}
     >
-      <img src={`/art/cards/${card?.artKey ?? minion.cardId}.svg`} alt="" />
+      <span className="minion-art-frame"><img src={`/art/cards/${card?.artKey ?? minion.cardId}.png`} alt="" /></span>
       <span className="minion-name">{name}</span>
       <span className="minion-stats"><b aria-label={`공격력 ${minion.attack}`}>{minion.attack}</b><b aria-label={`체력 ${minion.health}/${minion.maxHealth}`}>{minion.health}<small>/{minion.maxHealth}</small></b></span>
     </button>
