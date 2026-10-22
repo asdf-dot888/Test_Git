@@ -133,6 +133,42 @@ describe("authenticated Run API", () => {
     expect(repository.save.mock.calls[0]?.[3]).not.toHaveProperty("userId");
   });
 
+  it("accepts active and paused turn snapshots while rejecting inconsistent timer fields", async () => {
+    await repository.create(userId, createRun(33), ownerId, instant);
+    const run = createRun(34);
+    const activeTimer = { battleId: run.battle!.battleId, turnNumber: run.battle!.turnNumber, deadlineAt: instant.getTime() + 12_000, pausedRemainingMs: null };
+    const activeResponse = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run: { ...run, turnTimer: activeTimer } }),
+    });
+    expect(activeResponse.status).toBe(200);
+    await expect(activeResponse.json()).resolves.toMatchObject({ run: { turnTimer: activeTimer } });
+
+    repository.record = {
+      ...repository.record!,
+      etag: "etag-1",
+      document: { ...repository.record!.document, run },
+    };
+    const pausedTimer = { battleId: run.battle!.battleId, turnNumber: run.battle!.turnNumber, deadlineAt: null, pausedRemainingMs: 8_500 };
+    const pausedResponse = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run: { ...run, turnTimer: pausedTimer } }),
+    });
+    expect(pausedResponse.status).toBe(200);
+    await expect(pausedResponse.json()).resolves.toMatchObject({ run: { turnTimer: pausedTimer } });
+
+    repository.record = { ...repository.record!, etag: "etag-1", document: { ...repository.record!.document, run } };
+    const invalidResponse = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run: { ...run, turnTimer: { ...activeTimer, pausedRemainingMs: 2_000 } } }),
+    });
+    expect(invalidResponse.status).toBe(400);
+    await expect(invalidResponse.json()).resolves.toMatchObject({ error: { code: "INVALID_BODY" } });
+  });
+
   it("records explicit activity and owner-authorized deletion", async () => {
     await repository.create(userId, createRun(15), ownerId, instant);
     const activity = await fetch(`${baseUrl}/api/run/activity`, { method: "POST", headers: { "content-type": "application/json", "x-run-owner": ownerId }, body: "{}" });

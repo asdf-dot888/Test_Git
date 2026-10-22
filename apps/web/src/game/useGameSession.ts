@@ -13,7 +13,7 @@ export function useGameSession(): { session: GameSession; dispatch(action: GameA
   const [session, reducerDispatch] = useReducer(reduceGameAction, initialGameSession);
 
   const dispatch = (action: GameAction) => {
-    if (session.resolving && action.type !== "clear-error") return;
+    if (session.resolving && action.type !== "clear-error" && action.type !== "set-turn-timer") return;
     if (action.type === "end-turn") {
       reducerDispatch({ type: "resolution-start" } satisfies InternalAction);
       globalThis.setTimeout(() => reducerDispatch(action), 80);

@@ -74,6 +74,13 @@ export interface EncounterState {
   status: "pending" | "active" | "complete";
 }
 
+export interface TurnTimerState {
+  battleId: string;
+  turnNumber: number;
+  deadlineAt: number | null;
+  pausedRemainingMs: number | null;
+}
+
 export interface RewardState {
   tier: RewardTier;
   choices: string[];
@@ -93,6 +100,7 @@ export interface RunState {
   battle: BattleState | null;
   pendingReward: RewardState | null;
   encounters: EncounterState[];
+  turnTimer?: TurnTimerState;
 }
 
 export type EnemyAction =

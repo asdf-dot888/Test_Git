@@ -10,12 +10,14 @@ import {
   playMinion,
   skipReward,
   type RunState,
+  type TurnTimerState,
 } from "@board-game/game-core";
 import { collectCombatEffectEvents, type CombatEffectEvent } from "./combatEffects.js";
 
 export type GameAction =
   | { type: "start-run"; seed: number }
   | { type: "restore-run"; run: RunState }
+  | { type: "set-turn-timer"; timer: TurnTimerState | undefined }
   | { type: "clear-run" }
   | { type: "select-card"; instanceId: string }
   | { type: "select-attacker"; instanceId: string }
@@ -101,6 +103,13 @@ function ruleMessage(error: GameRuleError): string {
 }
 
 export function reduceGameAction(session: GameSession, action: InternalAction): GameSession {
+  if (action.type === "set-turn-timer") {
+    if (!session.run) return session;
+    const run = { ...session.run };
+    if (action.timer) run.turnTimer = action.timer;
+    else delete run.turnTimer;
+    return { ...session, run };
+  }
   if (action.type === "clear-combat-effect") {
     return { ...session, combatEffects: session.combatEffects.filter((event) => event.id !== action.eventId) };
   }

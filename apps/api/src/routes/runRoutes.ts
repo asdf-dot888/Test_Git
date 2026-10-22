@@ -54,6 +54,20 @@ const runSchema = z.object({
   deck: z.array(cardInstanceSchema).max(100),
   starterDeck: z.array(cardInstanceSchema).max(100),
   battle: battleSchema.nullable(),
+  turnTimer: z.object({
+    battleId: id,
+    turnNumber: z.number().int().min(1).max(100_000),
+    deadlineAt: z.number().int().safe().nullable(),
+    pausedRemainingMs: z.number().int().min(0).max(20_000).nullable(),
+  }).optional().superRefine((timer, context) => {
+    if (!timer) return;
+    const active = timer.deadlineAt !== null && timer.pausedRemainingMs === null;
+    const paused = timer.deadlineAt === null && timer.pausedRemainingMs !== null;
+    const initial = timer.deadlineAt === null && timer.pausedRemainingMs === null;
+    if (!active && !paused && !initial) {
+      context.addIssue({ code: "custom", message: "Turn timer fields must describe either an active or paused timer." });
+    }
+  }).optional(),
   pendingReward: z.object({
     tier: z.enum(["normal", "boss"]),
     choices: z.array(id).max(20),
@@ -112,7 +126,9 @@ export function createRunRouter(deps: {
     const expectedEtag = request.get("if-match")?.trim();
     const parsed = runBody.safeParse(request.body);
     if (!expectedEtag || !parsed.success) return sendError(response, 400, "INVALID_BODY", "The run state or If-Match header is invalid.");
-    const saved = await deps.repository.save(userId, ownerId, expectedEtag, parsed.data.run, now());
+    const { turnTimer, ...runWithoutTimer } = parsed.data.run;
+    const run: RunState = turnTimer ? { ...runWithoutTimer, turnTimer } : runWithoutTimer;
+    const saved = await deps.repository.save(userId, ownerId, expectedEtag, run, now());
     return response.status(200).json({ run: saved.document.run, etag: saved.etag });
   }));
 

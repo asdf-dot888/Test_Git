@@ -9,6 +9,7 @@ import { RunLockNotice } from "./components/RunLockNotice.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
+import { useTurnTimer } from "./game/useTurnTimer.js";
 import { createAudioController, type AudioController, type AudioSettings } from "./game/audio.js";
 import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
@@ -39,6 +40,8 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const pendingReplacement = useRef(false);
   const playedAudioEventIds = useRef(new Set<number>());
   const startedTurnIds = useRef(new Set<string>());
+  const warningTurnId = useRef<string | null>(null);
+  const lastWarningSecond = useRef<number | null>(null);
   const run = session.run;
   const battle = run?.battle;
   const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
@@ -49,6 +52,12 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
     if (action.type === "end-turn") audioController?.playEffect("turn-end");
     dispatchGameAction(action);
   }, [audioController, dispatchGameAction]);
+  const turnTimer = useTurnTimer({
+    run: run ?? null,
+    paused: screen !== "game" || menuView !== "closed" || session.resolving || session.combatEffects.length > 0,
+    onTimerChange: (timer) => dispatch({ type: "set-turn-timer", timer }),
+    onTimeout: () => dispatch({ type: "end-turn" }),
+  });
 
   useEffect(() => {
     const controller = createAudioController();
@@ -86,6 +95,23 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
     startedTurnIds.current.add(activeTurnId);
     audioController.playEffect("turn-start");
   }, [activeTurnId, audioController]);
+
+  useEffect(() => {
+    if (warningTurnId.current !== activeTurnId) {
+      warningTurnId.current = activeTurnId;
+      lastWarningSecond.current = null;
+    }
+    if (!audioController || !activeTurnId || turnTimer.isPaused) return;
+    const seconds = turnTimer.remainingSeconds;
+    if (seconds > 5) {
+      lastWarningSecond.current = null;
+      return;
+    }
+    if (seconds >= 1 && lastWarningSecond.current !== seconds) {
+      lastWarningSecond.current = seconds;
+      audioController.playEffect("timer-warning", 0.4);
+    }
+  }, [activeTurnId, audioController, turnTimer.isPaused, turnTimer.remainingSeconds]);
 
   useEffect(() => {
     if (!audioController) return;
