@@ -7,10 +7,10 @@
 [P01 전투 흐름](./phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/phase.md)
 
 ## Active Task
-[T02 카드별 이펙트 이미지와 애니메이션](./phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/T02-card-effect-art-and-animation.md)
+[T03 다음 전투 확인](./phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/T03-encounter-confirmation.md)
 
 ## Status
-- T01 전투 이펙트 이벤트 완료, commit `61c25fc`.
+- T01 전투 이펙트 이벤트 완료, commit `61c25fc`; T02 카드별 이미지와 애니메이션 완료, commit `e34153d`.
 
 ## Next Step (IMPORTANT)
-`.memory/phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/T02-card-effect-art-and-animation.md`의 청사진을 읽고 카드별 이펙트 이미지와 애니메이션 레이어를 구현한다.
+`.memory/phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/T03-encounter-confirmation.md`의 청사진을 읽고 보상 뒤 다음 전투 확인 화면과 메뉴 복귀 흐름을 구현한다.

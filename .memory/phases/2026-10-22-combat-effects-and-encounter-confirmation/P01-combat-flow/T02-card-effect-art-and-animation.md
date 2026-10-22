@@ -100,4 +100,4 @@ Task: T02-card-effect-art-and-animation
 ## Progress
 - [x] Implementation complete
 - [x] Validation passed (`npm.cmd run build`, PNG count/dimension/alpha check, local HTTP page and asset responses)
-- commit: pending
+- commit: `e34153d`
