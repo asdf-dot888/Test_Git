@@ -135,18 +135,18 @@ export const STARTER_DECK_CARD_IDS: readonly string[] = [
 ];
 
 export const NORMAL_ENEMIES: readonly EnemyDefinition[] = [
-  { id: "bandit-scout", name: "도적 정찰병", kind: "normal", maxHealth: 18, artKey: "bandit-scout", tactics: { profile: "aggressor", chargeTrigger: "hero-at-half", chargeDelayTurns: 1, chargeDamage: 6 }, actions: [{ kind: "heroDamage", amount: 3 }, { kind: "summon", cardId: "bone-rat" }] },
-  { id: "crypt-crawler", name: "묘지 포식자", kind: "normal", maxHealth: 21, artKey: "crypt-crawler", tactics: { profile: "summoner", chargeTrigger: "board-wide", chargeDelayTurns: 2, chargeDamage: 8 }, actions: [{ kind: "heroDamage", amount: 4 }, { kind: "summon", cardId: "cinder-imp" }] },
-  { id: "mire-hag", name: "늪의 노파", kind: "normal", maxHealth: 20, artKey: "mire-hag", tactics: { profile: "controller", chargeTrigger: "hero-at-half", chargeDelayTurns: 2, chargeDamage: 6 }, actions: [{ kind: "heroDamage", amount: 3 }, { kind: "summon", cardId: "ash-wolf" }] },
-  { id: "fallen-sentinel", name: "타락한 파수꾼", kind: "normal", maxHealth: 24, artKey: "fallen-sentinel", tactics: { profile: "hunter", chargeTrigger: "board-empty", chargeDelayTurns: 1, chargeDamage: 10 }, actions: [{ kind: "heroDamage", amount: 5 }, { kind: "summon", cardId: "crypt-guard" }] },
-  { id: "plague-herald", name: "역병 전령", kind: "normal", maxHealth: 22, artKey: "plague-herald", tactics: { profile: "summoner", chargeTrigger: "board-wide", chargeDelayTurns: 1, chargeDamage: 8 }, actions: [{ kind: "heroDamage", amount: 4 }, { kind: "summon", cardId: "bone-rat" }] },
-  { id: "night-stalker", name: "밤의 추적자", kind: "normal", maxHealth: 25, artKey: "night-stalker", tactics: { profile: "hunter", chargeTrigger: "hero-low-and-board-empty", chargeDelayTurns: 2, chargeDamage: 10 }, actions: [{ kind: "heroDamage", amount: 5 }, { kind: "summon", cardId: "dusk-raven" }] },
+  { id: "bandit-scout", name: "도적 정찰병", kind: "normal", maxHealth: 18, artKey: "bandit-scout", tactics: { profile: "aggressor" } },
+  { id: "crypt-crawler", name: "묘지 포식자", kind: "normal", maxHealth: 21, artKey: "crypt-crawler", tactics: { profile: "summoner" } },
+  { id: "mire-hag", name: "늪의 노파", kind: "normal", maxHealth: 20, artKey: "mire-hag", tactics: { profile: "controller" } },
+  { id: "fallen-sentinel", name: "타락한 파수꾼", kind: "normal", maxHealth: 24, artKey: "fallen-sentinel", tactics: { profile: "hunter" } },
+  { id: "plague-herald", name: "역병 전령", kind: "normal", maxHealth: 22, artKey: "plague-herald", tactics: { profile: "summoner" } },
+  { id: "night-stalker", name: "밤의 추적자", kind: "normal", maxHealth: 25, artKey: "night-stalker", tactics: { profile: "hunter" } },
 ];
 
 export const BOSSES: readonly EnemyDefinition[] = [
-  { id: "boss-blood-matron", name: "핏빛 여왕", kind: "boss", maxHealth: 34, artKey: "boss-blood-matron", tactics: { profile: "drain", chargeTrigger: "hero-at-half", chargeDelayTurns: 1, chargeDamage: 10 }, actions: [{ kind: "heroDamage", amount: 5 }, { kind: "summon", cardId: "grave-knight" }, { kind: "bossEffect", effectId: "blood-tithe", amount: 3 }] },
-  { id: "boss-grave-king", name: "무덤의 왕", kind: "boss", maxHealth: 40, artKey: "boss-grave-king", tactics: { profile: "board-clear", chargeTrigger: "board-wide", chargeDelayTurns: 1, chargeDamage: 12 }, actions: [{ kind: "heroDamage", amount: 6 }, { kind: "summon", cardId: "frost-wraith" }, { kind: "bossEffect", effectId: "bone-storm", amount: 2 }] },
-  { id: "boss-void-titan", name: "공허의 거신", kind: "boss", maxHealth: 48, artKey: "boss-void-titan", tactics: { profile: "ravager", chargeTrigger: "turn-four", chargeDelayTurns: 2, chargeDamage: 14 }, actions: [{ kind: "heroDamage", amount: 7 }, { kind: "summon", cardId: "hollow-giant" }, { kind: "bossEffect", effectId: "void-pulse", amount: 4 }] },
+  { id: "boss-blood-matron", name: "핏빛 여왕", kind: "boss", maxHealth: 34, artKey: "boss-blood-matron", tactics: { profile: "drain" } },
+  { id: "boss-grave-king", name: "무덤의 왕", kind: "boss", maxHealth: 40, artKey: "boss-grave-king", tactics: { profile: "board-clear" } },
+  { id: "boss-void-titan", name: "공허의 거신", kind: "boss", maxHealth: 48, artKey: "boss-void-titan", tactics: { profile: "ravager" } },
 ];
 
 export const CARD_BY_ID: ReadonlyMap<string, CardDefinition> = new Map(CARD_CATALOG.map((card) => [card.id, card]));

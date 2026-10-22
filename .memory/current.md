@@ -1,17 +1,17 @@
 ﻿# Current Context
 
 ## Active Plan
-[상호작용 효과음과 턴 제한 시간](./plans/2026-10-22-interaction-sounds-and-turn-timer.md)
+[적 카드 AI와 전투 승리 흐름](./plans/2026-10-22-enemy-card-ai-victory-flow.md)
 
 ## Active Phase
-[P01 상호작용 효과음과 턴 시계](./phases/2026-10-22-interaction-sounds-and-turn-timer/P01-interaction-feedback-and-turn-clock/phase.md)
+[P01 적 카드 전투와 승리 UI](./phases/2026-10-22-enemy-card-ai-victory-flow/P01-enemy-combat-and-victory-ui/phase.md)
 
 ## Active Task
-없음 — 계획의 모든 Task가 완료되었습니다.
+[T03 적 보드와 전투 연출](./phases/2026-10-22-enemy-card-ai-victory-flow/P01-enemy-combat-and-victory-ui/T03-enemy-board-and-combat-effects.md)
 
 ## Status
-- P01 완료 (3/3 Task).
-- T01 `0e46c06`, T02 `c1a7b94`, T03 커밋 완료.
+- P01 진행 중 (2/5 Task 완료).
+- T01 완료, 커밋 `89a8641`; T02 완료.
 
 ## Next Step (IMPORTANT)
-현재 계획의 모든 Task가 완료되었습니다. 다음 기능은 새 계획을 만든 뒤 시작합니다.
+T03 청사진을 읽고 적 손패·마나 표시, 적 카드 사용·공격 전투 연출, 보스 광역기 화면 흔들림을 연결한다.

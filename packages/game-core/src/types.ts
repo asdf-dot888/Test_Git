@@ -70,7 +70,20 @@ export interface BattleState {
   status: "active" | "playerWon" | "playerLost";
   pendingDiscardBeforeDraw?: boolean;
   pendingEnemyCharge?: EnemyChargeState | null;
+  enemyTurnEvents?: EnemyCombatRecord[];
 }
+
+export interface EnemyChargeState {
+  turnsRemaining: number;
+  damage: number;
+  target: "hero" | "board-and-hero";
+}
+
+export type EnemyCombatRecord =
+  | { type: "play-minion"; cardId: string; instanceId: string; handSlot: number; summonedIds: string[] }
+  | { type: "cast-spell"; cardId: string; instanceId: string; handSlot: number; effects: Array<{ kind: "damage" | "heal" | "summon" | "buff" | "draw"; targetId: string | null }> }
+  | { type: "attack"; cardId: string; attackerId: string; targetId: string }
+  | { type: "boss-area"; damage: 1; targetMinionIds: string[]; targetHeroId: "player" };
 
 export interface EncounterState {
   phase: 1 | 2 | 3;
@@ -108,29 +121,12 @@ export interface RunState {
   turnTimer?: TurnTimerState;
 }
 
-export type EnemyAction =
-  | { kind: "heroDamage"; amount: number }
-  | { kind: "summon"; cardId: string }
-  | { kind: "bossEffect"; effectId: string; amount: number };
-
 export type EnemyBehaviorProfile =
   | "aggressor" | "summoner" | "hunter" | "controller"
   | "drain" | "board-clear" | "ravager";
 
-export type EnemyChargeTrigger =
-  | "hero-at-half" | "board-empty" | "board-wide" | "hero-low-and-board-empty" | "turn-four";
-
 export interface EnemyTactics {
   profile: EnemyBehaviorProfile;
-  chargeTrigger: EnemyChargeTrigger;
-  chargeDelayTurns: 1 | 2;
-  chargeDamage: number;
-}
-
-export interface EnemyChargeState {
-  turnsRemaining: number;
-  damage: number;
-  target: "hero" | "board-and-hero";
 }
 
 export interface EnemyDefinition {
@@ -138,7 +134,6 @@ export interface EnemyDefinition {
   name: string;
   kind: "normal" | "boss";
   maxHealth: number;
-  actions: EnemyAction[];
   artKey: string;
   tactics: EnemyTactics;
 }

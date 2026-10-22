@@ -133,25 +133,15 @@ describe("card and enemy catalog", () => {
     expect(STARTER_DECK_CARD_IDS.every((id) => CARD_BY_ID.has(id))).toBe(true);
   });
 
-  it("has six normal enemies and three phase bosses with valid actions", () => {
+  it("has six normal enemies and three phase bosses with valid tactical profiles", () => {
     expect(NORMAL_ENEMIES).toHaveLength(6);
     expect(BOSSES).toHaveLength(3);
     for (const enemy of [...NORMAL_ENEMIES, ...BOSSES]) {
       expect(ENEMY_BY_ID.has(enemy.id)).toBe(true);
       expect(enemy.maxHealth).toBeGreaterThan(0);
-      expect(enemy.actions.some((action) => action.kind === "heroDamage")).toBe(true);
-      expect(enemy.actions.some((action) => action.kind === "summon")).toBe(true);
       expect(enemy.tactics.profile).toBeTruthy();
-      expect(enemy.tactics.chargeTrigger).toBeTruthy();
-      expect([1, 2]).toContain(enemy.tactics.chargeDelayTurns);
-      expect(enemy.tactics.chargeDamage).toBeGreaterThan(0);
-      for (const action of enemy.actions) {
-        if (action.kind === "summon") expect(CARD_BY_ID.get(action.cardId)?.kind).toBe("minion");
-      }
     }
-    const effects = BOSSES.map((boss) => boss.actions.find((action) => action.kind === "bossEffect"));
-    expect(effects.every((effect) => effect?.kind === "bossEffect")).toBe(true);
-    expect(new Set(effects.map((effect) => effect?.kind === "bossEffect" ? effect.effectId : "")).size).toBe(3);
+    expect([...NORMAL_ENEMIES, ...BOSSES].every((enemy) => !("actions" in enemy))).toBe(true);
   });
 });
 
@@ -313,7 +303,7 @@ describe("player actions and battle rules", () => {
     expect(attacked.battle?.enemyBoard).toHaveLength(0);
     expect(attacked.battle?.playerBoard[0]?.hasAttacked).toBe(true);
     expect(attacked.battle?.playerBoard[0]?.health).toBe(4);
-    expect(attacked.battle?.discardPile).toContainEqual(instance("defender", "ash-wolf"));
+    expect(attacked.battle?.enemyDiscardPile).toContainEqual(instance("defender", "ash-wolf"));
     expect(() => attackWithMinion(attacked, "attacker", attacked.battle!.enemyHero.id)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
   });
 
@@ -411,201 +401,167 @@ describe("player actions and battle rules", () => {
 });
 
 describe("enemy turns, rewards, and run progression", () => {
-  it("filters impossible summon actions on a full enemy board and keeps intent hidden", () => {
+  it("plays multiple affordable cards with refreshed enemy mana and waits to attack with new minions", () => {
     const run = copyRun(createRun(48));
     const battle = activeBattle(run);
-    battle.enemyBoard = Array.from({ length: gameConstants.maxBoard }, (_, index) => minion({ instanceId: `enemy-${index}`, owner: "enemy", summonedTurn: 99 }));
+    battle.enemyHand = [instance("enemy-wolf", "ash-wolf"), instance("enemy-guard", "crypt-guard"), instance("enemy-raven", "dusk-raven")];
+    battle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
     const result = endPlayerTurn(run);
-    expect(result.battle?.enemyBoard).toHaveLength(5);
-    expect(Object.keys(result.battle ?? {}).some((key) => key.toLowerCase().includes("intent") || key.toLowerCase().includes("action"))).toBe(false);
+    expect(result.battle?.enemyMana).toEqual({ current: 0, max: 10 });
+    expect(result.battle?.enemyBoard).toHaveLength(3);
+    expect(result.battle?.enemyBoard.every((minion) => minion.summonedTurn === 1 && !minion.hasAttacked)).toBe(true);
+    expect(result.battle?.enemyHand.map((card) => card.cardId)).toEqual(["eclipse"]);
     expect(result.battle?.activeSide).toBe("player");
+
+    const nextEnemyTurn = copyRun(result);
+    activeBattle(nextEnemyTurn).activeSide = "enemy";
+    activeBattle(nextEnemyTurn).enemyHand = [];
+    activeBattle(nextEnemyTurn).enemyMana.current = 0;
+    activeBattle(nextEnemyTurn).enemyDrawPile = [instance("still-expensive", "eclipse")];
+    const refreshed = resolveEnemyTurn(nextEnemyTurn);
+    expect(refreshed.battle?.enemyMana.current).toBe(1);
   });
 
-  it("makes enemy minions attack once without retaliation and ends the run at zero hero health", () => {
-    const run = copyRun(createRun(49));
+  it("spends mana on targeted damage spells and always chooses player minions first", () => {
+    const run = asEnemyTurn(createRun(49));
     const battle = activeBattle(run);
-    battle.playerBoard = [minion({ instanceId: "victim", health: 2, maxHealth: 2, attack: 99 })];
+    battle.enemyMana.current = 2;
+    battle.enemyHand = [instance("enemy-lance", "soul-lance")];
+    battle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
+    battle.playerBoard = [
+      minion({ instanceId: "safe-target", attack: 1, health: 5, maxHealth: 5 }),
+      minion({ instanceId: "lethal-target", attack: 8, health: 2, maxHealth: 2 }),
+    ];
+    const result = resolveEnemyTurn(run);
+    expect(result.battle?.playerBoard.map((minion) => minion.instanceId)).toEqual(["safe-target"]);
+    expect(result.battle?.playerHero.health).toBe(30);
+    expect(result.battle?.enemyMana.current).toBe(0);
+    expect(result.battle?.enemyDiscardPile).toContainEqual(instance("enemy-lance", "soul-lance"));
+  });
+
+  it("makes ready enemy minions attack a player minion first, then attacks the hero when the board is empty", () => {
+    const run = asEnemyTurn(createRun(50));
+    const battle = activeBattle(run);
+    battle.enemyMana.current = 0;
+    battle.enemyHand = [];
+    battle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
     battle.enemyBoard = [minion({ instanceId: "enemy-attacker", owner: "enemy", attack: 2, summonedTurn: 0 })];
-    const resolved = resolveEnemyTurn(asEnemyTurn(run));
-    expect(resolved.battle?.playerBoard).toHaveLength(0);
-    expect(resolved.battle?.enemyBoard[0]?.hasAttacked).toBe(true);
-    expect(resolved.battle?.enemyBoard[0]?.health).toBe(4);
+    battle.playerBoard = [minion({ instanceId: "victim", health: 2, maxHealth: 2, attack: 99 })];
+    const killedMinion = resolveEnemyTurn(run);
+    expect(killedMinion.battle?.playerBoard).toHaveLength(0);
+    expect(killedMinion.battle?.playerHero.health).toBe(30);
+    expect(killedMinion.battle?.enemyBoard[0]?.hasAttacked).toBe(true);
 
-    const defeated = copyRun(createRun(50));
-    activeBattle(defeated).playerHero.health = 1;
-    activeBattle(defeated).enemyBoard = Array.from({ length: 5 }, (_, index) => minion({ instanceId: `full-${index}`, owner: "enemy", summonedTurn: 99 }));
-    const loss = resolveEnemyTurn(asEnemyTurn(defeated));
-    expect(loss.status).toBe("defeat");
-    expect(loss.battle).toBeNull();
+    const openBoard = copyRun(killedMinion);
+    activeBattle(openBoard).activeSide = "enemy";
+    activeBattle(openBoard).enemyBoard[0]!.hasAttacked = false;
+    activeBattle(openBoard).enemyMana.current = 0;
+    activeBattle(openBoard).enemyHand = [];
+    activeBattle(openBoard).enemyDrawPile = [instance("enemy-expensive-2", "eclipse")];
+    const hitHero = resolveEnemyTurn(openBoard);
+    expect(hitHero.battle?.playerHero.health).toBe(28);
   });
 
-  it("resolves each boss's unique hidden effect", () => {
-    const bloodRun = asEnemyTurn(createRun(81));
-    const bloodBattle = activeBattle(bloodRun);
-    bloodBattle.enemyId = "boss-blood-matron";
-    bloodBattle.enemyHero.health = 10;
-    const blood = resolveEnemyTurn(bloodRun);
-    expect(blood.battle?.playerHero.health).toBe(27);
-    expect(blood.battle?.enemyHero.health).toBe(13);
-
-    const boneRun = asEnemyTurn(createRun(82));
-    const boneBattle = activeBattle(boneRun);
-    boneBattle.enemyId = "boss-grave-king";
-    boneBattle.playerBoard = [minion({ instanceId: "storm-victim", health: 1, maxHealth: 1 }), minion({ instanceId: "storm-victim-2", health: 1, maxHealth: 1 })];
-    const bone = resolveEnemyTurn(boneRun);
-    expect(bone.battle?.playerHero.health).toBe(28);
-    expect(bone.battle?.playerBoard).toHaveLength(0);
-
-    const voidRun = asEnemyTurn(createRun(83));
-    const voidBattle = activeBattle(voidRun);
-    voidBattle.enemyId = "boss-void-titan";
-    voidBattle.playerBoard = [minion({ instanceId: "pulse-victim", health: 3, maxHealth: 3 }), minion({ instanceId: "pulse-victim-2", health: 3, maxHealth: 3 })];
-    const pulse = resolveEnemyTurn(voidRun);
-    expect(pulse.battle?.playerHero.health).toBe(26);
-    expect(pulse.battle?.playerBoard.map((entry) => entry.health)).toEqual([1, 1]);
+  it("uses enemy-owned healing and buffs on its own hero and minions", () => {
+    const run = asEnemyTurn(createRun(51));
+    const battle = activeBattle(run);
+    battle.enemyMana.current = 4;
+    battle.enemyHero.health -= 3;
+    battle.enemyBoard = [minion({ instanceId: "ally", owner: "enemy", attack: 2, health: 2, maxHealth: 3, summonedTurn: 99 })];
+    battle.enemyHand = [instance("enemy-heal", "healing-mist"), instance("enemy-buff", "rune-surge")];
+    battle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
+    const result = resolveEnemyTurn(run);
+    expect(result.battle?.enemyHero.health).toBe(battle.enemyHero.maxHealth);
+    expect(result.battle?.enemyBoard[0]?.attack).toBeGreaterThan(2);
+    expect(result.battle?.playerHero.health).toBe(30);
   });
 
-  it("prioritizes guaranteed lethal damage over summons", () => {
-    const run = asEnemyTurn(createRun(84));
+  it("auto-discards the lowest-priority card at hand limit and refills from the seeded starter deck", () => {
+    const run = asEnemyTurn(createRun(52));
     const battle = activeBattle(run);
     battle.enemyId = "bandit-scout";
-    battle.playerHero.health = 6;
-    battle.enemyBoard = [minion({ instanceId: "face-damage", owner: "enemy", attack: 3, summonedTurn: 0 })];
-    const result = resolveEnemyTurn(run);
-    expect(result.status).toBe("defeat");
-    expect(result.battle).toBeNull();
+    battle.enemyMana.current = 0;
+    battle.enemyHand = Array.from({ length: 10 }, (_, index) => instance(`enemy-hand-${index}`, index === 0 ? "eclipse" : "ash-wolf"));
+    battle.enemyDrawPile = [instance("last-draw", "eclipse")];
+    const overflow = resolveEnemyTurn(run);
+    expect(overflow.battle?.enemyHand).toHaveLength(10);
+    expect(overflow.battle?.enemyDiscardPile.some((card) => card.cardId === "ash-wolf")).toBe(true);
+
+    const recycled = asEnemyTurn(createRun(53));
+    const recycledBattle = activeBattle(recycled);
+    recycledBattle.enemyMana.current = 0;
+    recycledBattle.enemyHand = [];
+    recycledBattle.enemyDrawPile = [];
+    const result = resolveEnemyTurn(recycled);
+    expect(result.battle?.enemyHand).toHaveLength(1);
+    expect(result.battle?.enemyDrawPile).toHaveLength(29);
+    expect(result.battle?.enemyHand[0]?.instanceId).toMatch(/^enemy-recycle-/);
   });
 
-  it("selects summon and tactical boss actions when their board conditions make them valuable", () => {
-    const summonRun = asEnemyTurn(createRun(85));
-    activeBattle(summonRun).enemyId = "crypt-crawler";
-    const summonResult = resolveEnemyTurn(summonRun);
-    expect(summonResult.battle?.enemyBoard[0]?.cardId).toBe("cinder-imp");
-
-    const controllerRun = asEnemyTurn(createRun(851));
-    const controllerBattle = activeBattle(controllerRun);
-    controllerBattle.enemyId = "mire-hag";
-    controllerBattle.playerBoard = Array.from({ length: 3 }, (_, index) => minion({ instanceId: `controller-target-${index}` }));
-    const controllerResult = resolveEnemyTurn(controllerRun);
-    expect(controllerResult.battle?.enemyBoard[0]?.cardId).toBe("ash-wolf");
-
-    const lowHealthRun = asEnemyTurn(createRun(852));
-    const lowHealthBattle = activeBattle(lowHealthRun);
-    lowHealthBattle.enemyId = "crypt-crawler";
-    lowHealthBattle.enemyBoard = [minion({ instanceId: "crawler-a", owner: "enemy", summonedTurn: 99 }), minion({ instanceId: "crawler-b", owner: "enemy", summonedTurn: 99 })];
-    lowHealthBattle.playerHero.health = 10;
-    const lowHealthResult = resolveEnemyTurn(lowHealthRun);
-    expect(lowHealthResult.battle?.playerHero.health).toBe(6);
-
-    const bossRun = asEnemyTurn(createRun(86));
-    const bossBattle = activeBattle(bossRun);
-    bossBattle.enemyId = "boss-grave-king";
-    bossBattle.playerBoard = [minion({ instanceId: "board-1", health: 3, maxHealth: 3 }), minion({ instanceId: "board-2", health: 3, maxHealth: 3 })];
-    const bossResult = resolveEnemyTurn(bossRun);
-    expect(bossResult.battle?.playerHero.health).toBe(28);
-    expect(bossResult.battle?.playerBoard.map((entry) => entry.health)).toEqual([1, 1]);
-  });
-
-  it("uses seeded tie breaks and picks lethal high-threat targets before safer ones", () => {
-    const makeTieRun = () => {
-      const run = asEnemyTurn(createRun(87));
-      const battle = activeBattle(run);
-      battle.enemyId = "crypt-crawler";
-      battle.enemyBoard = [minion({ instanceId: "existing-1", owner: "enemy", summonedTurn: 99 }), minion({ instanceId: "existing-2", owner: "enemy", summonedTurn: 99 })];
-      battle.playerBoard = [minion({ instanceId: "friendly-1" }), minion({ instanceId: "friendly-2" })];
-      battle.rngState = 123456;
-      return run;
-    };
-    const first = resolveEnemyTurn(makeTieRun());
-    const second = resolveEnemyTurn(makeTieRun());
-    expect(first.battle?.rngState).toBe(second.battle?.rngState);
-    expect(first.battle?.enemyBoard.map((entry) => entry.cardId)).toEqual(second.battle?.enemyBoard.map((entry) => entry.cardId));
-
-    const targetRun = asEnemyTurn(createRun(88));
-    const targetBattle = activeBattle(targetRun);
-    targetBattle.enemyId = "fallen-sentinel";
-    targetBattle.playerBoard = [
-      minion({ instanceId: "safe", attack: 10, health: 5, maxHealth: 5 }),
-      minion({ instanceId: "strong-but-tough", attack: 8, health: 4, maxHealth: 4 }),
-      minion({ instanceId: "left-tie", attack: 8, health: 2, maxHealth: 2 }),
-      minion({ instanceId: "right-tie", attack: 8, health: 2, maxHealth: 2 }),
-      minion({ instanceId: "strongest", attack: 9, health: 1, maxHealth: 1 }),
-    ];
-    targetBattle.enemyBoard = Array.from({ length: 4 }, (_, index) => minion({ instanceId: `attacker-${index}`, owner: "enemy", attack: 4, summonedTurn: 0 }));
-    const targeted = resolveEnemyTurn(targetRun);
-    expect(targeted.battle?.playerBoard.map((entry) => entry.instanceId)).toEqual(["safe"]);
-  });
-
-  it("persists each configured charge through its delay and applies boss area damage", () => {
-    const cases = [
-      ["bandit-scout", 15, 0, 1], ["crypt-crawler", 30, 3, 2], ["mire-hag", 15, 0, 2],
-      ["fallen-sentinel", 30, 0, 1], ["plague-herald", 30, 3, 1], ["night-stalker", 15, 0, 2],
-      ["boss-blood-matron", 15, 0, 1], ["boss-grave-king", 30, 3, 1], ["boss-void-titan", 30, 0, 2],
-    ] as const;
-    for (const [enemyId, heroHealth, boardSize, delay] of cases) {
-      const run = asEnemyTurn(createRun(90));
-      const battle = activeBattle(run);
-      battle.enemyId = enemyId;
-      battle.turnNumber = enemyId === "boss-void-titan" ? 4 : 1;
-      battle.playerHero.health = heroHealth;
-      battle.playerBoard = Array.from({ length: boardSize }, (_, index) => minion({ instanceId: `charge-target-${index}`, health: 3, maxHealth: 3 }));
-      let resolving = resolveEnemyTurn(run);
-      const enemy = ENEMY_BY_ID.get(enemyId)!;
-      expect(resolving.battle?.pendingEnemyCharge).toEqual({
-        turnsRemaining: delay,
-        damage: enemy.tactics.chargeDamage,
-        target: enemy.kind === "boss" ? "board-and-hero" : "hero",
-      });
-
-      resolving = JSON.parse(JSON.stringify(resolving)) as RunState;
-      expect(resolving.battle?.pendingEnemyCharge?.turnsRemaining).toBe(delay);
-      let chargeTurns = 0;
-      while (chargeTurns < delay) {
-        activeBattle(resolving).activeSide = "enemy";
-        const beforeHealth = activeBattle(resolving).playerHero.health;
-        resolving = resolveEnemyTurn(resolving);
-        chargeTurns += 1;
-        if (chargeTurns < delay) expect(resolving.battle?.playerHero.health).toBe(beforeHealth);
-      }
-      expect(resolving.battle?.playerHero.health).toBe(heroHealth - enemy.tactics.chargeDamage);
-      if (enemy.kind === "boss" && boardSize > 0) expect(resolving.battle?.playerBoard).toHaveLength(0);
-      else expect(resolving.battle?.playerBoard).toHaveLength(boardSize);
-      expect(resolving.battle?.pendingEnemyCharge).toBeNull();
+  it("runs the boss area pattern on turns 3, 6, and 9 after cards and before minion attacks", () => {
+    for (const turnNumber of [3, 6, 9]) {
+      const bossRun = asEnemyTurn(createRun(54 + turnNumber));
+      const bossBattle = activeBattle(bossRun);
+      bossBattle.enemyId = "boss-grave-king";
+      bossBattle.turnNumber = turnNumber;
+      bossBattle.enemyMana.current = 0;
+      bossBattle.enemyHand = turnNumber === 3 ? [instance("boss-minion", "ash-wolf")] : [];
+      bossBattle.enemyDrawPile = [instance(`boss-expensive-${turnNumber}`, "eclipse")];
+      bossBattle.playerBoard = [minion({ instanceId: `one-health-${turnNumber}`, health: 1, maxHealth: 1 }), minion({ instanceId: `survivor-${turnNumber}`, health: 3, maxHealth: 3 })];
+      bossBattle.enemyBoard = turnNumber === 3 ? [minion({ instanceId: "boss-attacker", owner: "enemy", attack: 1, summonedTurn: 0 })] : [];
+      const result = resolveEnemyTurn(bossRun);
+      expect(result.battle?.playerHero.health).toBe(29);
+      expect(result.battle?.playerBoard.map((minion) => minion.instanceId)).toEqual([`survivor-${turnNumber}`]);
+      expect(result.battle?.playerBoard[0]?.health).toBe(turnNumber === 3 ? 1 : 2);
+      expect(result.battle?.enemyBoard.some((minion) => minion.cardId === "ash-wolf")).toBe(turnNumber === 3);
+      expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(true);
+      if (turnNumber === 3) expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "attack" && event.targetId === `survivor-${turnNumber}`)).toBe(true);
     }
+
+    const offTurn = asEnemyTurn(createRun(55));
+    activeBattle(offTurn).enemyId = "boss-grave-king";
+    activeBattle(offTurn).turnNumber = 2;
+    activeBattle(offTurn).enemyMana.current = 0;
+    activeBattle(offTurn).enemyHand = [];
+    activeBattle(offTurn).enemyDrawPile = [instance("boss-expensive", "eclipse")];
+    const secondTurn = resolveEnemyTurn(offTurn);
+    expect(secondTurn.battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(false);
+
+    const lethal = asEnemyTurn(createRun(56));
+    activeBattle(lethal).enemyId = "boss-grave-king";
+    activeBattle(lethal).turnNumber = 3;
+    activeBattle(lethal).enemyMana.current = 0;
+    activeBattle(lethal).enemyHand = [];
+    activeBattle(lethal).enemyDrawPile = [instance("boss-expensive", "eclipse")];
+    activeBattle(lethal).playerHero.health = 1;
+    const defeated = resolveEnemyTurn(lethal);
+    expect(defeated.status).toBe("defeat");
+    expect(defeated.battle).toBeNull();
   });
 
-  it("runs death effects for minions killed by a boss charge", () => {
-    const run = asEnemyTurn(createRun(91));
-    const battle = activeBattle(run);
-    battle.enemyId = "boss-grave-king";
-    battle.playerBoard = [minion({ instanceId: "thorn", cardId: "thorn-brute", attack: 2, health: 6, maxHealth: 6 }), minion({ instanceId: "wolf-a" }), minion({ instanceId: "wolf-b" })];
-    let resolving = resolveEnemyTurn(run);
-    activeBattle(resolving).activeSide = "enemy";
-    resolving = resolveEnemyTurn(resolving);
-    expect(resolving.battle?.playerHero.health).toBe(18);
-    expect(resolving.battle?.playerBoard.map((entry) => entry.cardId)).toEqual(["bone-rat"]);
+  it("ignores legacy fixed charge actions and stops when an enemy card defeats the player", () => {
+    const legacy = asEnemyTurn(createRun(56));
+    const legacyBattle = activeBattle(legacy);
+    legacyBattle.enemyMana.current = 0;
+    legacyBattle.enemyHand = [];
+    legacyBattle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
+    (legacyBattle as BattleState & { pendingEnemyCharge?: unknown }).pendingEnemyCharge = { turnsRemaining: 1, damage: 30, target: "hero" };
+    legacyBattle.enemyBoard = [];
+    const noCharge = resolveEnemyTurn(legacy);
+    expect(noCharge.status).toBe("active");
+    expect(noCharge.battle?.playerHero.health).toBe(30);
+    expect(noCharge.battle).not.toHaveProperty("pendingEnemyCharge");
+
+    const lethal = asEnemyTurn(createRun(57));
+    const lethalBattle = activeBattle(lethal);
+    lethalBattle.enemyMana.current = 1;
+    lethalBattle.enemyHand = [instance("lethal-bolt", "shadow-bolt")];
+    lethalBattle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
+    lethalBattle.playerHero.health = 2;
+    const defeated = resolveEnemyTurn(lethal);
+    expect(defeated.status).toBe("defeat");
+    expect(defeated.battle).toBeNull();
   });
-
-  it("finishes a run on a lethal charge and tolerates legacy battles without charge state", () => {
-    const lethal = asEnemyTurn(createRun(92));
-    activeBattle(lethal).enemyId = "bandit-scout";
-    activeBattle(lethal).playerHero.health = 6;
-    let resolving = resolveEnemyTurn(lethal);
-    expect(resolving.battle?.pendingEnemyCharge?.turnsRemaining).toBe(1);
-    activeBattle(resolving).activeSide = "enemy";
-    resolving = resolveEnemyTurn(resolving);
-    expect(resolving.status).toBe("defeat");
-    expect(resolving.battle).toBeNull();
-
-    const legacy = asEnemyTurn(createRun(93));
-    delete activeBattle(legacy).pendingEnemyCharge;
-    activeBattle(legacy).enemyId = "fallen-sentinel";
-    activeBattle(legacy).playerBoard = [minion({ instanceId: "legacy-board" })];
-    const playable = resolveEnemyTurn(legacy);
-    expect(playable.status).toBe("active");
-    expect(playable.battle?.activeSide).toBe("player");
-  });
-
   it("offers tier-matched rewards, adds only a chosen copy, and permits skipping", () => {
     let run = winCurrentBattle(createRun(71));
     expect(run.pendingReward?.tier).toBe("normal");
