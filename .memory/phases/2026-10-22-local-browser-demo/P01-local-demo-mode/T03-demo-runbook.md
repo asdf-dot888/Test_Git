@@ -1,6 +1,6 @@
 # Task: T03 로컬 데모 실행 문서
 
-## Status: pending
+## Status: done
 
 ## Goal
 새 개발자가 회사 인증 정보 없이 로컬 데모를 실행하고, 데모와 실제 Entra/Cosmos 개발 모드의 차이를 README에서 구분할 수 있게 한다.
@@ -48,6 +48,6 @@ Task: T03-demo-runbook
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending
