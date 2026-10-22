@@ -317,7 +317,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
           turnTimer={{
             text: `00:${String(turnTimer.remainingSeconds).padStart(2, "0")}`,
             remainingSeconds: turnTimer.remainingSeconds,
-            visible: !session.resolving && session.combatEffects.length === 0 && battle.activeSide === "player" && battle.status === "active",
+            visible: screen === "game" && menuView === "closed" && !turnTimer.isPaused && !session.resolving && session.combatEffects.length === 0 && battle.activeSide === "player" && battle.status === "active",
           }}
           combatEffects={session.combatEffects}
           onCombatEffectComplete={(eventId) => dispatch({ type: "clear-combat-effect", eventId })}

@@ -7,11 +7,11 @@
 [P01 적 카드 전투와 승리 UI](./phases/2026-10-22-enemy-card-ai-victory-flow/P01-enemy-combat-and-victory-ui/phase.md)
 
 ## Active Task
-[T05 플레이어 턴 타이머 표시](./phases/2026-10-22-enemy-card-ai-victory-flow/P01-enemy-combat-and-victory-ui/T05-player-turn-timer-visibility.md)
+완료
 
 ## Status
-- P01 진행 중 (4/5 Task 완료).
-- T01 완료, 커밋 `89a8641`; T02 완료, 커밋 `3baf867`; T03 완료, 커밋 `d2d6288`; T04 완료.
+- P01 완료 (5/5 Task 완료).
+- T01 완료, 커밋 `89a8641`; T02 완료, 커밋 `3baf867`; T03 완료, 커밋 `d2d6288`; T04 완료, 커밋 `e079729`; T05 완료, 커밋 `f024a5a`.
 
-## Next Step (IMPORTANT)
-T05 청사진을 읽고 플레이어 활성 턴의 20초 타이머가 실제 전투 화면에 표시되도록 원인을 확인하고 수정한다.
+## Next Step
+현재 계획의 모든 Task가 완료되었습니다.

@@ -10,7 +10,7 @@
 
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | 적 덱·카드 전투 AI, 전투 연출, 승리 확인, 타이머 표시를 순차 구현한다. | [P01](../phases/2026-10-22-enemy-card-ai-victory-flow/P01-enemy-combat-and-victory-ui/phase.md) |
+| P01 | `done` | 적 덱·카드 전투 AI, 전투 연출, 승리 확인, 타이머 표시를 순차 구현한다. | [P01](../phases/2026-10-22-enemy-card-ai-victory-flow/P01-enemy-combat-and-victory-ui/phase.md) |
 
 ## Scope Notes
 

@@ -43,7 +43,7 @@ describe("turn timer application wiring", () => {
       reload: vi.fn(async () => undefined), retrySave: vi.fn(async () => undefined), retry: vi.fn(async () => undefined),
     };
 
-    render(<GameSessionView sync={sync} />);
+    const { container } = render(<GameSessionView sync={sync} />);
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     expect(savedRuns.some((saved) => saved.turnTimer?.pausedRemainingMs === 20_000)).toBe(true);
     expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 20_000 });
@@ -52,6 +52,11 @@ describe("turn timer application wiring", () => {
     expect(savedRuns.at(-1)?.turnTimer?.deadlineAt).toBe(120_000);
     expect(savedRuns.at(-1)?.turnTimer?.pausedRemainingMs).toBeNull();
     expect(screen.getByText("00:20")).toBeTruthy();
+    expect(container.querySelector(".turn-timer")?.className).not.toContain("is-hidden");
+    fireEvent.click(container.querySelector(".menu-button")!);
+    expect(container.querySelector(".turn-timer")?.className).toContain("is-hidden");
+    fireEvent.click(container.querySelector(".game-menu-panel .menu-primary")!);
+    expect(container.querySelector(".turn-timer")?.className).not.toContain("is-hidden");
     const saveCountAfterResume = saveRun.mock.calls.length;
     const warningsBeforeCountdown = players.filter((player) => player.src === "/audio/sfx/timer-warning.ogg").length;
 

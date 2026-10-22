@@ -1,6 +1,6 @@
 # Task: T05 플레이어 턴 타이머 표시 복구
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -33,10 +33,10 @@
 
 ## Acceptance Criteria
 
-- [ ] Timer appears at the right of `TURN` at the start of every active player turn and resumes after animations.
-- [ ] Timer remains absent during enemy turn, menu, hidden browser tab, and active combat effects, with the remaining time preserved.
-- [ ] At 5 seconds or fewer, the timer is red/blinking unless reduced motion is enabled.
-- [ ] Timer is not clipped or hidden at 1280, 720, or 390 px layouts.
+- [x] Timer appears at the right of `TURN` at the start of every active player turn and resumes after animations.
+- [x] Timer remains absent during enemy turn, menu, hidden browser tab, and active combat effects, with the remaining time preserved.
+- [x] At 5 seconds or fewer, the timer is red/blinking unless reduced motion is enabled.
+- [x] Timer is not clipped or hidden at 1280, 720, or 390 px layouts.
 
 ## Validation
 
@@ -60,7 +60,7 @@ Task: T05-player-turn-timer-visibility
 
 ## Progress
 
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과
+- commit: f024a5a
 

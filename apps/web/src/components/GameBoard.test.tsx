@@ -58,7 +58,7 @@ describe("GameBoard", () => {
     run.battle!.enemyDiscardPile = [{ instanceId: "enemy-discard", cardId: "ash-wolf" }];
     const markup = renderBoard(run);
     expect(markup).toContain("aria-label=\"적 손패 2장\"");
-    expect(markup.match(/class=\"enemy-card-back\"/g)).toHaveLength(2);
+    expect(markup.match(/class="enemy-card-back"/g)).toHaveLength(2);
     expect(markup).toContain("마나 4/10");
     expect(markup).toContain("적 덱 12장, 적 버린 카드 1장");
     expect(markup).not.toContain("eclipse");
