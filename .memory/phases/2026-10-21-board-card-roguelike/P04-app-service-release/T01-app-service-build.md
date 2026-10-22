@@ -57,4 +57,4 @@ Task: T01-app-service-build
 ## Progress
 - [x] 구현 완료
 - [x] 검증 통과
-- commit: pending
+- commit: `2f091e7`
