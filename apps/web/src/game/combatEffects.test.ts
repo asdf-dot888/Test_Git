@@ -9,6 +9,55 @@ function withBattle(run: RunState, update: (run: RunState) => void): RunState {
 }
 
 describe("collectCombatEffectEvents", () => {
+  it("plays a summon cue for played minions and their battlecry summons", () => {
+    const run = createRun(40);
+    const before = withBattle(run, (state) => { state.battle!.hand = [{ instanceId: "witch", cardId: "mire-witch" }]; });
+    const after = withBattle(before, (state) => {
+      state.battle!.hand = [];
+      state.battle!.playerBoard = [
+        { instanceId: "witch", cardId: "mire-witch", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 1, hasAttacked: false },
+        { instanceId: "rat", cardId: "bone-rat", owner: "player", attack: 1, health: 1, maxHealth: 1, summonedTurn: 1, hasAttacked: false },
+      ];
+    });
+    const events = collectCombatEffectEvents(before, after, { type: "play-minion", instanceId: "witch" }, 5);
+
+    expect(events.map(({ effectKind, assetCardId, soundCues }) => [effectKind, assetCardId, soundCues])).toEqual([
+      ["summon", "mire-witch", ["summon"]],
+      ["summon", "mire-witch", ["summon"]],
+    ]);
+  });
+
+  it("plays summon cues for spells and enemy summons", () => {
+    const run = createRun(401);
+    const before = withBattle(run, (state) => { state.battle!.hand = [{ instanceId: "bones", cardId: "raise-bones" }]; });
+    const spellEvents = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "bones" }, 8);
+    expect(spellEvents.map((event) => event.soundCues)).toEqual([["summon"]]);
+
+    const after = withBattle(before, (state) => {
+      state.battle!.enemyBoard = [{ instanceId: "enemy-rat", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 1, hasAttacked: false }];
+      state.battle!.hand = [];
+    });
+    const enemyEvents = collectCombatEffectEvents(before, after, { type: "end-turn" }, 20);
+    expect(enemyEvents).toContainEqual(expect.objectContaining({ effectKind: "summon", assetCardId: "bone-rat", soundCues: ["summon"], target: { kind: "minion", side: "enemy", slot: 0 } }));
+  });
+
+  it("plays a magical cue for a battlecry buff", () => {
+    const run = createRun(402);
+    const before = withBattle(run, (state) => {
+      state.battle!.hand = [{ instanceId: "knight", cardId: "grave-knight" }];
+      state.battle!.playerBoard = [{ instanceId: "guard", cardId: "crypt-guard", owner: "player", attack: 2, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
+    });
+    const after = withBattle(before, (state) => {
+      state.battle!.hand = [];
+      state.battle!.playerBoard = [
+        { instanceId: "guard", cardId: "crypt-guard", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
+        { instanceId: "knight", cardId: "grave-knight", owner: "player", attack: 3, health: 3, maxHealth: 3, summonedTurn: 1, hasAttacked: false },
+      ];
+    });
+    const events = collectCombatEffectEvents(before, after, { type: "play-minion", instanceId: "knight" }, 10);
+    expect(events.map((event) => event.soundCues)).toEqual([["summon"], ["spell"]]);
+  });
+
   it("anchors a minion attack to the attacker card and exact lane slots", () => {
     const run = createRun(41);
     const before = withBattle(run, (state) => {

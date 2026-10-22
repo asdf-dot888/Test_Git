@@ -71,19 +71,19 @@ export function collectCombatEffectEvents(
     if (card && definition?.kind === "minion") {
       const summoned = next.playerBoard.find((minion) => minion.instanceId === card.instanceId);
       const targetSlot = summoned ? slotOf(next.playerBoard, summoned.instanceId) : Math.max(0, previous.playerBoard.length);
-      pushEvent(events, firstEventId, card.cardId, "summon", { kind: "hand", slot: handSlot, instanceId: card.instanceId }, { kind: "minion", side: "player", slot: Math.min(4, targetSlot) });
+      pushEvent(events, firstEventId, card.cardId, "summon", { kind: "hand", slot: handSlot, instanceId: card.instanceId }, { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, ["summon"]);
       const effect = definition.minion?.effect;
       if (effect?.kind === "battlecryBuff") {
         const target = effect.target === "self"
           ? summoned
           : next.playerBoard.find((minion) => minion.instanceId !== card.instanceId);
         if (target) {
-          pushEvent(events, firstEventId, card.cardId, "buff", { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, target.instanceId) });
+          pushEvent(events, firstEventId, card.cardId, "buff", { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, target.instanceId) }, ["spell"]);
         }
       }
       if (effect?.kind === "battlecrySummon") {
         const extra = next.playerBoard.find((minion) => minion.cardId === effect.cardId && !previous.playerBoard.some((old) => old.instanceId === minion.instanceId) && minion.instanceId !== card.instanceId);
-        if (extra) pushEvent(events, firstEventId, card.cardId, "summon", { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, extra.instanceId) });
+        if (extra) pushEvent(events, firstEventId, card.cardId, "summon", { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, extra.instanceId) }, ["summon"]);
       }
     }
   } else if (action.type === "cast-spell") {
@@ -93,7 +93,7 @@ export function collectCombatEffectEvents(
     if (card && definition?.kind === "spell") {
       for (const effect of definition.spellEffects ?? []) {
         const kind: CombatEffectKind = effect.kind === "damage" ? "damage" : effect.kind;
-        const cues: SoundEffectKind[] = ["spell"];
+        const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage") {
           cues.push("damage");
           if (effect.target === "enemyMinion" && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId)) cues.push("death");
@@ -116,6 +116,10 @@ export function collectCombatEffectEvents(
     }
   } else if (action.type === "end-turn") {
     const damagedPlayerMinions = new Set<string>();
+    next.enemyBoard.forEach((minion, slot) => {
+      if (previous.enemyBoard.some((old) => old.instanceId === minion.instanceId)) return;
+      pushEvent(events, firstEventId, minion.cardId, "summon", { kind: "hero", side: "enemy" }, { kind: "minion", side: "enemy", slot }, ["summon"]);
+    });
     const boardEmptyAfterCharge = bossChargeReleased
       && previous.playerBoard.every((minion) => minion.health <= previousCharge.damage)
       && next.playerBoard.length === 0;

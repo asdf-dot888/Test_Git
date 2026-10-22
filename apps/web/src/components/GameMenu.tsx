@@ -1,4 +1,3 @@
-import { useEffect, useRef, type KeyboardEvent } from "react";
 import type { AudioSettings } from "../game/audio.js";
 
 export interface GameMenuProps {
@@ -12,36 +11,9 @@ export interface GameMenuProps {
 }
 
 export function GameMenu({ view, settings, onSettingsChange, onOpenSettings, onBackToChoices, onMainMenu, onReturn }: GameMenuProps) {
-  const dialogRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    dialogRef.current?.querySelector<HTMLElement>("button, input")?.focus();
-  }, [view]);
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      if (view === "settings") onBackToChoices();
-      else onReturn();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled)") ?? [])];
-    if (focusable.length === 0) return;
-    const first = focusable[0]!;
-    const last = focusable[focusable.length - 1]!;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
   return (
     <div className="game-menu-backdrop">
-      <section className="game-menu-panel" role="dialog" aria-modal="true" aria-labelledby="game-menu-title" ref={dialogRef} onKeyDown={handleKeyDown}>
+      <section className="game-menu-panel" role="dialog" aria-modal="true" aria-labelledby="game-menu-title">
         {view === "choices" ? (
           <>
             <span className="eyebrow">EXPEDITION PAUSED</span>

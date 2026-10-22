@@ -33,7 +33,7 @@ describe("GameMenu", () => {
     expect(onSettingsChange).toHaveBeenNthCalledWith(2, { ...DEFAULT_AUDIO_SETTINGS, muted: true });
   });
 
-  it("uses Escape to return to choices or close back to the battle", () => {
+  it("leaves Escape menu state changes to the active game session", () => {
     const onBackToChoices = vi.fn();
     const onReturn = vi.fn();
     const { rerender } = render(<GameMenu view="settings" settings={DEFAULT_AUDIO_SETTINGS} onSettingsChange={vi.fn()} onOpenSettings={vi.fn()} onBackToChoices={onBackToChoices} onMainMenu={vi.fn()} onReturn={onReturn} />);
@@ -41,7 +41,7 @@ describe("GameMenu", () => {
     rerender(<GameMenu view="choices" settings={DEFAULT_AUDIO_SETTINGS} onSettingsChange={vi.fn()} onOpenSettings={vi.fn()} onBackToChoices={onBackToChoices} onMainMenu={vi.fn()} onReturn={onReturn} />);
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
 
-    expect(onBackToChoices).toHaveBeenCalledOnce();
-    expect(onReturn).toHaveBeenCalledOnce();
+    expect(onBackToChoices).not.toHaveBeenCalled();
+    expect(onReturn).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 export type MusicKind = "normal" | "boss";
-export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death";
+export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "turn-start" | "turn-end" | "summon" | "timer-warning";
 
 export interface AudioSettings {
   musicVolume: number;
@@ -10,7 +10,7 @@ export interface AudioSettings {
 export interface AudioController {
   unlock(): Promise<void>;
   playMusic(kind: MusicKind): void;
-  playEffect(kind: SoundEffectKind): void;
+  playEffect(kind: SoundEffectKind, volumeScale?: number): void;
   setSettings(settings: AudioSettings): void;
   dispose(): void;
 }
@@ -27,6 +27,11 @@ const EFFECT_SOURCES: Record<SoundEffectKind, string> = {
   heal: "/audio/sfx/heal.ogg",
   damage: "/audio/sfx/damage.ogg",
   death: "/audio/sfx/death.ogg",
+  "ui-click": "/audio/sfx/ui-click.ogg",
+  "turn-start": "/audio/sfx/timer-warning.ogg",
+  "turn-end": "/audio/sfx/attack.ogg",
+  summon: "/audio/sfx/spell.ogg",
+  "timer-warning": "/audio/sfx/timer-warning.ogg",
 };
 
 const CROSSFADE_DURATION_MS = 400;
@@ -44,12 +49,12 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
   let currentMusicKind: MusicKind | null = null;
   let musicStarted = false;
   let disposed = false;
-  const effectPlayers = new Set<HTMLAudioElement>();
+  const effectPlayers = new Map<HTMLAudioElement, number>();
   const fadingMusic = new Set<HTMLAudioElement>();
   const timers = new Set<ReturnType<typeof setInterval>>();
 
   const musicVolume = () => settings.muted ? 0 : settings.musicVolume;
-  const effectVolume = () => settings.muted ? 0 : settings.effectsVolume;
+  const effectVolume = (scale = 1) => settings.muted ? 0 : clampVolume(settings.effectsVolume * scale);
 
   function attemptPlay(audio: HTMLAudioElement, isCurrentMusic: boolean): Promise<void> {
     try {
@@ -139,16 +144,17 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       if (previous) fadeIn(next);
     },
 
-    playEffect(kind) {
+    playEffect(kind, volumeScale = 1) {
       if (disposed) return;
+      const playerScale = clampVolume(volumeScale);
       let player: HTMLAudioElement;
       try {
         player = createAudio(EFFECT_SOURCES[kind]);
       } catch {
         return;
       }
-      effectPlayers.add(player);
-      player.volume = effectVolume();
+      effectPlayers.set(player, playerScale);
+      player.volume = effectVolume(playerScale);
       player.onended = () => {
         effectPlayers.delete(player);
         stopAudio(player);
@@ -168,7 +174,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
         muted: nextSettings.muted,
       };
       if (currentMusic && !fadingMusic.has(currentMusic)) currentMusic.volume = musicVolume();
-      for (const player of effectPlayers) player.volume = effectVolume();
+      for (const [player, scale] of effectPlayers) player.volume = effectVolume(scale);
     },
 
     dispose() {
@@ -177,7 +183,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       for (const timer of timers) clearInterval(timer);
       timers.clear();
       if (currentMusic) stopAudio(currentMusic);
-      for (const player of effectPlayers) stopAudio(player);
+      for (const player of effectPlayers.keys()) stopAudio(player);
       for (const music of fadingMusic) stopAudio(music);
       effectPlayers.clear();
       fadingMusic.clear();

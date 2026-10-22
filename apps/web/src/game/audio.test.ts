@@ -109,6 +109,34 @@ describe("createAudioController", () => {
     expect(players.every((player) => player.paused)).toBe(true);
   });
 
+  it("plays interaction cues from local assets and preserves per-effect volume scales", () => {
+    const { controller, players } = setup();
+    controller.playEffect("ui-click");
+    controller.playEffect("turn-start");
+    controller.playEffect("turn-end");
+    controller.playEffect("summon");
+    controller.playEffect("timer-warning", 0.4);
+
+    expect(players.map((player) => player.src)).toEqual([
+      "/audio/sfx/ui-click.ogg",
+      "/audio/sfx/timer-warning.ogg",
+      "/audio/sfx/attack.ogg",
+      "/audio/sfx/spell.ogg",
+      "/audio/sfx/timer-warning.ogg",
+    ]);
+    expect(players.map((player) => player.volume)).toEqual([0.72, 0.72, 0.72, 0.72, 0.288]);
+
+    controller.setSettings({ musicVolume: 0.5, effectsVolume: 0.5, muted: false });
+    expect(players.map((player) => player.volume)).toEqual([0.5, 0.5, 0.5, 0.5, 0.2]);
+    controller.setSettings({ musicVolume: 0.5, effectsVolume: 0.5, muted: true });
+    expect(players.every((player) => player.volume === 0)).toBe(true);
+    controller.setSettings({ musicVolume: 0.5, effectsVolume: 0.5, muted: false });
+    expect(players[4]?.volume).toBe(0.2);
+    controller.playEffect("timer-warning", 4);
+    expect(players[5]?.volume).toBe(0.5);
+    controller.dispose();
+  });
+
   it("clamps volumes, applies mute, and retries blocked music after unlock", async () => {
     const players: FakeAudio[] = [];
     const controller = createAudioController((src) => {

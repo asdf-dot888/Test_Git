@@ -11,5 +11,7 @@ All audio files shipped with the game are bundled locally under `apps/web/public
 | `sfx/spell.ogg` | `magical_1_0.ogg` | “Magic Spell SFX” — JaggedStone | CC0 · [OpenGameArt source](https://opengameart.org/content/magic-spell-sfx) | Copied as provided; 1.61-second clip. |
 | `sfx/heal.ogg` | `Cure1.wav` in `curemagic.zip` | “Cure Magic” — Someoneman | CC0 · [OpenGameArt source](https://opengameart.org/content/cure-magic) | Vorbis OGG, normalized to −18 LUFS / −2 dBTP, quality 4; 1.8-second clip. |
 | `sfx/death.ogg` | `monster-1.wav` in `monster_sfx_pack.zip` | “Monster Sound Effects Pack” — Ogrebane | CC0 · [OpenGameArt source](https://opengameart.org/content/monster-sound-effects-pack) | Vorbis OGG, normalized to −18 LUFS / −2 dBTP, quality 4; 0.64-second clip. |
+| `sfx/ui-click.ogg` | `click_002.ogg` in `kenney_interfaceSounds.zip` | “Interface Sounds” — Kenney | CC0 · [OpenGameArt source](https://opengameart.org/content/interface-sounds) | Copied as provided; 4,275 bytes. |
+| `sfx/timer-warning.ogg` | `Ding.ogg` in `ui_ogg.zip` | “UI Sound Effects (Button Clicks, User Feedback, Notifications)” — Robin Lamb | CC0 · [OpenGameArt source](https://opengameart.org/content/ui-sound-effects-button-clicks-user-feedback-notifications) | Copied as provided; 19,098 bytes. |
 
 The CC0 license permits reuse without attribution. These provenance notes are retained for future asset replacement and auditing.

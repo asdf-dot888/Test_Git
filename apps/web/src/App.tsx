@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CARD_BY_ID, ENEMY_BY_ID } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { EncounterContinueScreen } from "./components/EncounterContinueScreen.js";
@@ -10,6 +10,7 @@ import { GameMenu } from "./components/GameMenu.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
 import { createAudioController, type AudioController, type AudioSettings } from "./game/audio.js";
+import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 
 function secureSeed(): number {
@@ -24,7 +25,7 @@ export function App() {
 }
 
 export function GameSessionView({ sync }: { sync: RunSyncController }) {
-  const { session, dispatch } = useGameSession();
+  const { session, dispatch: dispatchGameAction } = useGameSession();
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "game">("menu");
   const [abandonOpen, setAbandonOpen] = useState(false);
@@ -37,9 +38,17 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const restoringRemoteRun = useRef(false);
   const pendingReplacement = useRef(false);
   const playedAudioEventIds = useRef(new Set<number>());
+  const startedTurnIds = useRef(new Set<string>());
   const run = session.run;
   const battle = run?.battle;
   const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
+  const activeTurnId = screen === "game" && battle?.activeSide === "player" && battle.status === "active"
+    ? `${battle.battleId}:${battle.turnNumber}`
+    : null;
+  const dispatch = useCallback((action: GameAction) => {
+    if (action.type === "end-turn") audioController?.playEffect("turn-end");
+    dispatchGameAction(action);
+  }, [audioController, dispatchGameAction]);
 
   useEffect(() => {
     const controller = createAudioController();
@@ -73,15 +82,45 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   }, [audioController, session.combatEffects]);
 
   useEffect(() => {
+    if (!audioController || !activeTurnId || startedTurnIds.current.has(activeTurnId)) return;
+    startedTurnIds.current.add(activeTurnId);
+    audioController.playEffect("turn-start");
+  }, [activeTurnId, audioController]);
+
+  useEffect(() => {
     if (!audioController) return;
-    const unlockAudio = () => { void audioController.unlock(); };
-    document.addEventListener("pointerdown", unlockAudio, { capture: true, once: true });
-    document.addEventListener("keydown", unlockAudio, { capture: true, once: true });
+    const onPointerDown = (event: PointerEvent) => {
+      void audioController.unlock();
+      if (!(event.target instanceof Element)) return;
+      const control = event.target.closest<HTMLElement>("button, a[href], input, select, textarea, label[for], [role='button'], [role='option'], [data-pointer-interaction]");
+      if (!control || control.matches(":disabled") || control.getAttribute("aria-disabled") === "true") return;
+      audioController.playEffect("ui-click");
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
     return () => {
-      document.removeEventListener("pointerdown", unlockAudio, { capture: true });
-      document.removeEventListener("keydown", unlockAudio, { capture: true });
+      document.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, [audioController]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (screen !== "game" || !battle || battle.status !== "active") return;
+        event.preventDefault();
+        if (menuView === "closed") setMenuView("choices");
+        else if (menuView === "settings") setMenuView("choices");
+        else setMenuView("closed");
+        return;
+      }
+      if (screen !== "game") return;
+      if (["Tab", "Enter", " ", "Spacebar", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [battle, menuView, screen]);
 
   useEffect(() => {
     if (sync.loadVersion <= appliedLoadVersion.current) return;
@@ -125,7 +164,6 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
 
   const returnToBattle = () => {
     setMenuView("closed");
-    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".menu-button")?.focus());
   };
 
   const confirmReturnToMenu = async () => {
