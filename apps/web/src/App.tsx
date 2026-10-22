@@ -161,6 +161,8 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
     <>
       <GameBoard
           run={run}
+          combatEffects={session.combatEffects}
+          onCombatEffectComplete={(eventId) => dispatch({ type: "clear-combat-effect", eventId })}
           selectedCardInstanceId={session.selectedCardInstanceId}
           selectedAttackerId={session.selectedAttackerId}
           targetMode={session.targetMode}

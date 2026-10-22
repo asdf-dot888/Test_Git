@@ -11,6 +11,7 @@ import {
   skipReward,
   type RunState,
 } from "@board-game/game-core";
+import { collectCombatEffectEvents, type CombatEffectEvent } from "./combatEffects.js";
 
 export type GameAction =
   | { type: "start-run"; seed: number }
@@ -27,6 +28,7 @@ export type GameAction =
   | { type: "choose-reward"; cardId: string }
   | { type: "skip-reward" }
   | { type: "continue-run"; nextSeed?: number }
+  | { type: "clear-combat-effect"; eventId: number }
   | { type: "clear-error" };
 
 export interface GameSession {
@@ -37,6 +39,8 @@ export interface GameSession {
   targetMode: "none" | "spell" | "attack";
   pendingDiscard: boolean;
   resolving: boolean;
+  combatEffects: CombatEffectEvent[];
+  nextCombatEffectId: number;
 }
 
 export const initialGameSession: GameSession = {
@@ -47,6 +51,8 @@ export const initialGameSession: GameSession = {
   targetMode: "none",
   pendingDiscard: false,
   resolving: false,
+  combatEffects: [],
+  nextCombatEffectId: 1,
 };
 
 type InternalAction = GameAction | { type: "resolution-start" };
@@ -61,6 +67,19 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
     targetMode: "none",
     pendingDiscard: run.battle?.pendingDiscardBeforeDraw ?? false,
     resolving: false,
+    combatEffects: [],
+    nextCombatEffectId: previous.nextCombatEffectId,
+  };
+}
+
+function sessionForAction(run: RunState, previous: GameSession, action: GameAction): GameSession {
+  if (!previous.run) return sessionForRun(run, previous);
+  const events = collectCombatEffectEvents(previous.run, run, action, previous.nextCombatEffectId);
+  const next = sessionForRun(run, previous);
+  return {
+    ...next,
+    combatEffects: [...previous.combatEffects, ...events],
+    nextCombatEffectId: previous.nextCombatEffectId + events.length,
   };
 }
 
@@ -82,6 +101,9 @@ function ruleMessage(error: GameRuleError): string {
 }
 
 export function reduceGameAction(session: GameSession, action: InternalAction): GameSession {
+  if (action.type === "clear-combat-effect") {
+    return { ...session, combatEffects: session.combatEffects.filter((event) => event.id !== action.eventId) };
+  }
   if (action.type === "clear-error") return { ...session, error: null };
   if (action.type === "clear-run") return { ...initialGameSession };
   if (action.type === "resolution-start") return { ...session, resolving: true, error: null };
@@ -105,10 +127,10 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
 
   if (!session.run) return { ...session, error: "먼저 새 원정을 시작하세요." };
   try {
-    if (action.type === "play-minion") return sessionForRun(playMinion(session.run, action.instanceId), session);
-    if (action.type === "cast-spell") return sessionForRun(castSpell(session.run, action.instanceId, action.targetId), session);
-    if (action.type === "attack") return sessionForRun(attackWithMinion(session.run, action.attackerId, action.targetId), session);
-    if (action.type === "end-turn") return sessionForRun(endPlayerTurn(session.run), session);
+    if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId), session, action);
+    if (action.type === "cast-spell") return sessionForAction(castSpell(session.run, action.instanceId, action.targetId), session, action);
+    if (action.type === "attack") return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
+    if (action.type === "end-turn") return sessionForAction(endPlayerTurn(session.run), session, action);
     if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);
     if (action.type === "choose-reward") return sessionForRun(chooseReward(session.run, action.cardId), session);
     if (action.type === "skip-reward") return sessionForRun(skipReward(session.run), session);

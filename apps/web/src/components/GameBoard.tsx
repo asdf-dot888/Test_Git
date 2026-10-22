@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { ENEMY_BY_ID, type RunState } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
 import type { PlayerSide } from "@board-game/game-core";
+import type { CombatEffectEvent } from "../game/combatEffects.js";
 import { DiscardPicker } from "./DiscardPicker.js";
 import { HeroPanel } from "./HeroPanel.js";
 import { HandPanel } from "./HandPanel.js";
@@ -12,6 +13,8 @@ import { TurnControls } from "./TurnControls.js";
 
 export interface GameBoardProps {
   run: RunState;
+  combatEffects?: CombatEffectEvent[];
+  onCombatEffectComplete?(eventId: number): void;
   selectedCardInstanceId: string | null;
   selectedAttackerId: string | null;
   targetMode: "none" | "spell" | "attack";
@@ -39,7 +42,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
+export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
@@ -66,6 +69,17 @@ export function GameBoard({ run, selectedCardInstanceId, selectedAttackerId, tar
       </header>
 
       <section className="battle-board" id="battle" aria-label="카드 전투 보드">
+        {combatEffects.length > 0 && <div className="combat-effect-events" aria-hidden="true">
+          {combatEffects.map((event) => <span
+            key={event.id}
+            data-combat-effect-id={event.id}
+            data-effect-card={event.assetCardId ?? "impact"}
+            data-effect-kind={event.effectKind}
+            data-effect-source={JSON.stringify(event.source)}
+            data-effect-target={JSON.stringify(event.target)}
+            onAnimationEnd={() => onCombatEffectComplete?.(event.id)}
+          />)}
+        </div>}
         <div className="battle-opponent">
           <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} />
           <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} />
