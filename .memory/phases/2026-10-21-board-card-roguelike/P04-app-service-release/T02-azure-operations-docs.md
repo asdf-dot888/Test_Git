@@ -1,6 +1,6 @@
 # Task: T02 Azure 설정과 운영 문서
 
-## Status: pending
+## Status: done
 
 ## Goal
 사내 Azure 운영자가 기존 App Service와 Cosmos DB를 설정하고, 개발자가 Entra 로컬 로그인·로컬 실행·배포 후 smoke check를 재현할 수 있는 문서를 제공한다.
@@ -55,6 +55,6 @@ Task: T02-azure-operations-docs
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending

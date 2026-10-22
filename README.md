@@ -1,85 +1,47 @@
-# Test_Git
+# 보드형 카드 로그라이크
 
----
+회사 Microsoft Entra 계정으로 로그인해 플레이하는 React 기반 1인용 카드 전투 게임입니다. 진행 중인 원정은 Azure Cosmos DB에 저장되며, 같은 계정의 다른 기기에서 이어할 수 있습니다. Azure 구성은 [설정 및 배포 안내](docs/azure-setup.md)를 참고하세요.
 
-# 🚀 Project Memory Starter Kit
+## 개발 환경
 
-> **"AI에게 대화창으로 매번 길게 설명하지 마세요. 파일 기반 메모리로 세션을 영구 유지하세요."**
+- Node.js 24 LTS (`package.json`의 지원 범위: `>=24 <25`)
+- npm (Node.js에 포함)
+- 로컬 Entra 로그인과 Cosmos DB 저장을 사용하려면 회사 관리자가 제공한 테넌트·앱 등록 값과 Cosmos 접근 권한
 
-이 스타터킷은 프로젝트에 복사해 넣는 것만으로 **3가지 전문 AI 스킬(`/grill-me`, `/memory-plan`, `/memory-execute`)**과 **파일 기반 메모리 구조**를 즉시 활성화해 주는 경량 패키지입니다.
+## 로컬 실행
 
----
+저장소 루트에서 의존성을 설치하고 환경 파일을 준비합니다.
 
-## ⚡ 1분 설치법
-
-1. 이 `project-memory-starter` 폴더 안에 있는 아래 2개 폴더를 **내 프로젝트 루트**에 복사합니다:
-   - **`.agents/`**: 3대 AI 스킬 정의 폴더
-   - **`.memory/`**: 메모리 파일들이 저장될 폴더
-
-*(Cursor, Antigravity 등 스킬 지원 도구에서 즉시 슬래시 커맨드로 인식됩니다.)*
-
----
-
-## 🔄 3단계 워크플로우
-
-```text
-  [1단계: 요구사항 인터뷰]        [2단계: 계획 및 청사진 생성]          [3단계: 순차 실행 및 포인터 전진]
-    /grill-me <기능명>    ───→    /memory-plan <기능명>      ───→    /memory-execute (또는 "current 보고 진행해줘")
-  (decisions/ 확정)              (plans/ & Task 청사진 생성)        (구현 ➔ 테스트 ➔ 커밋 ➔ 포인터 이동)
+```bash
+npm install
+cp .env.example .env
 ```
 
-### 1단계: `/grill-me <기능명>`
-- AI가 한 번에 딱 1개씩 추천 선택지와 함께 질문을 던집니다.
-- 답변을 고르면 애매한 점이 모두 해결될 때까지 인터뷰를 진행하고, 확정된 결정을 `.memory/decisions/{기능명}.md`에 저장합니다.
+Windows PowerShell에서는 환경 파일 복사에 다음 명령을 사용할 수 있습니다.
 
-### 2단계: `/memory-plan <기능명>`
-- **(철칙: 이 단계에서는 코드를 전혀 작성하지 않습니다.)**
-- 앞서 확정된 결정을 바탕으로 전체 계획(`plans/`), 마일스톤(`phases/`), 그리고 각 Task의 상세 스펙/테스트 명령어가 적힌 **Task 청사진(`T01...md`)**을 일괄 생성합니다.
-- `.memory/current.md` 포인터를 첫 번째 작업(T01)으로 자동 초기화합니다.
-
-### 3단계: `/memory-execute` 또는 `"current 보고 이어서 해줘"`
-- `.memory/current.md`가 가리키는 Task 청사진만 읽고 정답 코드를 구현합니다.
-- 테스트 커맨드를 실행하여 통과하면 자동으로 커밋하고, 상위 `phase.md` 진행률을 올린 뒤, **`current.md` 포인터를 다음 Task(T02)로 자동 전진**시킵니다.
-- **퇴근 후 다음 날 새 채팅창을 열고 `"current 보고 이어서 해줘"` 한 줄만 치면 1초 만에 다음 작업으로 직행합니다.**
-
----
-
-## 📂 폴더 구조 및 역할
-
-```text
-.memory/
-├── current.md                          ← [포인터] 지금 어디를 작업 중인지 가리키는 20줄 파일
-├── decisions/
-│   └── YYYY-MM-DD-{기능명}.md          ← [결정] 인터뷰로 확정된 기술 결정 박제
-├── plans/
-│   └── YYYY-MM-DD-{기능명}.md          ← [계획] 전체 목표 및 Phase 마일스톤 목록
-└── phases/
-    └── YYYY-MM-DD-{기능명}/            ← [청사진] 날짜별 계획 하위 폴더
-        └── P01-{마일스톤}/
-            ├── phase.md                ← 진행률 대시보드
-            ├── T01-{작업명}.md         ← 파일, 심볼, 모델 스키마, 테스트 커맨드
-            └── T02-{작업명}.md
-
-.agents/skills/
-├── grill-me/SKILL.md                   ← 인터뷰 스킬
-├── memory-plan/SKILL.md                ← 계층 계획 수립 스킬
-└── memory-execute/SKILL.md             ← 순차 실행 및 포인터 전진 스킬
+```powershell
+Copy-Item .env.example .env
 ```
 
----
+`.env`의 값을 회사 관리자에게 받은 정보로 채웁니다. 브라우저에서 사용하는 `VITE_` 값은 빌드 시 프런트엔드에 포함되므로 비밀 값이 아닌 테넌트·앱 ID·scope만 입력하세요. client secret이나 access token을 저장소에 넣지 마세요. 필요한 변수와 Cosmos 권한은 [Azure 설정 문서](docs/azure-setup.md#1-entra-앱-등록-값-준비)에 설명되어 있습니다.
 
-## 📁 예시 살펴보기
+개발 서버를 실행합니다.
 
-`examples/` 폴더에 세미나에서 설명한 **'쇼핑몰 상품 API 구축'** 실물 파일들이 들어있습니다. 어떻게 계획되고 작성되는지 참고해 보세요!
+```bash
+npm run dev
+```
 
+브라우저에서 Vite가 출력한 주소(기본 `http://localhost:5173`)를 엽니다. API는 로컬 `3001` 포트에서 실행되고, 프런트엔드의 `/api` 요청은 개발 서버가 API로 전달합니다. 로컬 API가 Cosmos DB에 저장할 때는 Azure Identity의 기본 자격 증명 체인을 사용하므로, 회사에서 허용한 로컬 Azure 로그인과 Cosmos 데이터 권한이 필요합니다.
 
-## 토큰 사용량 조회
-프로젝트 루트에 압축 해제 후:
-# CLI 실행
-& .\.codeburn\codeburn.ps1 sessions -p today --provider copilot --no-pager
-# VS Code MCP 등록
-& .\.codeburn\install.ps1
+## 검증 및 프로덕션 빌드
 
+```bash
+npm test
+npm run build
+```
 
-## 시각화 스킬
-/visualize 내용입력
+빌드는 공유 게임 엔진, API, React 앱 순서로 생성합니다. 프로덕션 실행은 `npm start`이며 API가 빌드된 웹 앱도 함께 제공합니다. Azure 배포 절차와 smoke check는 [Azure 설정 및 운영 안내](docs/azure-setup.md)를 따르세요.
+
+## 문제 해결
+
+로그인, 저장, 세션 잠금 오류는 [문제 해결 안내](docs/troubleshooting.md)를 확인하세요.
