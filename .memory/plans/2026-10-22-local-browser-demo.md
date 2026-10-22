@@ -6,7 +6,7 @@ Azure Entra ID나 Cosmos DB 자격 증명 없이 개발자가 `npm run dev`를 �
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | 개발 모드를 판별하고 브라우저 전용 데모 흐름과 실행 안내를 추가한다. | [P01](../phases/2026-10-22-local-browser-demo/P01-local-demo-mode/phase.md) |
+| P01 | `done` | 개발 모드를 판별하고 브라우저 전용 데모 흐름과 실행 안내를 추가한다. | [P01](../phases/2026-10-22-local-browser-demo/P01-local-demo-mode/phase.md) |
 
 ## Architecture
 
