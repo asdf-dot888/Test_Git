@@ -1,6 +1,6 @@
 # Task: T04 전투 승리 확인 흐름
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -77,7 +77,7 @@ Task: T04-victory-confirmation-flow
 
 ## Progress
 
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending
 

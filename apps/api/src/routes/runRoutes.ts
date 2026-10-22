@@ -56,6 +56,7 @@ const runSchema = z.object({
   encounterInPhase: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
   completedBattles: z.number().int().min(0).max(12),
   status: z.enum(["active", "victory", "defeat"]),
+  pendingVictoryAcknowledgement: z.boolean().optional().transform((value) => value ?? false),
   deck: z.array(cardInstanceSchema).max(100),
   starterDeck: z.array(cardInstanceSchema).max(100),
   battle: battleSchema.nullable(),

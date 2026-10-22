@@ -117,6 +117,7 @@ export interface RunState {
   starterDeck: CardInstance[];
   battle: BattleState | null;
   pendingReward: RewardState | null;
+  pendingVictoryAcknowledgement?: boolean;
   encounters: EncounterState[];
   turnTimer?: TurnTimerState;
 }

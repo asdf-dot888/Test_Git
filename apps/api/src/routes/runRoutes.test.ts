@@ -122,6 +122,7 @@ describe("authenticated Run API", () => {
   it("saves only validated state using If-Match and ignores body user IDs", async () => {
     await repository.create(userId, createRun(17), ownerId, instant);
     const run = createRun(88);
+    run.pendingVictoryAcknowledgement = true;
     const response = await fetch(`${baseUrl}/api/run`, {
       method: "PUT",
       headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
@@ -133,6 +134,7 @@ describe("authenticated Run API", () => {
     expect(repository.save.mock.calls[0]?.[3]).not.toHaveProperty("userId");
     expect(repository.save.mock.calls[0]?.[3].battle?.enemyStarterDeck).toHaveLength(30);
     expect(repository.save.mock.calls[0]?.[3].battle?.enemyHand).toHaveLength(3);
+    expect(repository.save.mock.calls[0]?.[3].pendingVictoryAcknowledgement).toBe(true);
   });
 
   it("accepts a legacy battle without enemy zones and saves its hydrated state", async () => {
@@ -156,6 +158,7 @@ describe("authenticated Run API", () => {
     expect(saved?.battle?.enemyStarterDeck).toHaveLength(30);
     expect(saved?.battle?.enemyHand).toHaveLength(3);
     expect(saved?.battle?.enemyDrawPile).toHaveLength(27);
+    expect(saved?.pendingVictoryAcknowledgement).toBe(false);
   });
 
   it("accepts active and paused turn snapshots while rejecting inconsistent timer fields", async () => {

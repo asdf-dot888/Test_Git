@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CARD_BY_ID, ENEMY_BY_ID } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { EncounterContinueScreen } from "./components/EncounterContinueScreen.js";
+import { VictoryScreen } from "./components/VictoryScreen.js";
 import { GameBoard } from "./components/GameBoard.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
@@ -259,9 +260,16 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
-      <MainMenu canContinue={run?.status === "active"} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen("game")} />
+      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen("game")} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
       <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
+    </>;
+  }
+
+  if (run.pendingVictoryAcknowledgement) {
+    return <>
+      <VictoryScreen disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={() => dispatch({ type: "acknowledge-victory" })} />
+      {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
     </>;
   }
 

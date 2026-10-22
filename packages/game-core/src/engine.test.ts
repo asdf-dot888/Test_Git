@@ -9,6 +9,7 @@ import {
 } from "./catalog.js";
 import {
   advanceRun,
+  acknowledgeVictory,
   attackWithMinion,
   castSpell,
   chooseReward,
@@ -65,7 +66,7 @@ function winCurrentBattle(run: RunState): RunState {
   battle.enemyBoard = [];
   battle.enemyHero.health = 1;
   battle.playerBoard.push(minion({ instanceId: `winner-${next.completedBattles}`, attack: 10, summonedTurn: battle.turnNumber - 1 }));
-  return attackWithMinion(next, `winner-${next.completedBattles}`, battle.enemyHero.id);
+  return acknowledgeVictory(attackWithMinion(next, `winner-${next.completedBattles}`, battle.enemyHero.id));
 }
 
 describe("card and enemy catalog", () => {
@@ -561,6 +562,41 @@ describe("enemy turns, rewards, and run progression", () => {
     const defeated = resolveEnemyTurn(lethal);
     expect(defeated.status).toBe("defeat");
     expect(defeated.battle).toBeNull();
+  });
+
+  it("requires a saved victory acknowledgement before normal or final-boss rewards", () => {
+    const run = copyRun(createRun(70));
+    const battle = activeBattle(run);
+    battle.enemyBoard = [];
+    battle.enemyHero.health = 1;
+    battle.playerBoard.push(minion({ instanceId: "victory-tap", attack: 10, summonedTurn: battle.turnNumber - 1 }));
+    const won = attackWithMinion(run, "victory-tap", battle.enemyHero.id);
+    expect(won.pendingVictoryAcknowledgement).toBe(true);
+    expect(won.pendingReward).not.toBeNull();
+    expect(() => chooseReward(won, won.pendingReward!.choices[0]!)).toThrowError(expect.objectContaining({ code: "ENCOUNTER_NOT_READY" }));
+    expect(() => skipReward(won)).toThrowError(expect.objectContaining({ code: "ENCOUNTER_NOT_READY" }));
+    const confirmed = acknowledgeVictory(won);
+    expect(confirmed.pendingVictoryAcknowledgement).toBe(false);
+    expect(confirmed.pendingReward).toEqual(won.pendingReward);
+    expect(() => acknowledgeVictory(confirmed)).toThrowError(expect.objectContaining({ code: "ENCOUNTER_NOT_READY" }));
+
+    const finalRun = copyRun(createRun(700));
+    finalRun.completedBattles = 11;
+    finalRun.phase = 3;
+    finalRun.encounterInPhase = 3;
+    finalRun.encounters.forEach((encounter, index) => { encounter.status = index === 11 ? "active" : "complete"; });
+    const finalBattle = activeBattle(finalRun);
+    finalBattle.enemyId = "boss-void-titan";
+    finalBattle.enemyHero.health = 1;
+    finalBattle.enemyBoard = [];
+    finalBattle.playerBoard.push(minion({ instanceId: "final-victory-tap", attack: 10, summonedTurn: finalBattle.turnNumber - 1 }));
+    const finalWon = attackWithMinion(finalRun, "final-victory-tap", finalBattle.enemyHero.id);
+    expect(finalWon.status).toBe("victory");
+    expect(finalWon.battle).toBeNull();
+    expect(finalWon.pendingVictoryAcknowledgement).toBe(true);
+    const finalConfirmed = acknowledgeVictory(finalWon);
+    expect(finalConfirmed.pendingVictoryAcknowledgement).toBe(false);
+    expect(skipReward(finalConfirmed).status).toBe("victory");
   });
   it("offers tier-matched rewards, adds only a chosen copy, and permits skipping", () => {
     let run = winCurrentBattle(createRun(71));

@@ -1,5 +1,6 @@
 import {
   GameRuleError,
+  acknowledgeVictory,
   advanceRun,
   attackWithMinion,
   castSpell,
@@ -29,6 +30,7 @@ export type GameAction =
   | { type: "end-turn" }
   | { type: "discard-before-draw"; instanceId: string }
   | { type: "choose-reward"; cardId: string }
+  | { type: "acknowledge-victory" }
   | { type: "skip-reward" }
   | { type: "continue-run"; nextSeed?: number }
   | { type: "clear-combat-effect"; eventId: number }
@@ -145,6 +147,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     if (action.type === "end-turn") return sessionForAction(endPlayerTurn(session.run), session, action);
     if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);
     if (action.type === "choose-reward") return sessionForRun(chooseReward(session.run, action.cardId), session);
+    if (action.type === "acknowledge-victory") return sessionForRun(acknowledgeVictory(session.run), session);
     if (action.type === "skip-reward") return sessionForRun(skipReward(session.run), session);
     if (action.type === "continue-run") {
       if (action.nextSeed === undefined) return { ...session, error: "다음 전투의 시드를 준비하지 못했습니다." };

@@ -184,6 +184,7 @@ function finishDefeat(run: RunState): RunState {
   next.status = "defeat";
   next.battle = null;
   next.pendingReward = null;
+  next.pendingVictoryAcknowledgement = false;
   return next;
 }
 
@@ -219,6 +220,7 @@ function finishVictory(run: RunState): RunState {
   const offers = rewardChoices(next, rewardTier, battle.rngState);
   battle.rngState = offers.state;
   next.pendingReward = { tier: rewardTier, choices: offers.choices, encounterIndex };
+  next.pendingVictoryAcknowledgement = true;
 
   const finalBoss = encounter.kind === "boss" && encounter.phase === 3;
   if (finalBoss) {
@@ -769,6 +771,7 @@ export function endPlayerTurn(run: RunState): RunState {
 }
 
 export function chooseReward(run: RunState, cardId: string): RunState {
+  if (run.pendingVictoryAcknowledgement) fail("ENCOUNTER_NOT_READY", "Acknowledge the battle victory before choosing a reward.");
   if (!run.pendingReward) fail("REWARD_NOT_PENDING", "There is no card reward to choose.");
   if (!run.pendingReward.choices.includes(cardId)) fail("INVALID_TARGET", "Choose one of the offered cards.");
   const next = cloneRun(run);
@@ -781,9 +784,19 @@ export function chooseReward(run: RunState, cardId: string): RunState {
 }
 
 export function skipReward(run: RunState): RunState {
+  if (run.pendingVictoryAcknowledgement) fail("ENCOUNTER_NOT_READY", "Acknowledge the battle victory before skipping the reward.");
   if (!run.pendingReward) fail("REWARD_NOT_PENDING", "There is no card reward to skip.");
   const next = cloneRun(run);
   next.pendingReward = null;
+  return next;
+}
+
+export function acknowledgeVictory(run: RunState): RunState {
+  if (!run.pendingReward || run.pendingVictoryAcknowledgement !== true) {
+    fail("ENCOUNTER_NOT_READY", "There is no battle victory waiting for acknowledgement.");
+  }
+  const next = cloneRun(run);
+  next.pendingVictoryAcknowledgement = false;
   return next;
 }
 
