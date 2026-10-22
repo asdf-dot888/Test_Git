@@ -7,10 +7,10 @@
 [P01 로컬 데모 모드](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/phase.md)
 
 ## Active Task
-[T02 브라우저 메모리 데모 게임 흐름](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/T02-demo-game-flow.md)
+[T03 로컬 데모 실행 문서](./phases/2026-10-22-local-browser-demo/P01-local-demo-mode/T03-demo-runbook.md)
 
 ## Status
-- T01 완료, commit `e3fbf0e`
+- T01 완료, commit `e3fbf0e`; T02 완료, commit `ebbcc3c`
 
 ## Next Step (IMPORTANT)
-T02 청사진을 읽고 `main.tsx` 데모 진입, 메모리 전용 sync adapter, 전 화면 안내 배너를 구현한 뒤 지정 검증을 실행하세요.
+T03 청사진에 따라 README의 로컬 데모와 Entra/Cosmos 개발 실행 안내를 갱신하고 검증하세요.

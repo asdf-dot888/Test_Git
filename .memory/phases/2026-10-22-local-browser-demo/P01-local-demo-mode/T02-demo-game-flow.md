@@ -85,4 +85,4 @@ Task: T02-demo-game-flow
 ## Progress
 - [x] 구현 완료
 - [x] 검증 통과
-- commit: pending
+- commit: `ebbcc3c`
