@@ -139,6 +139,10 @@
 .skip-reward { min-height: 38px; font-size: 11px; }
 .empty-reward { grid-column: 1 / -1; color: var(--muted); }
 .outcome-card { max-width: 620px; }
+.encounter-continue-card > p { color: #d8cbb6; line-height: 1.6; }
+.encounter-continue-card > p strong { color: #fff0c8; }
+.encounter-continue-actions { display: flex; justify-content: center; gap: 12px; margin-top: 22px; }
+.encounter-continue-actions button { min-width: 170px; min-height: 48px; }
 .outcome-stats { margin: 22px 0; padding: 13px; display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; border: 1px solid var(--line); border-radius: 9px; background: rgb(0 0 0 / 13%); }
 .outcome-stats span { display: grid; gap: 4px; color: var(--muted); font-size: 10px; }
 .outcome-stats b { color: #efe1c7; font-size: 13px; }
@@ -195,6 +199,8 @@
   .discard-picker, .run-screen, .menu-screen { padding: 12px; }
   .discard-dialog, .run-card, .menu-card { padding: 24px 16px; border-radius: 13px; }
   .reward-options { grid-template-columns: 1fr; max-height: 52vh; overflow: auto; }
+  .encounter-continue-actions { flex-direction: column; }
+  .encounter-continue-actions button { width: 100%; }
   .reward-card { min-height: 110px; grid-template-columns: 55px 1fr; justify-items: start; align-content: center; text-align: left; }
   .reward-card img { grid-row: span 3; width: 48px; height: 54px; }
   .reward-card .card-cost { left: 6px; top: 5px; }

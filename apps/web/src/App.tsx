@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CARD_BY_ID } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
+import { EncounterContinueScreen } from "./components/EncounterContinueScreen.js";
 import { GameBoard } from "./components/GameBoard.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
@@ -146,13 +147,18 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   }
 
   if (battle?.status === "playerWon") {
-    return <main className="run-screen"><section className="run-card outcome-card" role="status">
-      <span className="eyebrow">BATTLE CLEARED</span><h1>전투에서 승리했습니다</h1>
-      <p>영웅의 체력과 마나가 다음 전투를 위해 회복됩니다.</p>
-      <div className="outcome-stats"><span>진행 <b>PHASE {run.phase} · {run.completedBattles} / 12</b></span><span>현재 덱 <b>{run.deck.length}장</b></span></div>
-      <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => dispatch({ type: "continue-run" })}>다음 전투</button>
+    const nextEncounter = run.encounters.find((encounter) => encounter.status === "pending") ?? null;
+    return <>
+      <EncounterContinueScreen
+        phase={run.phase}
+        completedBattles={run.completedBattles}
+        nextEncounter={nextEncounter}
+        disabled={sync.status !== "ready"}
+        onContinue={() => dispatch({ type: "continue-run" })}
+        onReturnToMenu={() => setScreen("menu")}
+      />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
-    </section></main>;
+    </>;
   }
 
   if (!battle) return <main className="board-unavailable">전투 상태를 불러오지 못했습니다.</main>;
