@@ -14,6 +14,7 @@ import { TurnControls } from "./TurnControls.js";
 
 export interface GameBoardProps {
   run: RunState;
+  turnTimer: { text: string; remainingSeconds: number; visible: boolean };
   combatEffects?: CombatEffectEvent[];
   onCombatEffectComplete?(eventId: number): void;
   selectedCardInstanceId: string | null;
@@ -43,7 +44,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
@@ -67,7 +68,7 @@ export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, sel
     <main className="game-shell">
       <header className="game-topbar">
         <a className="brand-mark" href="#battle" aria-label="잿빛 원정 홈"><span aria-hidden="true">✦</span> 잿빛 원정</a>
-        <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span></div>
+        <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span><span className={`turn-timer${turnTimer.remainingSeconds <= 5 ? " is-critical" : ""}${turnTimer.visible ? "" : " is-hidden"}`} aria-label={`남은 시간 ${turnTimer.remainingSeconds}초`} aria-live="off" aria-hidden={!turnTimer.visible}>{turnTimer.text}</span></div>
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>
 

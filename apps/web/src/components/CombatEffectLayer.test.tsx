@@ -21,10 +21,28 @@ describe("CombatEffectLayer", () => {
     expect(document.body.querySelectorAll(".combat-effect-sprite")).toHaveLength(2);
     const frame = document.body.querySelector(".combat-effect-card-frame");
     const portrait = document.body.querySelector(".combat-effect-minion-portrait");
+    const impact = document.body.querySelector<HTMLElement>(".combat-effect-impact");
     expect(frame?.querySelector("img")?.getAttribute("src")).toBe("/art/cards/ash-wolf.png");
     expect(portrait?.getAttribute("src")).toBe("/art/cards/ash-wolf.png");
+    expect(impact?.style.animationDelay).toBe("930ms");
     await act(async () => { await vi.advanceTimersByTimeAsync(950); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(450); });
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the reduced-motion fallback short", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const onComplete = vi.fn();
+    render(<CombatEffectLayer events={[{ id: 9, assetCardId: null, effectKind: "impact", soundCues: [], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={onComplete} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(219); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledOnce();
   });
 
   it("uses the spell illustration for hand events and the generic impact for hero-only hits", async () => {

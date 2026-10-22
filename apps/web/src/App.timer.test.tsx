@@ -33,6 +33,7 @@ describe("turn timer application wiring", () => {
       constructor(src: string) { super(src, players); }
     });
     const run = createRun(71);
+    run.battle!.hand = [{ instanceId: "timer-minion", cardId: "ash-wolf" }];
     const savedRuns: RunState[] = [];
     const saveRun = vi.fn(async (savedRun: RunState) => { savedRuns.push(savedRun); });
     const sync: RunSyncController = {
@@ -50,15 +51,31 @@ describe("turn timer application wiring", () => {
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" })); await Promise.resolve(); });
     expect(savedRuns.at(-1)?.turnTimer?.deadlineAt).toBe(120_000);
     expect(savedRuns.at(-1)?.turnTimer?.pausedRemainingMs).toBeNull();
+    expect(screen.getByText("00:20")).toBeTruthy();
     const saveCountAfterResume = saveRun.mock.calls.length;
     const warningsBeforeCountdown = players.filter((player) => player.src === "/audio/sfx/timer-warning.ogg").length;
 
-    for (let second = 0; second < 19; second += 1) {
+    for (let second = 0; second < 15; second += 1) {
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    }
+    expect(screen.getByText("00:05").className).toContain("is-critical");
+    for (let second = 0; second < 4; second += 1) {
       await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     }
     expect(saveRun).toHaveBeenCalledTimes(saveCountAfterResume);
     const warningPlayers = players.filter((player) => player.src === "/audio/sfx/timer-warning.ogg").slice(warningsBeforeCountdown);
     expect(warningPlayers).toHaveLength(5);
     expect(warningPlayers.every((player) => player.volume === DEFAULT_AUDIO_SETTINGS.effectsVolume * 0.4)).toBe(true);
+
+    const minionCard = screen.getByRole("button", { name: /잿빛 늑대/ });
+    fireEvent.pointerDown(minionCard);
+    fireEvent.click(minionCard);
+    const timer = screen.getByText("00:01");
+    expect(timer.className).toContain("is-hidden");
+    expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 1_000 });
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_400); });
+    expect(screen.getByText("00:01").className).not.toContain("is-hidden");
+    expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: Date.now() + 1_000, pausedRemainingMs: null });
   });
 });

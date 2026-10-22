@@ -78,7 +78,7 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
       if (completeRef.current) return;
       completeRef.current = true;
       onCompleteRef.current(event.id);
-    }, (reducedMotion ? 220 : 950) + Math.min(index, 8) * 120);
+    }, (reducedMotion ? 220 : 1_400) + Math.min(index, 8) * 120);
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timeout);
@@ -106,7 +106,8 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
   return <>
     <span
       className={`combat-effect-impact effect-${event.effectKind}`}
-      style={{ left: geometry.target.x, top: geometry.target.y, animationDelay: `${delay + 360}ms` }}
+      style={{ left: geometry.target.x, top: geometry.target.y, animationDelay: `${delay + 930}ms` }}
+      onAnimationEnd={finish}
       aria-hidden="true"
     />
     {cardArt ? <>
@@ -115,7 +116,6 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
         data-effect-card={event.assetCardId}
         data-effect-kind={event.effectKind}
         style={style}
-        onAnimationEnd={finish}
         aria-hidden="true"
       ><img src={cardArt} alt="" /></span>
       {isMinionAttack && <img
@@ -125,7 +125,6 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
         src={cardArt}
         alt=""
         style={{ ...style, left: geometry.source.x + 34, top: geometry.source.y + 42 }}
-        onAnimationEnd={finish}
       />}
     </> : <img
       className="combat-effect-sprite combat-effect-impact-art"
@@ -134,7 +133,6 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
       src="/art/effects/impact.png"
       alt=""
       style={style}
-      onAnimationEnd={finish}
     />}
   </>;
 }
