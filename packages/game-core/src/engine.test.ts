@@ -294,18 +294,34 @@ describe("player actions and battle rules", () => {
     expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 6, max: 10 });
   });
 
-  it("enforces minion target priority, once-per-turn attacks, and no retaliation", () => {
+  it("enforces minion target priority and applies damage from both minions", () => {
     const run = copyRun(createRun(2));
     const battle = activeBattle(run);
-    battle.playerBoard = [minion({ instanceId: "attacker", attack: 4, summonedTurn: 0 })];
-    battle.enemyBoard = [minion({ instanceId: "defender", owner: "enemy", health: 3, maxHealth: 3, attack: 9 })];
+    battle.playerBoard = [minion({ instanceId: "attacker", attack: 3, health: 5, maxHealth: 5, summonedTurn: 0 })];
+    battle.enemyBoard = [minion({ instanceId: "defender", owner: "enemy", health: 3, maxHealth: 3, attack: 1 })];
     expect(() => attackWithMinion(run, "attacker", battle.enemyHero.id)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
     const attacked = attackWithMinion(run, "attacker", "defender");
     expect(attacked.battle?.enemyBoard).toHaveLength(0);
-    expect(attacked.battle?.playerBoard[0]?.hasAttacked).toBe(true);
-    expect(attacked.battle?.playerBoard[0]?.health).toBe(4);
+    expect(attacked.battle?.playerBoard[0]).toMatchObject({ hasAttacked: true, health: 4 });
     expect(attacked.battle?.enemyDiscardPile).toContainEqual(instance("defender", "ash-wolf"));
     expect(() => attackWithMinion(attacked, "attacker", attacked.battle!.enemyHero.id)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+  });
+
+  it("removes both minions after simultaneous lethal combat and resolves both death summons once", () => {
+    const run = asEnemyTurn(createRun(224));
+    const battle = activeBattle(run);
+    battle.enemyMana.current = 0;
+    battle.enemyHand = [];
+    battle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
+    battle.enemyBoard = [minion({ instanceId: "enemy-thorn", cardId: "thorn-brute", owner: "enemy", attack: 5, health: 5, maxHealth: 5, summonedTurn: 0 })];
+    battle.playerBoard = [minion({ instanceId: "player-thorn", cardId: "thorn-brute", attack: 5, health: 5, maxHealth: 5, summonedTurn: 0 })];
+
+    const result = resolveEnemyTurn(run);
+    expect(result.battle?.enemyBoard.map((entry) => entry.cardId)).toEqual(["bone-rat"]);
+    expect(result.battle?.playerBoard.map((entry) => entry.cardId)).toEqual(["bone-rat"]);
+    expect(result.battle?.enemyDiscardPile.filter((entry) => entry.instanceId === "enemy-thorn")).toHaveLength(1);
+    expect(result.battle?.discardPile.filter((entry) => entry.instanceId === "player-thorn")).toHaveLength(1);
+    expect(result.battle?.enemyTurnEvents?.filter((event) => event.type === "attack")).toHaveLength(1);
   });
 
   it("allows hero attacks only after the enemy board is clear", () => {
@@ -440,27 +456,28 @@ describe("enemy turns, rewards, and run progression", () => {
     expect(result.battle?.enemyDiscardPile).toContainEqual(instance("enemy-lance", "soul-lance"));
   });
 
-  it("makes ready enemy minions attack a player minion first, then attacks the hero when the board is empty", () => {
+  it("makes ready enemy minions trade reciprocal damage before attacking the hero on an empty board", () => {
     const run = asEnemyTurn(createRun(50));
     const battle = activeBattle(run);
     battle.enemyMana.current = 0;
     battle.enemyHand = [];
     battle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
-    battle.enemyBoard = [minion({ instanceId: "enemy-attacker", owner: "enemy", attack: 2, summonedTurn: 0 })];
-    battle.playerBoard = [minion({ instanceId: "victim", health: 2, maxHealth: 2, attack: 99 })];
-    const killedMinion = resolveEnemyTurn(run);
-    expect(killedMinion.battle?.playerBoard).toHaveLength(0);
-    expect(killedMinion.battle?.playerHero.health).toBe(30);
-    expect(killedMinion.battle?.enemyBoard[0]?.hasAttacked).toBe(true);
+    battle.enemyBoard = [minion({ instanceId: "enemy-attacker", owner: "enemy", attack: 1, health: 5, maxHealth: 5, summonedTurn: 0 })];
+    battle.playerBoard = [minion({ instanceId: "victim", health: 5, maxHealth: 5, attack: 3 })];
+    const exchangedDamage = resolveEnemyTurn(run);
+    expect(exchangedDamage.battle?.playerBoard[0]?.health).toBe(4);
+    expect(exchangedDamage.battle?.enemyBoard[0]).toMatchObject({ health: 2, hasAttacked: true });
+    expect(exchangedDamage.battle?.playerHero.health).toBe(30);
 
-    const openBoard = copyRun(killedMinion);
+    const openBoard = copyRun(exchangedDamage);
     activeBattle(openBoard).activeSide = "enemy";
     activeBattle(openBoard).enemyBoard[0]!.hasAttacked = false;
+    activeBattle(openBoard).playerBoard = [];
     activeBattle(openBoard).enemyMana.current = 0;
     activeBattle(openBoard).enemyHand = [];
     activeBattle(openBoard).enemyDrawPile = [instance("enemy-expensive-2", "eclipse")];
     const hitHero = resolveEnemyTurn(openBoard);
-    expect(hitHero.battle?.playerHero.health).toBe(28);
+    expect(hitHero.battle?.playerHero.health).toBe(29);
   });
 
   it("uses enemy-owned healing and buffs on its own hero and minions", () => {

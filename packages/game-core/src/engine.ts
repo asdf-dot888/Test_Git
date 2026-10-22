@@ -346,6 +346,13 @@ function removeDeadMinions(run: RunState, side: PlayerSide): RunState {
   return run;
 }
 
+function applyMinionCombatDamage(attacker: MinionState, defender: MinionState): void {
+  const attackerDamage = attacker.attack;
+  const defenderDamage = defender.attack;
+  defender.health -= attackerDamage;
+  attacker.health -= defenderDamage;
+}
+
 function validateTargetId(targetId: string | undefined): asserts targetId is string {
   if (!targetId) fail("INVALID_TARGET", "Select a valid target for this effect.");
 }
@@ -519,10 +526,14 @@ function playEnemyCard(run: RunState, handInstanceId: string): RunState {
 }
 
 function resolveEnemyMinionAttacks(run: RunState): RunState {
-  const battle = run.battle;
-  if (!battle) return run;
-  for (const attacker of battle.enemyBoard) {
-    if (!run.battle || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) continue;
+  const initialBattle = run.battle;
+  if (!initialBattle) return run;
+  const attackerIds = initialBattle.enemyBoard.map((minion) => minion.instanceId);
+  for (const attackerId of attackerIds) {
+    const battle = run.battle;
+    if (!battle) break;
+    const attacker = battle.enemyBoard.find((minion) => minion.instanceId === attackerId);
+    if (!attacker || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) continue;
     const target = [...battle.playerBoard]
       .map((minion, index) => ({ minion, index }))
       .sort((left, right) => {
@@ -535,9 +546,10 @@ function resolveEnemyMinionAttacks(run: RunState): RunState {
       })[0]?.minion;
     if (target) {
       battle.enemyTurnEvents?.push({ type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: target.instanceId });
-      target.health -= attacker.attack;
+      applyMinionCombatDamage(attacker, target);
       attacker.hasAttacked = true;
       run = removeDeadMinions(run, "player");
+      run = removeDeadMinions(run, "enemy");
     } else {
       battle.enemyTurnEvents?.push({ type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id });
       attacker.hasAttacked = true;
@@ -691,9 +703,10 @@ export function attackWithMinion(run: RunState, attackerId: string, targetId: st
   if (battle.enemyBoard.length > 0) {
     const target = battle.enemyBoard.find((minion) => minion.instanceId === targetId);
     if (!target) fail("INVALID_TARGET", "Attack an enemy minion while any are on the board.");
-    target.health -= attacker.attack;
+    applyMinionCombatDamage(attacker, target);
     attacker.hasAttacked = true;
-    return removeDeadMinions(next, "enemy");
+    const afterEnemyCleanup = removeDeadMinions(next, "enemy");
+    return removeDeadMinions(afterEnemyCleanup, "player");
   }
   if (targetId !== battle.enemyHero.id) fail("INVALID_TARGET", "The enemy hero is the only available target.");
   attacker.hasAttacked = true;
