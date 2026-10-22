@@ -54,4 +54,52 @@ describe("collectCombatEffectEvents", () => {
     const impact = collectCombatEffectEvents(before, after, { type: "end-turn" }, 9);
     expect(impact[0]).toMatchObject({ assetCardId: null, effectKind: "impact", source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } });
   });
+
+  it("creates separate boss charge impacts for damaged targets and preserves minion face attacks", () => {
+    const run = createRun(44);
+    const before = withBattle(run, (state) => {
+      const battle = state.battle!;
+      battle.enemyId = "boss-grave-king";
+      battle.pendingEnemyCharge = { turnsRemaining: 1, damage: 12, target: "board-and-hero" };
+      battle.playerBoard = [{ instanceId: "fallen", cardId: "ash-wolf", owner: "player", attack: 2, health: 10, maxHealth: 10, summonedTurn: 0, hasAttacked: false }];
+      battle.enemyBoard = [{ instanceId: "striker", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    });
+    const after = withBattle(before, (state) => {
+      state.battle!.pendingEnemyCharge = null;
+      state.battle!.playerHero.health = 13;
+      state.battle!.playerBoard = [];
+      state.battle!.enemyBoard[0]!.hasAttacked = true;
+    });
+    const events = collectCombatEffectEvents(before, after, { type: "end-turn" }, 30);
+
+    expect(events).toHaveLength(3);
+    expect(events.filter((event) => event.assetCardId === null && event.effectKind === "damage").map((event) => event.target)).toEqual([
+      { kind: "minion", side: "player", slot: 0 },
+      { kind: "hero", side: "player" },
+    ]);
+    expect(events.some((event) => event.assetCardId === "bone-rat" && event.effectKind === "attack" && event.target.kind === "hero")).toBe(true);
+  });
+
+  it("does not add a minion charge impact when its health did not decrease", () => {
+    const run = createRun(46);
+    const before = withBattle(run, (state) => {
+      state.battle!.enemyId = "boss-grave-king";
+      state.battle!.pendingEnemyCharge = { turnsRemaining: 1, damage: 12, target: "board-and-hero" };
+      state.battle!.playerBoard = [{ instanceId: "unharmed", cardId: "crypt-guard", owner: "player", attack: 2, health: 20, maxHealth: 20, summonedTurn: 0, hasAttacked: false }];
+    });
+    const after = withBattle(before, (state) => {
+      state.battle!.pendingEnemyCharge = null;
+      state.battle!.playerHero.health -= 12;
+    });
+    const events = collectCombatEffectEvents(before, after, { type: "end-turn" }, 40);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.target).toEqual({ kind: "hero", side: "player" });
+  });
+
+  it("does not create charge impact events during an ordinary enemy turn", () => {
+    const run = createRun(45);
+    const before = withBattle(run, (state) => { state.battle!.enemyId = "boss-grave-king"; });
+    const after = withBattle(before, (state) => { state.battle!.turnNumber += 1; });
+    expect(collectCombatEffectEvents(before, after, { type: "end-turn" }, 1)).toEqual([]);
+  });
 });

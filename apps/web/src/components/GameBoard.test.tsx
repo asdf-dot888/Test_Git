@@ -31,4 +31,39 @@ describe("GameBoard", () => {
     expect(markup).toContain("공격");
     expect(markup).toContain("체력");
   });
+
+  it("shows a quiet warning only while a hidden enemy charge is pending", () => {
+    const renderBoard = (run: ReturnType<typeof createRun>) => renderToStaticMarkup(
+      <GameBoard
+        run={run}
+        selectedCardInstanceId={null}
+        selectedAttackerId={null}
+        targetMode="none"
+        isResolving={false}
+        error={null}
+        onSelectCard={vi.fn()}
+        onSelectTarget={vi.fn()}
+        onDiscardCard={vi.fn()}
+        onCancelTarget={vi.fn()}
+        onEndTurn={vi.fn()}
+        onMenu={vi.fn()}
+      />,
+    );
+    const plain = createRun(413);
+    expect(renderBoard(plain)).not.toContain("enemy-charge-warning");
+
+    const legacy = structuredClone(plain);
+    delete legacy.battle!.pendingEnemyCharge;
+    expect(renderBoard(legacy)).not.toContain("enemy-charge-warning");
+
+    const charging = structuredClone(plain);
+    charging.battle!.pendingEnemyCharge = { turnsRemaining: 998, damage: 137, target: "board-and-hero" };
+    const markup = renderBoard(charging);
+    expect(markup).toContain("class=\"battle-board enemy-charge-warning\"");
+    expect(markup).toContain("class=\"hero-portrait-wrap is-charge-warning\"");
+    expect(markup).toContain("적 영웅");
+    expect(markup).not.toContain("137");
+    expect(markup).not.toContain("998");
+    expect(markup).not.toContain("board-and-hero");
+  });
 });

@@ -18,6 +18,9 @@
 .end-turn-button:disabled { opacity: .55; cursor: not-allowed; }
 .battle-board { position: relative; isolation: isolate; width: min(100% - 48px, 1160px); min-height: 440px; margin: 22px auto 12px; padding: 24px clamp(20px, 6vw, 86px); display: grid; grid-template-rows: 1fr auto 1fr; border: 1px solid rgb(233 196 133 / 35%); border-radius: 26px; background: #75624a url("/art/board-surface.png") center / cover no-repeat; box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); overflow: hidden; }
 .battle-board::before { position: absolute; z-index: -1; content: ""; inset: 0; background: linear-gradient(180deg, rgb(28 23 19 / 27%), transparent 30%, transparent 65%, rgb(25 22 19 / 32%)); }
+.battle-board.enemy-charge-warning { border-color: rgb(206 132 83 / 50%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(73 31 20 / 20%); }
+.hero-portrait-wrap.is-charge-warning { border-color: #cf8b62; box-shadow: 0 0 0 4px rgb(149 68 45 / 20%), 0 0 19px rgb(228 141 81 / 55%); animation: enemy-charge-pulse 1.8s ease-in-out infinite; }
+@keyframes enemy-charge-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgb(149 68 45 / 16%), 0 0 12px rgb(228 141 81 / 34%); } 50% { box-shadow: 0 0 0 6px rgb(149 68 45 / 26%), 0 0 22px rgb(228 141 81 / 62%); } }
 .battle-opponent, .battle-player { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(175px, .8fr) minmax(0, 2fr); align-items: center; gap: clamp(12px, 3vw, 38px); }
 .battle-player { grid-template-columns: minmax(0, 2fr) minmax(175px, .8fr); }
 .hero-panel { position: relative; min-width: 0; display: flex; align-items: center; gap: 13px; padding: 10px 12px; border: 1px solid rgb(255 246 222 / 22%); border-radius: 14px; background: rgb(25 23 22 / 71%); box-shadow: 0 8px 22px rgb(0 0 0 / 20%); backdrop-filter: blur(6px); }
@@ -259,6 +262,7 @@
   100% { opacity: 0; transform: scale(1.8); }
 }
 @media (prefers-reduced-motion: reduce) {
+  .hero-portrait-wrap.is-charge-warning { animation: none; }
   .combat-effect-sprite { animation-duration: 160ms; animation-delay: 0ms !important; }
   .combat-effect-impact { animation-duration: 160ms; animation-delay: 0ms !important; }
 }

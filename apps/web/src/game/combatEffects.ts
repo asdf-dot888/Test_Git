@@ -1,4 +1,4 @@
-import { CARD_BY_ID, type PlayerSide, type RunState, type SpellEffect } from "@board-game/game-core";
+import { CARD_BY_ID, ENEMY_BY_ID, type PlayerSide, type RunState, type SpellEffect } from "@board-game/game-core";
 import type { GameAction } from "./gameActions.js";
 
 export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "summon" | "draw" | "impact";
@@ -58,6 +58,9 @@ export function collectCombatEffectEvents(
   if (!previous || !next) return [];
 
   const events: CombatEffectEvent[] = [];
+  const previousCharge = previous.pendingEnemyCharge ?? null;
+  const chargeReleased = action.type === "end-turn" && previousCharge !== null && (next.pendingEnemyCharge ?? null) === null;
+  const bossChargeReleased = chargeReleased && ENEMY_BY_ID.get(previous.enemyId)?.kind === "boss" && previousCharge.target === "board-and-hero";
   if (action.type === "play-minion") {
     const handSlot = slotOf(previous.hand, action.instanceId);
     const card = previous.hand[handSlot];
@@ -102,28 +105,45 @@ export function collectCombatEffectEvents(
     }
   } else if (action.type === "end-turn") {
     const damagedPlayerMinions = new Set<string>();
+    const boardEmptyAfterCharge = bossChargeReleased
+      && previous.playerBoard.every((minion) => minion.health <= previousCharge.damage)
+      && next.playerBoard.length === 0;
     for (const attacker of next.enemyBoard) {
       if (!previous.enemyBoard.some((minion) => minion.instanceId === attacker.instanceId)
         || attacker.summonedTurn >= next.turnNumber || !attacker.hasAttacked) continue;
       const target = previous.playerBoard.find((minion) => {
+        if (bossChargeReleased && minion.health <= previousCharge.damage) return false;
         const after = next.playerBoard.find((candidate) => candidate.instanceId === minion.instanceId);
-        return !damagedPlayerMinions.has(minion.instanceId) && (!after || after.health < minion.health);
+        const expectedAfterCharge = minion.health - (bossChargeReleased ? previousCharge.damage : 0);
+        return !damagedPlayerMinions.has(minion.instanceId) && (!after || after.health < expectedAfterCharge);
       });
       if (target) {
         damagedPlayerMinions.add(target.instanceId);
         pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, attacker.instanceId) }, { kind: "minion", side: "player", slot: slotOf(previous.playerBoard, target.instanceId) });
-      } else if (previous.playerBoard.length === 0) {
+      } else if (previous.playerBoard.length === 0 || boardEmptyAfterCharge) {
         pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, attacker.instanceId) }, { kind: "hero", side: "player" });
       }
     }
 
     const playerHeroDamaged = next.playerHero.health < previous.playerHero.health;
-    const minionHitHero = previous.playerBoard.length === 0 && next.enemyBoard.some((attacker) => {
+    const minionHitHero = (previous.playerBoard.length === 0 || boardEmptyAfterCharge) && next.enemyBoard.some((attacker) => {
       const before = previous.enemyBoard.find((minion) => minion.instanceId === attacker.instanceId);
       return before && attacker.summonedTurn < next.turnNumber && attacker.hasAttacked;
     });
-    if (playerHeroDamaged && !minionHitHero) {
+    if (playerHeroDamaged && !minionHitHero && !bossChargeReleased) {
       pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" });
+    }
+  }
+
+  if (bossChargeReleased && previousCharge) {
+    previous.playerBoard.forEach((minion, slot) => {
+      const after = next.playerBoard.find((candidate) => candidate.instanceId === minion.instanceId);
+      if (!after || after.health < minion.health) {
+        pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "enemy" }, { kind: "minion", side: "player", slot });
+      }
+    });
+    if (next.playerHero.health < previous.playerHero.health) {
+      pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" });
     }
   }
   return events;

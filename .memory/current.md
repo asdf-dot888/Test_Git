@@ -7,13 +7,14 @@
 [P01 카드 아트와 전투 AI](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/phase.md)
 
 ## Active Task
-[T05 적 차지 신호](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/T05-enemy-charge-cue.md)
+없음 (모든 Task 완료)
 
 ## Status
-- T04 완료: 상황별 행동 선택, 위협 하수인 타깃, 즉시 치명타 우선, 적별 차지 공격을 구현하고 검증했다.
+- T01–T05 완료: 카드 원화, 카드 뷰, 전투 애니메이션, 상황 적응형 적 AI, 차지 준비 신호 구현과 청사진 검증을 마쳤다.
 
 ## Next Step (IMPORTANT)
-T05 청사진을 읽고 숨겨진 차지 공격 준비 상태를 알아볼 수 있는 비언어적 보드 신호를 구현한다.
+현재 활성 계획의 모든 Task가 완료되었다.
+
 
 
 

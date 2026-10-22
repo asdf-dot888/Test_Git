@@ -48,6 +48,7 @@ export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, sel
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
+  const enemyChargeWarning = Boolean(battle.pendingEnemyCharge);
   const targetSide = targetMode === "spell"
     ? spellTargetSide(selectedCardInstanceId, run)
     : targetMode === "attack"
@@ -70,9 +71,9 @@ export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, sel
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>
 
-      <section className="battle-board" id="battle" aria-label="카드 전투 보드">
+      <section className={`battle-board${enemyChargeWarning ? " enemy-charge-warning" : ""}`} id="battle" aria-label="카드 전투 보드">
         <div className="battle-opponent">
-          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} />
+          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} chargeWarning={enemyChargeWarning} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} />
           <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} />
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
