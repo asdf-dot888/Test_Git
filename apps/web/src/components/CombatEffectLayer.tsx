@@ -70,11 +70,12 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
         target: anchorPoint(event.target, event, false),
       });
     });
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const timeout = window.setTimeout(() => {
       if (completeRef.current) return;
       completeRef.current = true;
       onCompleteRef.current(event.id);
-    }, 950 + Math.min(index, 8) * 120);
+    }, (reducedMotion ? 220 : 950) + Math.min(index, 8) * 120);
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timeout);
@@ -90,6 +91,9 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
     "--effect-dy": `${geometry.target.y - geometry.source.y}px`,
     animationDelay: `${delay}ms`,
   } as CSSProperties;
+  const isCardSource = event.source.kind === "hand" || event.source.kind === "minion";
+  const cardArt = isCardSource && event.assetCardId ? `/art/cards/${event.assetCardId}.png` : null;
+  const isMinionAttack = event.effectKind === "attack" && event.source.kind === "minion" && cardArt !== null;
   const finish = () => {
     if (completeRef.current) return;
     completeRef.current = true;
@@ -102,15 +106,33 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
       style={{ left: geometry.target.x, top: geometry.target.y, animationDelay: `${delay + 360}ms` }}
       aria-hidden="true"
     />
-    <img
-      className="combat-effect-sprite"
-      data-effect-card={event.assetCardId ?? "impact"}
+    {cardArt ? <>
+      <span
+        className={`combat-effect-sprite combat-effect-card-frame${isMinionAttack ? " is-minion-attack" : ""}`}
+        data-effect-card={event.assetCardId}
+        data-effect-kind={event.effectKind}
+        style={style}
+        onAnimationEnd={finish}
+        aria-hidden="true"
+      ><img src={cardArt} alt="" /></span>
+      {isMinionAttack && <img
+        className="combat-effect-sprite combat-effect-minion-portrait"
+        data-effect-card={event.assetCardId}
+        data-effect-kind={event.effectKind}
+        src={cardArt}
+        alt=""
+        style={{ ...style, left: geometry.source.x + 34, top: geometry.source.y + 42 }}
+        onAnimationEnd={finish}
+      />}
+    </> : <img
+      className="combat-effect-sprite combat-effect-impact-art"
+      data-effect-card="impact"
       data-effect-kind={event.effectKind}
-      src={`/art/effects/${event.assetCardId ?? "impact"}.png`}
+      src="/art/effects/impact.png"
       alt=""
       style={style}
       onAnimationEnd={finish}
-    />
+    />}
   </>;
 }
 

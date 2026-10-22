@@ -7,12 +7,13 @@
 [P01 카드 아트와 전투 AI](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/phase.md)
 
 ## Active Task
-[T03 카드 전투 애니메이션](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/T03-card-combat-animation.md)
+[T04 상황 적응형 적 AI](./phases/2026-10-22-card-art-adaptive-enemy-ai/P01-card-art-and-combat-ai/T04-adaptive-enemy-ai.md)
 
 ## Status
-- T02 완료: 손패·보상·전장 하수인이 PNG 카드 원화를 사용하며 카드 상호작용과 접근성 상태를 유지한다.
+- T03 완료: 하수인 공격에 카드 프레임과 초상화를 함께 이동시키고, 주문은 손패 원화로 이동 연출한다.
 
 ## Next Step (IMPORTANT)
-T03 청사진을 읽고 카드/하수인 공격과 주문 사용에 해당 그림을 활용한 이동 연출을 구현한다.
+T04 청사진을 읽고 적별 성향·상황에 따라 행동하는 AI와 차지 공격을 구현한다.
+
 
 
