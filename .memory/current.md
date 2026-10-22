@@ -1,16 +1,16 @@
-# Current Context
+﻿# Current Context
 
 ## Active Plan
-[로컬 브라우저 데모 모드](./plans/2026-10-22-local-browser-demo.md) — 완료
+[전투 이펙트와 다음 전투 확인](./plans/2026-10-22-combat-effects-and-encounter-confirmation.md)
 
 ## Active Phase
-모든 Phase 완료
+[P01 전투 흐름](./phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/phase.md)
 
 ## Active Task
-없음
+[T02 카드별 이펙트 이미지와 애니메이션](./phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/T02-card-effect-art-and-animation.md)
 
 ## Status
-- T01 완료, commit `e3fbf0e`; T02 완료, commit `ebbcc3c`; T03 완료, commit `3714cf4`; 전체 계획 완료
+- T01 전투 이펙트 이벤트 완료, commit `61c25fc`.
 
 ## Next Step (IMPORTANT)
-현재 계획의 모든 작업이 완료되었습니다. 로컬 데모를 시작하려면 프로젝트 루트에서 `npm run dev`를 실행하고 `http://localhost:5173`을 여세요.
+`.memory/phases/2026-10-22-combat-effects-and-encounter-confirmation/P01-combat-flow/T02-card-effect-art-and-animation.md`의 청사진을 읽고 카드별 이펙트 이미지와 애니메이션 레이어를 구현한다.

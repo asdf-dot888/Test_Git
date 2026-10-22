@@ -119,4 +119,4 @@ Task: T01-combat-effect-events
 ## Progress
 - [x] Implementation complete
 - [x] Validation passed (`npm.cmd run build`)
-- commit: pending
+- commit: `61c25fc`
