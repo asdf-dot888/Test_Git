@@ -7,6 +7,8 @@ import type {
   CardInstance,
   EncounterState,
   EnemyAction,
+  EnemyChargeState,
+  EnemyDefinition,
   MinionState,
   PlayerSide,
   RunState,
@@ -310,6 +312,89 @@ function eligibleEnemyActions(enemyId: string, battle: BattleState): EnemyAction
   return enemy.actions.filter((action) => action.kind !== "summon" || battle.enemyBoard.length < MAX_BOARD);
 }
 
+function scoreEnemyAction(action: EnemyAction, enemy: EnemyDefinition, battle: BattleState): number {
+  const profile = enemy.tactics.profile;
+  if (action.kind === "summon") {
+    let score = battle.enemyBoard.length === 0 ? 50 : battle.enemyBoard.length === 1 ? 25 : battle.enemyBoard.length >= MAX_BOARD ? -100 : 0;
+    if (profile === "summoner" && battle.enemyBoard.length < 3) score += 25;
+    if (profile === "controller" && battle.playerBoard.length >= 3 && battle.enemyBoard.length < 2) score += 30;
+    return score;
+  }
+  if (action.kind === "heroDamage") {
+    let score = profile === "aggressor" ? 40 : 25;
+    if (battle.playerHero.health <= Math.floor(battle.playerHero.maxHealth / 3)) score += 30;
+    if (profile === "hunter" && battle.playerBoard.length === 0) score += 25;
+    return score;
+  }
+
+  const effectIsRelevant = action.effectId === "blood-tithe"
+    ? battle.enemyHero.health < Math.floor(battle.enemyHero.maxHealth / 2)
+    : (action.effectId === "bone-storm" || action.effectId === "void-pulse") && battle.playerBoard.length >= 2;
+  return effectIsRelevant ? 60 : 10;
+}
+
+function selectEnemyAction(actions: readonly EnemyAction[], enemy: EnemyDefinition, battle: BattleState): EnemyAction | null {
+  if (actions.length === 0) return null;
+  const scored = actions.map((action) => ({ action, score: scoreEnemyAction(action, enemy, battle) }));
+  const highest = Math.max(...scored.map((candidate) => candidate.score));
+  const tied = scored.filter((candidate) => candidate.score === highest);
+  if (tied.length === 1) return tied[0]!.action;
+  const choice = pickIndex(tied.length, battle.rngState);
+  battle.rngState = choice.state;
+  return tied[choice.value]!.action;
+}
+
+function playerBoardWillBeCleared(action: EnemyAction, battle: BattleState): boolean {
+  if (battle.playerBoard.length === 0) return true;
+  if (action.kind !== "bossEffect" || action.effectId === "blood-tithe") return false;
+  const damage = action.effectId === "bone-storm" ? action.amount : Math.max(1, Math.floor(action.amount / 2));
+  return battle.playerBoard.every((minion) => minion.health <= damage);
+}
+
+function isGuaranteedLethalAction(action: EnemyAction, battle: BattleState): boolean {
+  const immediateDamage = action.kind === "heroDamage" || action.kind === "bossEffect" ? action.amount : 0;
+  if (immediateDamage >= battle.playerHero.health) return true;
+  if (!playerBoardWillBeCleared(action, battle)) return false;
+  const faceDamage = battle.enemyBoard
+    .filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked)
+    .reduce((total, minion) => total + minion.attack, 0);
+  return immediateDamage + faceDamage >= battle.playerHero.health;
+}
+
+function chargeTriggerMet(enemy: EnemyDefinition, battle: BattleState): boolean {
+  switch (enemy.tactics.chargeTrigger) {
+    case "hero-at-half":
+      return battle.playerHero.health <= Math.floor(battle.playerHero.maxHealth / 2);
+    case "board-empty":
+      return battle.playerBoard.length === 0;
+    case "board-wide":
+      return battle.playerBoard.length >= 3;
+    case "hero-low-and-board-empty":
+      return battle.playerHero.health <= Math.floor(battle.playerHero.maxHealth / 2) && battle.playerBoard.length === 0;
+    case "turn-four":
+      return battle.turnNumber >= 4;
+  }
+}
+
+function startEnemyCharge(enemy: EnemyDefinition, battle: BattleState): void {
+  const charge: EnemyChargeState = {
+    turnsRemaining: enemy.tactics.chargeDelayTurns,
+    damage: enemy.tactics.chargeDamage,
+    target: enemy.kind === "boss" ? "board-and-hero" : "hero",
+  };
+  battle.pendingEnemyCharge = charge;
+}
+
+function resolveEnemyCharge(run: RunState, charge: EnemyChargeState): RunState {
+  const battle = run.battle;
+  if (!battle) return run;
+  if (charge.target === "board-and-hero") {
+    for (const minion of battle.playerBoard) minion.health -= charge.damage;
+    run = removeDeadMinions(run, "player");
+  }
+  return dealDamageToPlayerHero(run, charge.damage);
+}
+
 function applyBossEffect(run: RunState, effectId: string, amount: number): RunState {
   const battle = run.battle;
   if (!battle) return run;
@@ -343,7 +428,16 @@ function resolveEnemyMinionAttacks(run: RunState): RunState {
   if (!battle) return run;
   for (const attacker of battle.enemyBoard) {
     if (!run.battle || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) continue;
-    const target = battle.playerBoard[0];
+    const target = [...battle.playerBoard]
+      .map((minion, index) => ({ minion, index }))
+      .sort((left, right) => {
+        const leftKillable = left.minion.health <= attacker.attack;
+        const rightKillable = right.minion.health <= attacker.attack;
+        return Number(rightKillable) - Number(leftKillable)
+          || right.minion.attack - left.minion.attack
+          || left.minion.health - right.minion.health
+          || left.index - right.index;
+      })[0]?.minion;
     if (target) {
       target.health -= attacker.attack;
       attacker.hasAttacked = true;
@@ -381,6 +475,7 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     enemyId: encounter.enemyId,
     rngState: shuffled.state,
     status: "active",
+    pendingEnemyCharge: null,
   };
   nextRun.battle = battle;
   return nextRun;
@@ -513,15 +608,36 @@ export function resolveEnemyTurn(run: RunState): RunState {
   const next = cloneRun(run);
   const battle = assertActiveRun(next);
   if (battle.activeSide !== "enemy") fail("WRONG_TURN", "The enemy turn is not active.");
-  const actions = eligibleEnemyActions(battle.enemyId, battle);
-  if (actions.length > 0) {
-    const choice = pickIndex(actions.length, battle.rngState);
-    battle.rngState = choice.state;
-    const updated = applyEnemyAction(next, actions[choice.value]!);
-    if (updated.status !== "active") return updated;
-    run = updated;
+  const enemy = ENEMY_BY_ID.get(battle.enemyId);
+  if (!enemy) fail("INVALID_ACTION", `Unknown enemy: ${battle.enemyId}`);
+  const pendingCharge = battle.pendingEnemyCharge ?? null;
+  if (pendingCharge) {
+    const turnsRemaining = pendingCharge.turnsRemaining - 1;
+    if (turnsRemaining > 0) {
+      battle.pendingEnemyCharge = { ...pendingCharge, turnsRemaining };
+      run = next;
+    } else {
+      battle.pendingEnemyCharge = null;
+      run = resolveEnemyCharge(next, pendingCharge);
+      if (run.status !== "active") return run;
+    }
   } else {
-    run = next;
+    const actions = eligibleEnemyActions(battle.enemyId, battle);
+    const lethalActions = actions.filter((action) => isGuaranteedLethalAction(action, battle));
+    if (lethalActions.length > 0) {
+      const lethal = selectEnemyAction(lethalActions, enemy, battle);
+      if (lethal) {
+        run = applyEnemyAction(next, lethal);
+        if (run.status !== "active") return run;
+      }
+    } else if (chargeTriggerMet(enemy, battle)) {
+      startEnemyCharge(enemy, battle);
+      run = next;
+    } else {
+      const selected = selectEnemyAction(actions, enemy, battle);
+      run = selected ? applyEnemyAction(next, selected) : next;
+      if (run.status !== "active") return run;
+    }
   }
 
   run = resolveEnemyMinionAttacks(run);

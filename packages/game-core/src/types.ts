@@ -64,6 +64,7 @@ export interface BattleState {
   rngState: number;
   status: "active" | "playerWon" | "playerLost";
   pendingDiscardBeforeDraw?: boolean;
+  pendingEnemyCharge?: EnemyChargeState | null;
 }
 
 export interface EncounterState {
@@ -99,6 +100,26 @@ export type EnemyAction =
   | { kind: "summon"; cardId: string }
   | { kind: "bossEffect"; effectId: string; amount: number };
 
+export type EnemyBehaviorProfile =
+  | "aggressor" | "summoner" | "hunter" | "controller"
+  | "drain" | "board-clear" | "ravager";
+
+export type EnemyChargeTrigger =
+  | "hero-at-half" | "board-empty" | "board-wide" | "hero-low-and-board-empty" | "turn-four";
+
+export interface EnemyTactics {
+  profile: EnemyBehaviorProfile;
+  chargeTrigger: EnemyChargeTrigger;
+  chargeDelayTurns: 1 | 2;
+  chargeDamage: number;
+}
+
+export interface EnemyChargeState {
+  turnsRemaining: number;
+  damage: number;
+  target: "hero" | "board-and-hero";
+}
+
 export interface EnemyDefinition {
   id: string;
   name: string;
@@ -106,4 +127,5 @@ export interface EnemyDefinition {
   maxHealth: number;
   actions: EnemyAction[];
   artKey: string;
+  tactics: EnemyTactics;
 }
