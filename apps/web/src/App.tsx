@@ -6,9 +6,11 @@ import { GameBoard } from "./components/GameBoard.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
 import { RunLockNotice } from "./components/RunLockNotice.js";
+import { GameMenu } from "./components/GameMenu.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
-import { createAudioController } from "./game/audio.js";
+import { createAudioController, type AudioSettings } from "./game/audio.js";
+import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 
 function secureSeed(): number {
   const seed = new Uint32Array(1);
@@ -26,6 +28,10 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "game">("menu");
   const [abandonOpen, setAbandonOpen] = useState(false);
+  const [menuView, setMenuView] = useState<"closed" | "choices" | "settings">("closed");
+  const [abandonToMenuOpen, setAbandonToMenuOpen] = useState(false);
+  const [abandonToMenuBusy, setAbandonToMenuBusy] = useState(false);
+  const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => loadAudioSettings());
   const [audioController] = useState(() => createAudioController());
   const appliedLoadVersion = useRef(0);
   const restoringRemoteRun = useRef(false);
@@ -36,6 +42,11 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
 
   useEffect(() => () => audioController.dispose(), [audioController]);
+
+  useEffect(() => {
+    audioController.setSettings(audioSettings);
+    saveAudioSettings(audioSettings);
+  }, [audioController, audioSettings]);
 
   useEffect(() => {
     audioController.playMusic(enemyKind === "boss" ? "boss" : "normal");
@@ -97,6 +108,29 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
       return;
     }
     void startNewServerRun(run ? "completed" : "abandoned").catch(() => undefined);
+  };
+
+  const returnToBattle = () => {
+    setMenuView("closed");
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".menu-button")?.focus());
+  };
+
+  const confirmReturnToMenu = async () => {
+    if (abandonToMenuBusy) return;
+    pendingReplacement.current = true;
+    setAbandonToMenuBusy(true);
+    try {
+      await sync.deleteRun("abandoned");
+      dispatch({ type: "clear-run" });
+      setAbandonToMenuOpen(false);
+      setMenuView("closed");
+      setScreen("menu");
+    } catch {
+      // The sync controller preserves the run and exposes its normal error state.
+    } finally {
+      pendingReplacement.current = false;
+      setAbandonToMenuBusy(false);
+    }
   };
 
   const selectCard = (instanceId: string) => {
@@ -208,10 +242,20 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
           onDiscardCard={(instanceId) => dispatch({ type: "discard-before-draw", instanceId })}
           onCancelTarget={() => dispatch({ type: session.error ? "clear-error" : "cancel-selection" })}
           onEndTurn={() => dispatch({ type: "end-turn" })}
-          onMenu={() => setScreen("menu")}
+          onMenu={() => setMenuView("choices")}
         />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
       <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
+      <AbandonRunDialog intent="main-menu" open={abandonToMenuOpen} busy={abandonToMenuBusy} onCancel={() => setAbandonToMenuOpen(false)} onConfirm={() => { void confirmReturnToMenu(); }} />
+      {menuView !== "closed" && <GameMenu
+        view={menuView}
+        settings={audioSettings}
+        onSettingsChange={setAudioSettings}
+        onOpenSettings={() => setMenuView("settings")}
+        onBackToChoices={() => setMenuView("choices")}
+        onMainMenu={() => setAbandonToMenuOpen(true)}
+        onReturn={returnToBattle}
+      />}
       {session.error && <p className="sr-only" role="alert">{session.error}</p>}
     </>
   );
