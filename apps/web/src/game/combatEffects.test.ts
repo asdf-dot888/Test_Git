@@ -36,6 +36,7 @@ describe("collectCombatEffectEvents", () => {
     const after = withBattle(before, (state) => {
       state.battle!.enemyBoard = [{ instanceId: "enemy-rat", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 1, hasAttacked: false }];
       state.battle!.hand = [];
+      state.battle!.enemyTurnEvents = [{ type: "play-minion", cardId: "bone-rat", instanceId: "enemy-rat", handSlot: 0, summonedIds: ["enemy-rat"] }];
     });
     const enemyEvents = collectCombatEffectEvents(before, after, { type: "end-turn" }, 20);
     expect(enemyEvents).toContainEqual(expect.objectContaining({ effectKind: "summon", assetCardId: "bone-rat", soundCues: ["summon"], target: { kind: "minion", side: "enemy", slot: 0 } }));
@@ -79,6 +80,7 @@ describe("collectCombatEffectEvents", () => {
       state.battle!.turnNumber = 2;
       state.battle!.enemyBoard.forEach((minion) => { minion.hasAttacked = true; });
       state.battle!.playerBoard.forEach((minion) => { minion.health = 2; });
+      state.battle!.enemyTurnEvents = [0, 1].map((index) => ({ type: "attack" as const, cardId: "bone-rat", attackerId: `enemy-${index}`, targetId: `player-${index}` }));
     });
     const events = collectCombatEffectEvents(before, after, { type: "end-turn" }, 20);
 
@@ -98,7 +100,7 @@ describe("collectCombatEffectEvents", () => {
     });
     const spell = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "lance", targetId: "target" }, 4);
     expect(spell).toHaveLength(1);
-    expect(spell[0]).toMatchObject({ assetCardId: "soul-lance", effectKind: "damage", source: { kind: "hand", slot: 0, instanceId: "lance" }, target: { kind: "minion", side: "enemy", slot: 0 } });
+    expect(spell[0]).toMatchObject({ assetCardId: "soul-lance", effectKind: "damage", source: { kind: "hand", side: "player", slot: 0, instanceId: "lance" }, target: { kind: "minion", side: "enemy", slot: 0 } });
     expect(spell[0]?.soundCues).toEqual(["spell", "damage"]);
 
     const after = withBattle(before, (state) => { state.battle!.playerHero.health -= 3; });
@@ -120,52 +122,37 @@ describe("collectCombatEffectEvents", () => {
     expect(heal[0]?.soundCues).toEqual(["spell", "heal"]);
   });
 
-  it("creates separate boss charge impacts for damaged targets and preserves minion face attacks", () => {
+  it("maps enemy card, targeted spell, minion attack, and boss area records in order", () => {
     const run = createRun(44);
     const before = withBattle(run, (state) => {
       const battle = state.battle!;
-      battle.enemyId = "boss-grave-king";
-      battle.pendingEnemyCharge = { turnsRemaining: 1, damage: 12, target: "board-and-hero" };
-      battle.playerBoard = [{ instanceId: "fallen", cardId: "ash-wolf", owner: "player", attack: 2, health: 10, maxHealth: 10, summonedTurn: 0, hasAttacked: false }];
-      battle.enemyBoard = [{ instanceId: "striker", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+      battle.playerBoard = [
+        { instanceId: "player-target", cardId: "crypt-guard", owner: "player", attack: 2, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false },
+      ];
+      battle.enemyBoard = [
+        { instanceId: "enemy-minion", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false },
+      ];
     });
     const after = withBattle(before, (state) => {
-      state.battle!.pendingEnemyCharge = null;
-      state.battle!.playerHero.health = 13;
-      state.battle!.playerBoard = [];
-      state.battle!.enemyBoard[0]!.hasAttacked = true;
+      state.battle!.enemyTurnEvents = [
+        { type: "play-minion", cardId: "cinder-imp", instanceId: "secret-card", handSlot: 1, summonedIds: ["enemy-minion"] },
+        { type: "cast-spell", cardId: "soul-lance", instanceId: "enemy-lance", handSlot: 0, effects: [{ kind: "damage", targetId: "player-target" }] },
+        { type: "boss-area", damage: 1, targetMinionIds: ["player-target"], targetHeroId: "player" },
+        { type: "attack", cardId: "bone-rat", attackerId: "enemy-minion", targetId: "player-target" },
+      ];
+      state.battle!.playerBoard[0]!.health = 1;
     });
     const events = collectCombatEffectEvents(before, after, { type: "end-turn" }, 30);
-
-    expect(events).toHaveLength(3);
-    expect(events.filter((event) => event.assetCardId === null && event.effectKind === "damage").map((event) => event.target)).toEqual([
-      { kind: "minion", side: "player", slot: 0 },
-      { kind: "hero", side: "player" },
-    ]);
-    expect(events.filter((event) => event.effectKind === "damage").map((event) => event.soundCues)).toEqual([["damage", "death"], ["damage"]]);
-    expect(events.some((event) => event.assetCardId === "bone-rat" && event.effectKind === "attack" && event.target.kind === "hero")).toBe(true);
+    expect(events.map((event) => event.effectKind)).toEqual(["summon", "damage", "impact", "attack"]);
+    expect(events[0]).toMatchObject({ assetCardId: "cinder-imp", source: { kind: "hand", side: "enemy", slot: 1, instanceId: "secret-card" }, target: { kind: "minion", side: "enemy", slot: 0 } });
+    expect(events[1]).toMatchObject({ assetCardId: "soul-lance", source: { kind: "hand", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 }, soundCues: ["spell", "damage"] });
+    expect(events[2]).toMatchObject({ areaImpact: true, effectKind: "impact", soundCues: ["damage"] });
+    expect(events[3]).toMatchObject({ assetCardId: "bone-rat", source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 } });
   });
 
-  it("does not add a minion charge impact when its health did not decrease", () => {
-    const run = createRun(46);
-    const before = withBattle(run, (state) => {
-      state.battle!.enemyId = "boss-grave-king";
-      state.battle!.pendingEnemyCharge = { turnsRemaining: 1, damage: 12, target: "board-and-hero" };
-      state.battle!.playerBoard = [{ instanceId: "unharmed", cardId: "crypt-guard", owner: "player", attack: 2, health: 20, maxHealth: 20, summonedTurn: 0, hasAttacked: false }];
-    });
-    const after = withBattle(before, (state) => {
-      state.battle!.pendingEnemyCharge = null;
-      state.battle!.playerHero.health -= 12;
-    });
-    const events = collectCombatEffectEvents(before, after, { type: "end-turn" }, 40);
-    expect(events).toHaveLength(1);
-    expect(events[0]?.target).toEqual({ kind: "hero", side: "player" });
-  });
-
-  it("does not create charge impact events during an ordinary enemy turn", () => {
+  it("does not create an area impact when the enemy turn has no boss-area record", () => {
     const run = createRun(45);
     const before = withBattle(run, (state) => { state.battle!.enemyId = "boss-grave-king"; });
     const after = withBattle(before, (state) => { state.battle!.turnNumber += 1; });
     expect(collectCombatEffectEvents(before, after, { type: "end-turn" }, 1)).toEqual([]);
-  });
-});
+  });});

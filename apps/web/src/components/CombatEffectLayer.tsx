@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { CombatAnchor, CombatEffectEvent } from "../game/combatEffects.js";
 
@@ -20,7 +20,7 @@ interface EffectGeometry {
 function anchorName(anchor: CombatAnchor): string {
   if (anchor.kind === "hero") return `hero:${anchor.side}`;
   if (anchor.kind === "minion") return `minion:${anchor.side}:${anchor.slot}`;
-  return `hand:${anchor.slot}`;
+  return `hand:${anchor.side}:${anchor.slot}`;
 }
 
 function centerOf(element: HTMLElement): Point {
@@ -32,7 +32,7 @@ function fallbackPoint(anchor: CombatAnchor): Point {
   const board = document.querySelector<HTMLElement>(".battle-board");
   const bounds = board?.getBoundingClientRect();
   if (anchor.kind === "hand") {
-    const hand = document.querySelector<HTMLElement>(".hand-panel");
+    const hand = document.querySelector<HTMLElement>(anchor.side === "enemy" ? ".enemy-hand" : ".hand-panel");
     return hand ? centerOf(hand) : { x: window.innerWidth / 2, y: window.innerHeight - 72 };
   }
   if (!bounds) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -85,6 +85,18 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
     };
   }, [event, index]);
 
+  useEffect(() => {
+    if (!event.areaImpact || (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)) return;
+    const board = document.querySelector<HTMLElement>(".battle-board");
+    if (!board) return;
+    board.classList.add("is-shaking");
+    const timeout = window.setTimeout(() => board.classList.remove("is-shaking"), 500);
+    return () => {
+      window.clearTimeout(timeout);
+      board.classList.remove("is-shaking");
+    };
+  }, [event.areaImpact, event.id]);
+
   if (!geometry) return null;
   const delay = Math.min(index, 8) * 120;
   const style = {
@@ -94,6 +106,12 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
     "--effect-dy": `${geometry.target.y - geometry.source.y}px`,
     animationDelay: `${delay}ms`,
   } as CSSProperties;
+  const boardBounds = event.areaImpact ? document.querySelector<HTMLElement>(".battle-board")?.getBoundingClientRect() : undefined;
+  const areaWidth = Math.min(window.innerWidth * 0.64, 520);
+  const areaHeight = Math.min(window.innerHeight * 0.35, 220);
+  const impactStyle = event.areaImpact && boardBounds
+    ? { left: boardBounds.left + (boardBounds.width - areaWidth) / 2, top: boardBounds.top + (boardBounds.height - areaHeight) / 2, animationDelay: `${delay + 930}ms` }
+    : { left: geometry.target.x, top: geometry.target.y, animationDelay: `${delay + 930}ms` };
   const isCardSource = event.source.kind === "hand" || event.source.kind === "minion";
   const cardArt = isCardSource && event.assetCardId ? `/art/cards/${event.assetCardId}.png` : null;
   const isMinionAttack = event.effectKind === "attack" && event.source.kind === "minion" && cardArt !== null;
@@ -105,8 +123,8 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
 
   return <>
     <span
-      className={`combat-effect-impact effect-${event.effectKind}`}
-      style={{ left: geometry.target.x, top: geometry.target.y, animationDelay: `${delay + 930}ms` }}
+      className={`combat-effect-impact effect-${event.effectKind}${event.areaImpact ? " is-area-impact" : ""}`}
+      style={impactStyle}
       onAnimationEnd={finish}
       aria-hidden="true"
     />

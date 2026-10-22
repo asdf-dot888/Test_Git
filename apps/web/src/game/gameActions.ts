@@ -78,7 +78,9 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
 function sessionForAction(run: RunState, previous: GameSession, action: GameAction): GameSession {
   if (!previous.run) return sessionForRun(run, previous);
   const events = collectCombatEffectEvents(previous.run, run, action, previous.nextCombatEffectId);
-  const next = sessionForRun(run, previous);
+  const nextRun = run.battle && Object.prototype.hasOwnProperty.call(run.battle, "enemyTurnEvents") ? structuredClone(run) : run;
+  if (nextRun.battle?.enemyTurnEvents) delete nextRun.battle.enemyTurnEvents;
+  const next = sessionForRun(nextRun, previous);
   return {
     ...next,
     combatEffects: [...previous.combatEffects, ...events],

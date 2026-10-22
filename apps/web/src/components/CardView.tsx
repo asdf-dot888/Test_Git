@@ -13,7 +13,7 @@ export function CardView({ instance, effectSlot, selected, disabled, onSelect }:
   const card = CARD_BY_ID.get(instance.cardId);
   if (!card) return null;
   return (
-    <button className={`game-card card-${card.kind}${selected ? " is-selected" : ""}`} data-effect-anchor={effectSlot === undefined ? undefined : `hand:${effectSlot}`} data-effect-instance-id={instance.instanceId} data-effect-card-id={instance.cardId} type="button" aria-pressed={selected} disabled={disabled} onClick={onSelect}>
+    <button className={`game-card card-${card.kind}${selected ? " is-selected" : ""}`} data-effect-anchor={effectSlot === undefined ? undefined : `hand:player:${effectSlot}`} data-effect-instance-id={instance.instanceId} data-effect-card-id={instance.cardId} type="button" aria-pressed={selected} disabled={disabled} onClick={onSelect}>
       <span className="card-cost" aria-label={`비용 ${card.cost}`}>{card.cost}</span>
       <span className="card-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
       <strong className="card-name">{card.name}</strong>

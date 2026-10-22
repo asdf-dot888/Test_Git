@@ -10,7 +10,7 @@ describe("CardView", () => {
 
     const button = screen.getByRole("button");
     expect(button.getAttribute("aria-pressed")).toBe("true");
-    expect(button.getAttribute("data-effect-anchor")).toBe("hand:2");
+    expect(button.getAttribute("data-effect-anchor")).toBe("hand:player:2");
     expect(button.getAttribute("data-effect-instance-id")).toBe("wolf-1");
     expect(container.querySelector("img")?.getAttribute("src")).toBe("/art/cards/ash-wolf.png");
     expect(container.textContent).toContain("잿빛 늑대");

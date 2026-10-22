@@ -1,6 +1,6 @@
 # Task: T03 적 보드 UI와 전투 연출
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -89,7 +89,7 @@ Task: T03-enemy-board-and-combat-effects
 
 ## Progress
 
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending
 

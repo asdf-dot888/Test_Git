@@ -17,4 +17,15 @@ describe("reduceGameAction timer snapshots", () => {
     expect(cleared.run).not.toHaveProperty("turnTimer");
     expect(cleared.combatEffects).toEqual([]);
   });
+
+  it("converts enemy turn records to visual events and removes them before publishing state", () => {
+    const run = createRun(541);
+    run.battle!.enemyHand = [{ instanceId: "enemy-minion", cardId: "ash-wolf" }];
+    run.battle!.enemyDrawPile = [{ instanceId: "enemy-draw", cardId: "eclipse" }];
+    const session = reduceGameAction(initialGameSession, { type: "restore-run", run });
+    const afterTurn = reduceGameAction(session, { type: "end-turn" });
+
+    expect(afterTurn.combatEffects.some((event) => event.source.kind === "hand" && event.source.side === "enemy")).toBe(true);
+    expect(afterTurn.run?.battle).not.toHaveProperty("enemyTurnEvents");
+  });
 });

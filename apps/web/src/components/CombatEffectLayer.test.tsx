@@ -48,12 +48,38 @@ describe("CombatEffectLayer", () => {
   it("uses the spell illustration for hand events and the generic impact for hero-only hits", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
-    const spell = render(<CombatEffectLayer events={[{ id: 1, assetCardId: "shadow-bolt", effectKind: "damage", soundCues: [], source: { kind: "hand", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={vi.fn()} />);
+    const spell = render(<CombatEffectLayer events={[{ id: 1, assetCardId: "shadow-bolt", effectKind: "damage", soundCues: [], source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={vi.fn()} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelector(".combat-effect-card-frame img")?.getAttribute("src")).toBe("/art/cards/shadow-bolt.png");
     spell.unmount();
     render(<CombatEffectLayer events={[{ id: 2, assetCardId: null, effectKind: "impact", soundCues: [], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={vi.fn()} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelector(".combat-effect-impact-art")?.getAttribute("src")).toBe("/art/effects/impact.png");
+  });
+
+  it("shakes the board for a boss area impact and clears the class after 500ms", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const onComplete = vi.fn();
+    render(<div className="battle-board"><CombatEffectLayer events={[{ id: 15, assetCardId: null, effectKind: "impact", areaImpact: true, soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={onComplete} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(true);
+    expect(document.body.querySelector(".combat-effect-impact")?.classList.contains("is-area-impact")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(false);
+  });
+
+  it("skips the board shake for reduced motion while still completing the area event", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const onComplete = vi.fn();
+    render(<div className="battle-board"><CombatEffectLayer events={[{ id: 16, assetCardId: null, effectKind: "impact", areaImpact: true, soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={onComplete} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(false);
+    await act(async () => { await vi.advanceTimersByTimeAsync(220); });
+    expect(onComplete).toHaveBeenCalledWith(16);
   });
 });

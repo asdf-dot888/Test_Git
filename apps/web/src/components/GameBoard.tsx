@@ -5,6 +5,7 @@ import type { PlayerSide } from "@board-game/game-core";
 import type { CombatEffectEvent } from "../game/combatEffects.js";
 import { CombatEffectLayer } from "./CombatEffectLayer.js";
 import { DiscardPicker } from "./DiscardPicker.js";
+import { EnemyHand } from "./EnemyHand.js";
 import { HeroPanel } from "./HeroPanel.js";
 import { HandPanel } from "./HandPanel.js";
 import { ManaDisplay } from "./ManaDisplay.js";
@@ -49,7 +50,6 @@ export function GameBoard({ run, turnTimer, combatEffects = [], onCombatEffectCo
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
-  const enemyChargeWarning = Boolean(battle.pendingEnemyCharge);
   const targetSide = targetMode === "spell"
     ? spellTargetSide(selectedCardInstanceId, run)
     : targetMode === "attack"
@@ -72,9 +72,17 @@ export function GameBoard({ run, turnTimer, combatEffects = [], onCombatEffectCo
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>
 
-      <section className={`battle-board${enemyChargeWarning ? " enemy-charge-warning" : ""}`} id="battle" aria-label="카드 전투 보드">
+      <section className="battle-board" id="battle" aria-label="카드 전투 보드">
         <div className="battle-opponent">
-          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} chargeWarning={enemyChargeWarning} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} />
+          <div className="enemy-resource-bar">
+            <EnemyHand count={battle.enemyHand.length} instanceIds={battle.enemyHand.map((card) => card.instanceId)} />
+            <div className="enemy-deck-counts" aria-label={`적 덱 ${battle.enemyDrawPile.length}장, 적 버린 카드 ${battle.enemyDiscardPile.length}장`}>
+              <span>덱 <b>{battle.enemyDrawPile.length}</b></span>
+              <span>버림 <b>{battle.enemyDiscardPile.length}</b></span>
+            </div>
+            <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} />
+          </div>
+          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} />
           <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} />
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>

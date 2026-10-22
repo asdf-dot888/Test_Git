@@ -15,14 +15,14 @@ describe("HeroPanel", () => {
     expect(markup).toContain(`aria-label="체력 ${hero.health}/${hero.maxHealth}"`);
   });
 
-  it("renders a boss PNG and preserves its target and charge indicators", () => {
+  it("renders a targetable boss PNG", () => {
     const hero = createRun(2).battle!.enemyHero;
     const markup = renderToStaticMarkup(
-      <HeroPanel hero={hero} side="enemy" artKey="boss-grave-king" name="무덤의 왕" chargeWarning targetable onSelectTarget={vi.fn()} />,
+      <HeroPanel hero={hero} side="enemy" artKey="boss-grave-king" name="무덤의 왕" targetable onSelectTarget={vi.fn()} />,
     );
 
     expect(markup).toContain('src="/art/enemies/boss-grave-king.png"');
-    expect(markup).toContain('class="hero-portrait-wrap is-charge-warning"');
+    expect(markup).toContain('class="hero-portrait-wrap"');
     expect(markup).toContain('aria-label="무덤의 왕을(를) 대상으로 선택"');
     expect(markup).toContain(`aria-label="체력 ${hero.health}/${hero.maxHealth}"`);
   });
