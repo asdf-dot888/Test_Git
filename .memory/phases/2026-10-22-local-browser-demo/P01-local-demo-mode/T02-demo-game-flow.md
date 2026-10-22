@@ -1,6 +1,6 @@
 # Task: T02 브라우저 메모리 데모 게임 흐름
 
-## Status: pending
+## Status: done
 
 ## Goal
 데모 플래그로 진입하면 MSAL, 로그인, API 요청 없이 기존 게임 엔진과 보드 UI를 사용하게 하고, 원정 진행이 새로고침 후 복구되지 않음을 화면에 알린다.
@@ -83,6 +83,6 @@ Task: T02-demo-game-flow
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 검증 통과
 - commit: pending

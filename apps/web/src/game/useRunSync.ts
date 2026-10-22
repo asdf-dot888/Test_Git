@@ -13,6 +13,16 @@ export interface RunSyncState {
   loadVersion: number;
 }
 
+export interface RunSyncController extends RunSyncState {
+  saveRun(run: RunState): Promise<void>;
+  createRun(seed: number): Promise<RunState>;
+  replaceRun(reason: "completed" | "abandoned", seed: number): Promise<RunState>;
+  deleteRun(reason: "completed" | "abandoned"): Promise<void>;
+  reload(): Promise<void>;
+  retrySave(run: RunState | null): Promise<void>;
+  retry(): Promise<void>;
+}
+
 const initialState: RunSyncState = {
   status: "loading",
   etag: null,
@@ -27,7 +37,7 @@ function newOwnerId(): string {
   return globalThis.crypto.randomUUID();
 }
 
-export function useRunSync() {
+export function useRunSync(): RunSyncController {
   const auth = useAuth();
   const signIn = auth.signIn;
   const client = useMemo(

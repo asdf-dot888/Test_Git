@@ -1,4 +1,8 @@
 #root { min-height: 100vh; }
+.local-demo-root { min-height: 100vh; }
+.local-demo-notice { position: relative; z-index: 20; min-height: 30px; padding: 6px 12px; color: #211b12; background: #efce8d; text-align: center; font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+.local-demo-root .menu-screen { min-height: calc(100vh - 30px); }
+.local-demo-root .game-shell { min-height: calc(100vh - 30px); }
 .game-shell { min-height: 100vh; display: grid; grid-template-rows: auto minmax(390px, 1fr) auto; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, #29241d 0, #17171a 60%, #111214 100%); }
 .game-topbar { height: 68px; padding: 0 clamp(18px, 4vw, 64px); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-bottom: 1px solid rgb(255 255 255 / 7%); background: rgb(16 16 18 / 80%); }
 .brand-mark { color: var(--gold-bright); text-decoration: none; font-size: 15px; font-weight: 800; letter-spacing: .04em; }

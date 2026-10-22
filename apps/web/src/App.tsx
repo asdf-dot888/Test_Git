@@ -6,7 +6,7 @@ import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
 import { RunLockNotice } from "./components/RunLockNotice.js";
 import { useGameSession } from "./game/useGameSession.js";
-import { useRunSync } from "./game/useRunSync.js";
+import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
 
 function secureSeed(): number {
   const seed = new Uint32Array(1);
@@ -15,8 +15,12 @@ function secureSeed(): number {
 }
 
 export function App() {
-  const { session, dispatch } = useGameSession();
   const sync = useRunSync();
+  return <GameSessionView sync={sync} />;
+}
+
+export function GameSessionView({ sync }: { sync: RunSyncController }) {
+  const { session, dispatch } = useGameSession();
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "game">("menu");
   const [abandonOpen, setAbandonOpen] = useState(false);
