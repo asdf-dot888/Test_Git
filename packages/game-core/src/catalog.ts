@@ -1,4 +1,60 @@
-import type { CardDefinition, EnemyDefinition } from "./types.js";
+import type { CardDefinition, EnemyDefinition, MinionEffect, SpellEffect } from "./types.js";
+
+const SUMMONED_CARD_NAMES: Readonly<Record<string, string>> = {
+  "bone-rat": "뼈 쥐",
+  "cinder-imp": "불씨 임프",
+};
+
+function summonedCardName(cardId: string): string {
+  const name = SUMMONED_CARD_NAMES[cardId];
+  if (!name) throw new Error(`Missing display name for summoned card: ${cardId}`);
+  return name;
+}
+
+function describeStatChanges(attack: number, health: number): string {
+  const changes = [
+    attack > 0 ? `공격력 +${attack}` : "",
+    health > 0 ? `체력 +${health}` : "",
+  ].filter(Boolean);
+  return changes.join(" 및 ");
+}
+
+function statChangesParticle(attack: number, health: number): string {
+  return attack === 0 && health > 0 ? "를" : "을";
+}
+
+function describeMinionEffect(effect: MinionEffect | undefined): string {
+  if (!effect) return "특수 효과 없음";
+  if (effect.kind === "battlecrySummon") {
+    return `전투의 함성: ${summonedCardName(effect.cardId)} ${effect.count}마리를 소환합니다.`;
+  }
+  if (effect.kind === "deathSummon") {
+    return `죽음의 메아리: ${summonedCardName(effect.cardId)} ${effect.count}마리를 소환합니다.`;
+  }
+
+  const target = effect.target === "self" ? "자신" : "다른 아군 하수인";
+  return `전투의 함성: ${target}에게 ${describeStatChanges(effect.attack, effect.health)}${statChangesParticle(effect.attack, effect.health)} 부여합니다.`;
+}
+
+function describeSpellEffects(effects: readonly SpellEffect[]): string {
+  return effects.map((effect) => {
+    if (effect.kind === "damage") {
+      const target = effect.target === "enemyHero" ? "적 영웅" : "적 하수인";
+      return `${target}에게 ${effect.amount}의 피해를 줍니다.`;
+    }
+    if (effect.kind === "heal") {
+      const target = effect.target === "playerHero" ? "내 영웅" : "아군 하수인";
+      return `${target}의 체력을 ${effect.amount} 회복합니다.`;
+    }
+    if (effect.kind === "summon") {
+      return `${summonedCardName(effect.cardId)} ${effect.count}마리를 소환합니다.`;
+    }
+    if (effect.kind === "buff") {
+      return `아군 하수인에게 ${describeStatChanges(effect.attack, effect.health)}${statChangesParticle(effect.attack, effect.health)} 부여합니다.`;
+    }
+    return `카드를 ${effect.count}장 뽑습니다.`;
+  }).join(" / ");
+}
 
 const minion = (
   id: string,
@@ -13,7 +69,7 @@ const minion = (
   name,
   kind: "minion",
   cost,
-  description: effect ? "전투 능력을 가진 하수인" : "필드에 소환해 공격하는 하수인",
+  description: describeMinionEffect(effect),
   artKey: id,
   rewardTier,
   minion: effect ? { attack, maxHealth, effect } : { attack, maxHealth },
@@ -30,7 +86,7 @@ const spell = (
   name,
   kind: "spell",
   cost,
-  description: "마나를 소모해 효과를 발휘하는 주문",
+  description: describeSpellEffects(spellEffects),
   artKey: id,
   rewardTier,
   spellEffects,

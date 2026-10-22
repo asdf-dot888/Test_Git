@@ -82,6 +82,43 @@ describe("card and enemy catalog", () => {
       if (card.kind === "minion") expect(card.minion).toBeDefined();
       else expect(card.spellEffects?.length).toBeGreaterThan(0);
     }
+
+    const expectedDescriptions: Record<string, string> = {
+      "ash-wolf": "특수 효과 없음",
+      "crypt-guard": "특수 효과 없음",
+      "cinder-imp": "전투의 함성: 뼈 쥐 1마리를 소환합니다.",
+      "bone-rat": "특수 효과 없음",
+      "grave-knight": "전투의 함성: 다른 아군 하수인에게 공격력 +1 및 체력 +1을 부여합니다.",
+      "mire-witch": "전투의 함성: 뼈 쥐 1마리를 소환합니다.",
+      "iron-hound": "특수 효과 없음",
+      "ember-priest": "전투의 함성: 자신에게 체력 +2를 부여합니다.",
+      "shade-stalker": "특수 효과 없음",
+      "thorn-brute": "죽음의 메아리: 뼈 쥐 1마리를 소환합니다.",
+      "dusk-raven": "특수 효과 없음",
+      "plague-bearer": "죽음의 메아리: 불씨 임프 1마리를 소환합니다.",
+      "rune-smith": "전투의 함성: 자신에게 공격력 +1을 부여합니다.",
+      "moon-stag": "특수 효과 없음",
+      "hollow-giant": "특수 효과 없음",
+      "blood-oracle": "전투의 함성: 자신에게 체력 +2를 부여합니다.",
+      "frost-wraith": "죽음의 메아리: 뼈 쥐 2마리를 소환합니다.",
+      "storm-crow": "특수 효과 없음",
+      "ancient-treant": "특수 효과 없음",
+      "dread-colossus": "특수 효과 없음",
+      "shadow-bolt": "적 영웅에게 2의 피해를 줍니다.",
+      "soul-lance": "적 하수인에게 3의 피해를 줍니다.",
+      "healing-mist": "내 영웅의 체력을 4 회복합니다.",
+      "raise-bones": "뼈 쥐 2마리를 소환합니다.",
+      "rune-surge": "아군 하수인에게 공격력 +2 및 체력 +1을 부여합니다.",
+      "dark-insight": "카드를 2장 뽑습니다.",
+      "meteor-shard": "적 하수인에게 5의 피해를 줍니다.",
+      "life-thread": "아군 하수인의 체력을 5 회복합니다.",
+      "soul-storm": "적 영웅에게 4의 피해를 줍니다. / 카드를 1장 뽑습니다.",
+      eclipse: "적 영웅에게 8의 피해를 줍니다.",
+    };
+    for (const card of CARD_CATALOG) {
+      expect(card.description).toBe(expectedDescriptions[card.id]);
+      expect(card.description).not.toMatch(/전투 능력을 가진 하수인|필드에 소환해 공격하는 하수인|마나를 소모해 효과를 발휘하는 주문/);
+    }
   });
 
   it("has a 30-card, 20-minion/10-spell starter deck with two copies per ID", () => {
