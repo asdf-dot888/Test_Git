@@ -131,6 +131,31 @@ describe("authenticated Run API", () => {
     expect(response.status).toBe(200);
     expect(repository.save).toHaveBeenCalledWith(userId, ownerId, "etag-1", expect.objectContaining({ seed: 88 }), instant);
     expect(repository.save.mock.calls[0]?.[3]).not.toHaveProperty("userId");
+    expect(repository.save.mock.calls[0]?.[3].battle?.enemyStarterDeck).toHaveLength(30);
+    expect(repository.save.mock.calls[0]?.[3].battle?.enemyHand).toHaveLength(3);
+  });
+
+  it("accepts a legacy battle without enemy zones and saves its hydrated state", async () => {
+    await repository.create(userId, createRun(17), ownerId, instant);
+    const run = createRun(88);
+    const legacyBattle = { ...run.battle } as Record<string, unknown>;
+    delete legacyBattle.enemyMana;
+    delete legacyBattle.enemyStarterDeck;
+    delete legacyBattle.enemyHand;
+    delete legacyBattle.enemyDrawPile;
+    delete legacyBattle.enemyDiscardPile;
+    const response = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run: { ...run, battle: legacyBattle } }),
+    });
+
+    expect(response.status).toBe(200);
+    const saved = repository.save.mock.calls[0]?.[3];
+    expect(saved?.battle?.enemyMana).toEqual({ current: 5, max: 10 });
+    expect(saved?.battle?.enemyStarterDeck).toHaveLength(30);
+    expect(saved?.battle?.enemyHand).toHaveLength(3);
+    expect(saved?.battle?.enemyDrawPile).toHaveLength(27);
   });
 
   it("accepts active and paused turn snapshots while rejecting inconsistent timer fields", async () => {

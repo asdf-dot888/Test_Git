@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router, type ErrorRequestHandler, type Request, type Response } from "express";
-import { createRun, type RunState } from "@board-game/game-core";
+import { createRun, hydrateRunForCurrentBattle, type RunState } from "@board-game/game-core";
 import { z } from "zod";
 import type { AuthenticatedRequest } from "../auth/entraAuth.js";
 import type { RunRepository } from "../db/runRepository.js";
@@ -33,9 +33,14 @@ const battleSchema = z.object({
   playerHero: heroSchema,
   enemyHero: heroSchema,
   playerMana: z.object({ current: z.number().int().min(0).max(10), max: z.number().int().min(0).max(10) }),
+  enemyMana: z.object({ current: z.number().int().min(0).max(10), max: z.number().int().min(0).max(10) }).optional(),
   hand: z.array(cardInstanceSchema).max(10),
   drawPile: z.array(cardInstanceSchema).max(100),
   discardPile: z.array(cardInstanceSchema).max(100),
+  enemyStarterDeck: z.array(cardInstanceSchema).max(100).optional(),
+  enemyHand: z.array(cardInstanceSchema).max(10).optional(),
+  enemyDrawPile: z.array(cardInstanceSchema).max(100).optional(),
+  enemyDiscardPile: z.array(cardInstanceSchema).max(100).optional(),
   playerBoard: z.array(minionSchema).max(5),
   enemyBoard: z.array(minionSchema).max(5),
   enemyId: id,
@@ -127,7 +132,8 @@ export function createRunRouter(deps: {
     const parsed = runBody.safeParse(request.body);
     if (!expectedEtag || !parsed.success) return sendError(response, 400, "INVALID_BODY", "The run state or If-Match header is invalid.");
     const { turnTimer, ...runWithoutTimer } = parsed.data.run;
-    const run: RunState = turnTimer ? { ...runWithoutTimer, turnTimer } : runWithoutTimer;
+    const normalized = hydrateRunForCurrentBattle(runWithoutTimer as unknown as RunState);
+    const run: RunState = turnTimer ? { ...normalized, turnTimer } : normalized;
     const saved = await deps.repository.save(userId, ownerId, expectedEtag, run, now());
     return response.status(200).json({ run: saved.document.run, etag: saved.etag });
   }));

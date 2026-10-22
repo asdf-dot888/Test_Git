@@ -55,9 +55,14 @@ export interface BattleState {
   playerHero: HeroState;
   enemyHero: HeroState;
   playerMana: { current: number; max: number };
+  enemyMana: { current: number; max: number };
   hand: CardInstance[];
   drawPile: CardInstance[];
   discardPile: CardInstance[];
+  enemyStarterDeck: CardInstance[];
+  enemyHand: CardInstance[];
+  enemyDrawPile: CardInstance[];
+  enemyDiscardPile: CardInstance[];
   playerBoard: MinionState[];
   enemyBoard: MinionState[];
   enemyId: string;

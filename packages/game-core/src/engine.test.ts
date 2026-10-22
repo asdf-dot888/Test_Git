@@ -16,6 +16,7 @@ import {
   discardBeforeDraw,
   endPlayerTurn,
   gameConstants,
+  hydrateRunForCurrentBattle,
   playMinion,
   resolveEnemyTurn,
   skipReward,
@@ -167,10 +168,58 @@ describe("seeded run setup and random helpers", () => {
     }
     expect(first.battle?.hand).toHaveLength(3);
     expect(first.battle?.playerMana).toEqual({ current: 5, max: 10 });
+    expect(first.battle?.enemyMana).toEqual({ current: 5, max: 10 });
+    expect(first.battle?.enemyStarterDeck).toHaveLength(30);
+    expect(first.battle?.enemyHand).toHaveLength(3);
+    expect(first.battle?.enemyDrawPile).toHaveLength(27);
     expect(first.battle?.playerHero.health).toBe(30);
-    expect(first.battle?.pendingEnemyCharge).toBeNull();
+    expect(first.battle).not.toHaveProperty("pendingEnemyCharge");
     expect(first.starterDeck).toHaveLength(30);
     expect(first.deck).toHaveLength(30);
+  });
+
+  it("builds deterministic personality-weighted enemy decks with at most two copies", () => {
+    const first = createRun(4567);
+    const second = createRun(4567);
+    expect(first.battle?.enemyStarterDeck).toEqual(second.battle?.enemyStarterDeck);
+    const deck = first.battle!.enemyStarterDeck;
+    expect(new Set(deck.map((card) => card.instanceId)).size).toBe(30);
+    const counts = new Map<string, number>();
+    for (const card of deck) counts.set(card.cardId, (counts.get(card.cardId) ?? 0) + 1);
+    expect([...counts.values()].every((count) => count <= 2)).toBe(true);
+    expect(first.battle?.enemyDrawPile).toHaveLength(27);
+    expect(first.battle?.rngState).toBe(second.battle?.rngState);
+  });
+
+  it("hydrates an active legacy battle without changing player state or modern enemy zones", () => {
+    const modern = copyRun(createRun(789));
+    const modernBattle = activeBattle(modern);
+    const expectedDeck = structuredClone(modernBattle.enemyStarterDeck);
+    // Simulate an older snapshot while retaining the fields required by the current type.
+    const legacy = copyRun(createRun(790));
+    const legacyBattle = legacy.battle! as unknown as Record<string, unknown>;
+    delete legacyBattle.enemyMana;
+    delete legacyBattle.enemyStarterDeck;
+    delete legacyBattle.enemyHand;
+    delete legacyBattle.enemyDrawPile;
+    delete legacyBattle.enemyDiscardPile;
+    const playerHand = structuredClone(legacyBattle.hand);
+    const playerBoard = structuredClone(legacyBattle.playerBoard);
+    legacyBattle.pendingEnemyCharge = { turnsRemaining: 1, damage: 4, target: "hero" };
+
+    const hydrated = hydrateRunForCurrentBattle(legacy);
+    expect(hydrated).not.toBe(legacy);
+    expect(hydrated.battle?.hand).toEqual(playerHand);
+    expect(hydrated.battle?.playerBoard).toEqual(playerBoard);
+    expect(hydrated.battle?.enemyMana).toEqual({ current: 5, max: 10 });
+    expect(hydrated.battle?.enemyStarterDeck).toHaveLength(30);
+    expect(hydrated.battle?.enemyHand).toHaveLength(3);
+    expect(hydrated.battle?.enemyDrawPile).toHaveLength(27);
+    expect(hydrated.battle).not.toHaveProperty("pendingEnemyCharge");
+
+    const unchanged = hydrateRunForCurrentBattle(modern);
+    expect(unchanged).toBe(modern);
+    expect(unchanged.battle?.enemyStarterDeck).toEqual(expectedDeck);
   });
 
   it("shuffles deterministically without changing the source array", () => {

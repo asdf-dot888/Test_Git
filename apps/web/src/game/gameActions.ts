@@ -7,6 +7,7 @@ import {
   createRun,
   discardBeforeDraw,
   endPlayerTurn,
+  hydrateRunForCurrentBattle,
   playMinion,
   skipReward,
   type RunState,
@@ -117,7 +118,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
   if (action.type === "clear-run") return { ...initialGameSession };
   if (action.type === "resolution-start") return { ...session, resolving: true, error: null };
   if (action.type === "start-run") return sessionForRun(createRun(action.seed), session);
-  if (action.type === "restore-run") return sessionForRun(action.run, session);
+  if (action.type === "restore-run") return sessionForRun(hydrateRunForCurrentBattle(action.run), session);
   if (action.type === "cancel-selection") {
     return { ...session, selectedCardInstanceId: null, selectedAttackerId: null, targetMode: "none", error: null };
   }

@@ -56,6 +56,83 @@ function cardCounts(deck: readonly CardInstance[]): Map<string, number> {
   return counts;
 }
 
+function enemyCardWeight(card: CardDefinition, enemy: EnemyDefinition): number {
+  const profile = enemy.tactics.profile;
+  const effects = card.spellEffects ?? [];
+  const minion = card.minion;
+  const bossCardBonus = enemy.kind === "boss" && card.rewardTier === "boss" ? 2 : 0;
+  let weight = 1 + bossCardBonus;
+
+  if (profile === "aggressor" || profile === "hunter") {
+    if (minion) weight += card.cost <= 3 ? 5 : 2;
+    if (effects.some((effect) => effect.kind === "damage")) weight += 5;
+    if (effects.some((effect) => effect.kind === "summon")) weight += 2;
+  } else if (profile === "summoner") {
+    if (minion) weight += 5;
+    if (minion?.effect?.kind === "battlecrySummon" || effects.some((effect) => effect.kind === "summon")) weight += 5;
+    if (effects.some((effect) => effect.kind === "draw")) weight += 2;
+  } else if (profile === "controller" || profile === "drain") {
+    if (minion && minion.maxHealth >= minion.attack) weight += 4;
+    if (effects.some((effect) => effect.kind === "heal" || effect.kind === "buff")) weight += 5;
+    if (effects.some((effect) => effect.kind === "damage")) weight += 2;
+  } else {
+    if (minion && card.cost >= 4) weight += 5;
+    if (card.kind === "spell" && card.cost >= 4) weight += 4;
+    if (effects.some((effect) => effect.kind === "damage")) weight += 2;
+  }
+  return weight;
+}
+
+function createEnemyDeck(enemy: EnemyDefinition, seed: number, idPrefix: string): { starterDeck: CardInstance[]; shuffledDeck: CardInstance[]; state: number } {
+  const starterDeck: CardInstance[] = [];
+  const counts = new Map<string, number>();
+  let state = normalizeSeed(seed);
+  while (starterDeck.length < 30) {
+    const candidates = CARD_CATALOG
+      .filter((card) => (counts.get(card.id) ?? 0) < 2)
+      .map((card) => ({ card, weight: enemyCardWeight(card, enemy) }));
+    const totalWeight = candidates.reduce((total, candidate) => total + candidate.weight, 0);
+    if (totalWeight <= 0) fail("INVALID_ACTION", `No valid cards are available for ${enemy.id}.`);
+    const picked = pickIndex(totalWeight, state);
+    state = picked.state;
+    let cursor = picked.value;
+    const selected = candidates.find(({ weight }) => {
+      cursor -= weight;
+      return cursor < 0;
+    })?.card;
+    if (!selected) fail("INVALID_ACTION", `Could not generate a card for ${enemy.id}.`);
+    const index = starterDeck.length + 1;
+    starterDeck.push({ instanceId: `${idPrefix}-${index}`, cardId: selected.id });
+    counts.set(selected.id, (counts.get(selected.id) ?? 0) + 1);
+  }
+  const shuffled = shuffle(starterDeck, state);
+  return { starterDeck, shuffledDeck: shuffled.items, state: shuffled.state };
+}
+
+export function hydrateRunForCurrentBattle(run: RunState): RunState {
+  const battle = run.battle;
+  if (!battle || run.status !== "active" || battle.status !== "active") return run;
+  const hasEnemyZones = Boolean(battle.enemyMana && battle.enemyStarterDeck && battle.enemyHand && battle.enemyDrawPile && battle.enemyDiscardPile);
+  const hasObsoleteCharge = Object.prototype.hasOwnProperty.call(battle, "pendingEnemyCharge");
+  if (hasEnemyZones && !hasObsoleteCharge) return run;
+
+  const next = cloneRun(run);
+  const current = next.battle!;
+  if (!hasEnemyZones) {
+    const enemy = ENEMY_BY_ID.get(current.enemyId);
+    if (!enemy) fail("INVALID_ACTION", `Unknown enemy: ${current.enemyId}`);
+    const generated = createEnemyDeck(enemy, current.rngState, `${current.battleId}-enemy-card`);
+    current.enemyMana = { current: INITIAL_MANA, max: MAX_MANA };
+    current.enemyStarterDeck = generated.starterDeck;
+    current.enemyHand = generated.shuffledDeck.slice(0, 3);
+    current.enemyDrawPile = generated.shuffledDeck.slice(3);
+    current.enemyDiscardPile = [];
+    current.rngState = generated.state;
+  }
+  delete current.pendingEnemyCharge;
+  return next;
+}
+
 function makeInstance(run: RunState, cardId: string, prefix = "card"): CardInstance {
   return { instanceId: `${prefix}-${run.nextInstanceNumber}`, cardId };
 }
@@ -460,6 +537,7 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
 
   encounter.status = "active";
   const shuffled = shuffle(run.deck, battleSeed);
+  const enemyDeck = createEnemyDeck(enemy, shuffled.state, `${run.runId}-enemy-${encounterIndex + 1}`);
   const nextRun = { ...run, phase: encounter.phase, battle: null } as RunState;
   const battle: BattleState = {
     battleId: `${run.runId}-battle-${encounterIndex + 1}`,
@@ -468,15 +546,19 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     playerHero: { id: "player", health: HERO_HEALTH, maxHealth: HERO_HEALTH },
     enemyHero: { id: "enemy", health: enemy.maxHealth, maxHealth: enemy.maxHealth },
     playerMana: { current: INITIAL_MANA, max: MAX_MANA },
+    enemyMana: { current: INITIAL_MANA, max: MAX_MANA },
     hand: shuffled.items.slice(0, 3),
     drawPile: shuffled.items.slice(3),
     discardPile: [],
+    enemyStarterDeck: enemyDeck.starterDeck,
+    enemyHand: enemyDeck.shuffledDeck.slice(0, 3),
+    enemyDrawPile: enemyDeck.shuffledDeck.slice(3),
+    enemyDiscardPile: [],
     playerBoard: [],
     enemyBoard: [],
     enemyId: encounter.enemyId,
-    rngState: shuffled.state,
+    rngState: enemyDeck.state,
     status: "active",
-    pendingEnemyCharge: null,
   };
   nextRun.battle = battle;
   return nextRun;
