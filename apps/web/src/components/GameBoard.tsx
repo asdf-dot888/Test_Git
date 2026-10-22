@@ -3,6 +3,7 @@ import { ENEMY_BY_ID, type RunState } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
 import type { PlayerSide } from "@board-game/game-core";
 import type { CombatEffectEvent } from "../game/combatEffects.js";
+import { CombatEffectLayer } from "./CombatEffectLayer.js";
 import { DiscardPicker } from "./DiscardPicker.js";
 import { HeroPanel } from "./HeroPanel.js";
 import { HandPanel } from "./HandPanel.js";
@@ -61,6 +62,7 @@ export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, sel
   };
 
   return (
+    <>
     <main className="game-shell">
       <header className="game-topbar">
         <a className="brand-mark" href="#battle" aria-label="잿빛 원정 홈"><span aria-hidden="true">✦</span> 잿빛 원정</a>
@@ -69,17 +71,6 @@ export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, sel
       </header>
 
       <section className="battle-board" id="battle" aria-label="카드 전투 보드">
-        {combatEffects.length > 0 && <div className="combat-effect-events" aria-hidden="true">
-          {combatEffects.map((event) => <span
-            key={event.id}
-            data-combat-effect-id={event.id}
-            data-effect-card={event.assetCardId ?? "impact"}
-            data-effect-kind={event.effectKind}
-            data-effect-source={JSON.stringify(event.source)}
-            data-effect-target={JSON.stringify(event.target)}
-            onAnimationEnd={() => onCombatEffectComplete?.(event.id)}
-          />)}
-        </div>}
         <div className="battle-opponent">
           <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} />
           <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} />
@@ -106,5 +97,7 @@ export function GameBoard({ run, combatEffects = [], onCombatEffectComplete, sel
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
       {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}
     </main>
+    <CombatEffectLayer events={combatEffects} onComplete={(eventId) => onCombatEffectComplete?.(eventId)} />
+    </>
   );
 }

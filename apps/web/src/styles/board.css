@@ -227,6 +227,28 @@
 .run-sync-expiry { font-size: 13px; }
 .run-sync-banner { position: fixed; z-index: 30; top: 14px; left: 50%; transform: translateX(-50%); width: min(94vw, 720px); display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; border: 1px solid #776444; border-radius: 12px; color: #f4ead4; background: rgba(26, 23, 19, .96); box-shadow: 0 10px 35px #0008; }
 .run-sync-banner button { flex: none; }
+
+.combat-effect-layer { position: fixed; z-index: 80; inset: 0; overflow: hidden; pointer-events: none; }
+.combat-effect-sprite { position: fixed; z-index: 81; width: clamp(54px, 8vw, 104px); height: clamp(54px, 8vw, 104px); object-fit: contain; transform: translate(-50%, -50%); filter: drop-shadow(0 0 12px rgb(255 215 127 / 60%)); animation: combat-effect-flight 620ms cubic-bezier(.2, .76, .25, 1) both; will-change: transform, opacity; }
+.combat-effect-impact { position: fixed; z-index: 82; width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 2px solid #ffe2a0; border-radius: 50%; opacity: 0; box-shadow: 0 0 20px 8px rgb(255 206 116 / 62%), inset 0 0 12px rgb(255 255 220 / 65%); animation: combat-effect-impact 280ms ease-out both; }
+.combat-effect-impact.effect-damage, .combat-effect-impact.effect-attack, .combat-effect-impact.effect-impact { border-color: #ffd1a0; box-shadow: 0 0 20px 8px rgb(240 96 71 / 64%), inset 0 0 12px rgb(255 239 210 / 75%); }
+.combat-effect-impact.effect-buff, .combat-effect-impact.effect-heal { border-color: #b9ffd8; box-shadow: 0 0 20px 8px rgb(74 231 168 / 58%), inset 0 0 12px rgb(221 255 238 / 78%); }
+.combat-effect-impact.effect-summon { border-color: #e0c4ff; box-shadow: 0 0 20px 8px rgb(166 112 255 / 58%), inset 0 0 12px rgb(248 230 255 / 78%); }
+@keyframes combat-effect-flight {
+  0% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(.68); }
+  14% { opacity: 1; transform: translate(-50%, -50%) translate(0, 0) scale(1); }
+  76% { opacity: 1; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.92); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.72); }
+}
+@keyframes combat-effect-impact {
+  0% { opacity: 0; transform: scale(.25); }
+  35% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .combat-effect-sprite { animation-duration: 160ms; animation-delay: 0ms !important; }
+  .combat-effect-impact { animation-duration: 160ms; animation-delay: 0ms !important; }
+}
 .dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(5, 5, 5, .76); }
 .abandon-dialog { width: min(100%, 500px); }
 .abandon-dialog h2 { margin: 14px 0; font-size: clamp(20px, 4vw, 28px); }

@@ -17,10 +17,11 @@ export function HandPanel({ cards, selectedCardInstanceId, currentMana, boardSiz
     <section className="hand-panel" aria-label={`내 손패 ${cards.length}장`}>
       <div className="hand-heading"><h2>손패</h2><span>{cards.length} / 10</span></div>
       <div className="hand-cards">
-        {cards.slice(0, 10).map((instance) => (
+        {cards.slice(0, 10).map((instance, index) => (
           <CardView
             key={instance.instanceId}
             instance={instance}
+            effectSlot={index}
             selected={selectedCardInstanceId === instance.instanceId}
             disabled={disabled || !canSelectCard(instance) || (CARD_BY_ID.get(instance.cardId)?.cost ?? Number.POSITIVE_INFINITY) > currentMana || (CARD_BY_ID.get(instance.cardId)?.kind === "minion" && boardSize >= 5)}
             onSelect={() => onSelectCard(instance.instanceId)}

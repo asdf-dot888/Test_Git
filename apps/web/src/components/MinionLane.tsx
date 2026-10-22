@@ -19,7 +19,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
       {Array.from({ length: 5 }, (_, index) => {
         const minion = minions[index];
         return (
-          <div className={`lane-slot${minion ? " is-occupied" : ""}`} key={`${side}-${index}`}>
+          <div className={`lane-slot${minion ? " is-occupied" : ""}`} data-effect-anchor={`minion:${side}:${index}`} key={`${side}-${index}`}>
             {minion ? (
               <MinionCard
                 minion={minion}

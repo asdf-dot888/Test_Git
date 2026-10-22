@@ -4,7 +4,7 @@ import type { GameAction } from "./gameActions.js";
 export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "summon" | "draw" | "impact";
 
 export type CombatAnchor =
-  | { kind: "hand"; slot: number }
+  | { kind: "hand"; slot: number; instanceId?: string }
   | { kind: "hero"; side: PlayerSide }
   | { kind: "minion"; side: PlayerSide; slot: number };
 
@@ -65,7 +65,7 @@ export function collectCombatEffectEvents(
     if (card && definition?.kind === "minion") {
       const summoned = next.playerBoard.find((minion) => minion.instanceId === card.instanceId);
       const targetSlot = summoned ? slotOf(next.playerBoard, summoned.instanceId) : Math.max(0, previous.playerBoard.length);
-      pushEvent(events, firstEventId, card.cardId, "summon", { kind: "hand", slot: handSlot }, { kind: "minion", side: "player", slot: Math.min(4, targetSlot) });
+      pushEvent(events, firstEventId, card.cardId, "summon", { kind: "hand", slot: handSlot, instanceId: card.instanceId }, { kind: "minion", side: "player", slot: Math.min(4, targetSlot) });
       const effect = definition.minion?.effect;
       if (effect?.kind === "battlecryBuff") {
         const target = effect.target === "self"
@@ -87,7 +87,7 @@ export function collectCombatEffectEvents(
     if (card && definition?.kind === "spell") {
       for (const effect of definition.spellEffects ?? []) {
         const kind: CombatEffectKind = effect.kind === "damage" ? "damage" : effect.kind;
-        pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", slot: handSlot }, spellTarget(previous, effect, action.targetId));
+        pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", slot: handSlot, instanceId: card.instanceId }, spellTarget(previous, effect, action.targetId));
       }
     }
   } else if (action.type === "attack") {
