@@ -1,5 +1,6 @@
 import { CARD_BY_ID, ENEMY_BY_ID, type PlayerSide, type RunState, type SpellEffect } from "@board-game/game-core";
 import type { GameAction } from "./gameActions.js";
+import type { SoundEffectKind } from "./audio.js";
 
 export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "summon" | "draw" | "impact";
 
@@ -12,6 +13,7 @@ export interface CombatEffectEvent {
   id: number;
   assetCardId: string | null;
   effectKind: CombatEffectKind;
+  soundCues: SoundEffectKind[];
   source: CombatAnchor;
   target: CombatAnchor;
 }
@@ -27,8 +29,9 @@ function pushEvent(
   effectKind: CombatEffectKind,
   source: CombatAnchor,
   target: CombatAnchor,
+  soundCues: SoundEffectKind[] = [],
 ): void {
-  events.push({ id: firstEventId + events.length, assetCardId, effectKind, source, target });
+  events.push({ id: firstEventId + events.length, assetCardId, effectKind, soundCues: [...new Set(soundCues)], source, target });
 }
 
 function spellTarget(previous: NonNullable<RunState["battle"]>, effect: SpellEffect, targetId?: string): CombatAnchor {
@@ -54,12 +57,12 @@ export function collectCombatEffectEvents(
   firstEventId: number,
 ): CombatEffectEvent[] {
   const previous = previousRun.battle;
-  const next = nextRun.battle;
-  if (!previous || !next) return [];
+  if (!previous) return [];
+  const next = nextRun.battle ?? previous;
 
   const events: CombatEffectEvent[] = [];
   const previousCharge = previous.pendingEnemyCharge ?? null;
-  const chargeReleased = action.type === "end-turn" && previousCharge !== null && (next.pendingEnemyCharge ?? null) === null;
+  const chargeReleased = action.type === "end-turn" && previousCharge !== null && (nextRun.battle?.pendingEnemyCharge ?? null) === null;
   const bossChargeReleased = chargeReleased && ENEMY_BY_ID.get(previous.enemyId)?.kind === "boss" && previousCharge.target === "board-and-hero";
   if (action.type === "play-minion") {
     const handSlot = slotOf(previous.hand, action.instanceId);
@@ -90,7 +93,14 @@ export function collectCombatEffectEvents(
     if (card && definition?.kind === "spell") {
       for (const effect of definition.spellEffects ?? []) {
         const kind: CombatEffectKind = effect.kind === "damage" ? "damage" : effect.kind;
-        pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", slot: handSlot, instanceId: card.instanceId }, spellTarget(previous, effect, action.targetId));
+        const cues: SoundEffectKind[] = ["spell"];
+        if (effect.kind === "damage") {
+          cues.push("damage");
+          if (effect.target === "enemyMinion" && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId)) cues.push("death");
+        } else if (effect.kind === "heal") {
+          cues.push("heal");
+        }
+        pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", slot: handSlot, instanceId: card.instanceId }, spellTarget(previous, effect, action.targetId), cues);
       }
     }
   } else if (action.type === "attack") {
@@ -101,7 +111,8 @@ export function collectCombatEffectEvents(
       const target: CombatAnchor = targetSlot >= 0
         ? { kind: "minion", side: "enemy", slot: targetSlot }
         : { kind: "hero", side: "enemy" };
-      pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "player", slot: attackerSlot }, target);
+      const targetDied = targetSlot >= 0 && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId);
+      pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "player", slot: attackerSlot }, target, targetDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
     }
   } else if (action.type === "end-turn") {
     const damagedPlayerMinions = new Set<string>();
@@ -119,19 +130,20 @@ export function collectCombatEffectEvents(
       });
       if (target) {
         damagedPlayerMinions.add(target.instanceId);
-        pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, attacker.instanceId) }, { kind: "minion", side: "player", slot: slotOf(previous.playerBoard, target.instanceId) });
+        const targetDied = !next.playerBoard.some((minion) => minion.instanceId === target.instanceId);
+        pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, attacker.instanceId) }, { kind: "minion", side: "player", slot: slotOf(previous.playerBoard, target.instanceId) }, targetDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
       } else if (previous.playerBoard.length === 0 || boardEmptyAfterCharge) {
-        pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, attacker.instanceId) }, { kind: "hero", side: "player" });
+        pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, attacker.instanceId) }, { kind: "hero", side: "player" }, ["minion-attack", "damage"]);
       }
     }
 
-    const playerHeroDamaged = next.playerHero.health < previous.playerHero.health;
+    const playerHeroDamaged = next.playerHero.health < previous.playerHero.health || nextRun.status === "defeat";
     const minionHitHero = (previous.playerBoard.length === 0 || boardEmptyAfterCharge) && next.enemyBoard.some((attacker) => {
       const before = previous.enemyBoard.find((minion) => minion.instanceId === attacker.instanceId);
       return before && attacker.summonedTurn < next.turnNumber && attacker.hasAttacked;
     });
     if (playerHeroDamaged && !minionHitHero && !bossChargeReleased) {
-      pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" });
+      pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" }, ["damage"]);
     }
   }
 
@@ -139,11 +151,11 @@ export function collectCombatEffectEvents(
     previous.playerBoard.forEach((minion, slot) => {
       const after = next.playerBoard.find((candidate) => candidate.instanceId === minion.instanceId);
       if (!after || after.health < minion.health) {
-        pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "enemy" }, { kind: "minion", side: "player", slot });
+        pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "enemy" }, { kind: "minion", side: "player", slot }, next.playerBoard.some((candidate) => candidate.instanceId === minion.instanceId) ? ["damage"] : ["damage", "death"]);
       }
     });
     if (next.playerHero.health < previous.playerHero.health) {
-      pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" });
+      pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" }, ["damage"]);
     }
   }
   return events;

@@ -17,7 +17,7 @@ describe("collectCombatEffectEvents", () => {
     });
     const events = collectCombatEffectEvents(before, before, { type: "attack", attackerId: "wolf", targetId: "guard" }, 12);
 
-    expect(events).toEqual([{ id: 12, assetCardId: "ash-wolf", effectKind: "attack", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } }]);
+    expect(events).toEqual([{ id: 12, assetCardId: "ash-wolf", effectKind: "attack", soundCues: ["minion-attack", "damage"], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } }]);
   });
 
   it("creates one event for each enemy minion attack during its turn", () => {
@@ -38,6 +38,7 @@ describe("collectCombatEffectEvents", () => {
       ["bone-rat", { kind: "minion", side: "enemy", slot: 0 }, { kind: "minion", side: "player", slot: 0 }],
       ["bone-rat", { kind: "minion", side: "enemy", slot: 1 }, { kind: "minion", side: "player", slot: 1 }],
     ]);
+    expect(events.map((event) => event.soundCues)).toEqual([["minion-attack", "damage"], ["minion-attack", "damage"]]);
   });
 
   it("keeps the spell card id and hand source for spell damage and common hero impact", () => {
@@ -49,10 +50,25 @@ describe("collectCombatEffectEvents", () => {
     const spell = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "lance", targetId: "target" }, 4);
     expect(spell).toHaveLength(1);
     expect(spell[0]).toMatchObject({ assetCardId: "soul-lance", effectKind: "damage", source: { kind: "hand", slot: 0, instanceId: "lance" }, target: { kind: "minion", side: "enemy", slot: 0 } });
+    expect(spell[0]?.soundCues).toEqual(["spell", "damage"]);
 
     const after = withBattle(before, (state) => { state.battle!.playerHero.health -= 3; });
     const impact = collectCombatEffectEvents(before, after, { type: "end-turn" }, 9);
-    expect(impact[0]).toMatchObject({ assetCardId: null, effectKind: "impact", source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } });
+    expect(impact[0]).toMatchObject({ assetCardId: null, effectKind: "impact", soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } });
+  });
+
+  it("cues spell damage, minion death, and healing separately", () => {
+    const run = createRun(431);
+    const before = withBattle(run, (state) => {
+      state.battle!.hand = [{ instanceId: "lance", cardId: "soul-lance" }, { instanceId: "mist", cardId: "healing-mist" }];
+      state.battle!.enemyBoard = [{ instanceId: "target", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    });
+    const afterDamage = withBattle(before, (state) => { state.battle!.enemyBoard = []; });
+    const damage = collectCombatEffectEvents(before, afterDamage, { type: "cast-spell", instanceId: "lance", targetId: "target" }, 70);
+    expect(damage[0]?.soundCues).toEqual(["spell", "damage", "death"]);
+
+    const heal = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "mist" }, 80);
+    expect(heal[0]?.soundCues).toEqual(["spell", "heal"]);
   });
 
   it("creates separate boss charge impacts for damaged targets and preserves minion face attacks", () => {
@@ -77,6 +93,7 @@ describe("collectCombatEffectEvents", () => {
       { kind: "minion", side: "player", slot: 0 },
       { kind: "hero", side: "player" },
     ]);
+    expect(events.filter((event) => event.effectKind === "damage").map((event) => event.soundCues)).toEqual([["damage", "death"], ["damage"]]);
     expect(events.some((event) => event.assetCardId === "bone-rat" && event.effectKind === "attack" && event.target.kind === "hero")).toBe(true);
   });
 

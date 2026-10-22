@@ -60,7 +60,10 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
   const [geometry, setGeometry] = useState<EffectGeometry | null>(null);
   const completeRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+
+  useLayoutEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useLayoutEffect(() => {
     completeRef.current = false;
@@ -80,7 +83,7 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timeout);
     };
-  }, [event.id, index, event.source, event.target]);
+  }, [event, index]);
 
   if (!geometry) return null;
   const delay = Math.min(index, 8) * 120;

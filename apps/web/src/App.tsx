@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CARD_BY_ID } from "@board-game/game-core";
+import { CARD_BY_ID, ENEMY_BY_ID } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { EncounterContinueScreen } from "./components/EncounterContinueScreen.js";
 import { GameBoard } from "./components/GameBoard.js";
@@ -8,6 +8,7 @@ import { RewardScreen } from "./components/RewardScreen.js";
 import { RunLockNotice } from "./components/RunLockNotice.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
+import { createAudioController } from "./game/audio.js";
 
 function secureSeed(): number {
   const seed = new Uint32Array(1);
@@ -25,11 +26,38 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "game">("menu");
   const [abandonOpen, setAbandonOpen] = useState(false);
+  const [audioController] = useState(() => createAudioController());
   const appliedLoadVersion = useRef(0);
   const restoringRemoteRun = useRef(false);
   const pendingReplacement = useRef(false);
+  const playedAudioEventIds = useRef(new Set<number>());
   const run = session.run;
   const battle = run?.battle;
+  const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
+
+  useEffect(() => () => audioController.dispose(), [audioController]);
+
+  useEffect(() => {
+    audioController.playMusic(enemyKind === "boss" ? "boss" : "normal");
+  }, [audioController, enemyKind]);
+
+  useEffect(() => {
+    for (const event of session.combatEffects) {
+      if (playedAudioEventIds.current.has(event.id)) continue;
+      playedAudioEventIds.current.add(event.id);
+      for (const cue of event.soundCues) audioController.playEffect(cue);
+    }
+  }, [audioController, session.combatEffects]);
+
+  useEffect(() => {
+    const unlockAudio = () => { void audioController.unlock(); };
+    document.addEventListener("pointerdown", unlockAudio, { capture: true, once: true });
+    document.addEventListener("keydown", unlockAudio, { capture: true, once: true });
+    return () => {
+      document.removeEventListener("pointerdown", unlockAudio, { capture: true });
+      document.removeEventListener("keydown", unlockAudio, { capture: true });
+    };
+  }, [audioController]);
 
   useEffect(() => {
     if (sync.loadVersion <= appliedLoadVersion.current) return;

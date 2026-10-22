@@ -15,7 +15,7 @@ describe("CombatEffectLayer", () => {
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
     vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
     const onComplete = vi.fn();
-    render(<CombatEffectLayer events={[{ id: 7, assetCardId: "ash-wolf", effectKind: "attack", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={onComplete} />);
+    render(<CombatEffectLayer events={[{ id: 7, assetCardId: "ash-wolf", effectKind: "attack", soundCues: [], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={onComplete} />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelectorAll(".combat-effect-sprite")).toHaveLength(2);
@@ -30,11 +30,11 @@ describe("CombatEffectLayer", () => {
   it("uses the spell illustration for hand events and the generic impact for hero-only hits", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
-    const spell = render(<CombatEffectLayer events={[{ id: 1, assetCardId: "shadow-bolt", effectKind: "damage", source: { kind: "hand", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={vi.fn()} />);
+    const spell = render(<CombatEffectLayer events={[{ id: 1, assetCardId: "shadow-bolt", effectKind: "damage", soundCues: [], source: { kind: "hand", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={vi.fn()} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelector(".combat-effect-card-frame img")?.getAttribute("src")).toBe("/art/cards/shadow-bolt.png");
     spell.unmount();
-    render(<CombatEffectLayer events={[{ id: 2, assetCardId: null, effectKind: "impact", source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={vi.fn()} />);
+    render(<CombatEffectLayer events={[{ id: 2, assetCardId: null, effectKind: "impact", soundCues: [], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={vi.fn()} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelector(".combat-effect-impact-art")?.getAttribute("src")).toBe("/art/effects/impact.png");
   });
