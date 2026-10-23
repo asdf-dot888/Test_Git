@@ -49,6 +49,7 @@ function describeSpellEffects(effects: readonly SpellEffect[]): string {
     if (effect.kind === "summon") {
       return `${summonedCardName(effect.cardId)} ${effect.count}마리를 소환합니다.`;
     }
+    if (effect.kind === "gainMana") return `마나 ${effect.amount}을 얻습니다.`;
     if (effect.kind === "buff") {
       return `아군 하수인에게 ${describeStatChanges(effect.attack, effect.health)}${statChangesParticle(effect.attack, effect.health)} 부여합니다.`;
     }
@@ -81,6 +82,7 @@ const spell = (
   cost: number,
   spellEffects: NonNullable<CardDefinition["spellEffects"]>,
   rewardTier: "normal" | "boss" = "normal",
+  playerOnly = false,
 ): CardDefinition => ({
   id,
   name,
@@ -89,6 +91,7 @@ const spell = (
   description: describeSpellEffects(spellEffects),
   artKey: id,
   rewardTier,
+  ...(playerOnly ? { playerOnly: true } : {}),
   spellEffects,
 });
 
@@ -117,6 +120,7 @@ export const CARD_CATALOG: readonly CardDefinition[] = [
   spell("shadow-bolt", "그림자 화살", 1, [{ kind: "damage", amount: 2, target: "enemyHero" }]),
   spell("soul-lance", "영혼 창", 2, [{ kind: "damage", amount: 3, target: "enemyMinion" }]),
   spell("healing-mist", "치유 안개", 2, [{ kind: "heal", amount: 4, target: "playerHero" }]),
+  spell("mana-spring", "마력의 샘", 0, [{ kind: "gainMana", amount: 1 }], "normal", true),
   spell("raise-bones", "뼈 무리", 3, [{ kind: "summon", cardId: "bone-rat", count: 2 }]),
   spell("rune-surge", "룬의 파동", 2, [{ kind: "buff", attack: 2, health: 1, target: "playerMinion" }]),
   spell("dark-insight", "어둠의 통찰", 3, [{ kind: "draw", count: 2 }]),
@@ -131,7 +135,7 @@ export const STARTER_DECK_CARD_IDS: readonly string[] = [
   "bone-rat", "bone-rat", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
   "iron-hound", "iron-hound", "ember-priest", "ember-priest", "shade-stalker", "shade-stalker",
   "thorn-brute", "thorn-brute", "shadow-bolt", "shadow-bolt", "soul-lance", "soul-lance",
-  "healing-mist", "healing-mist", "raise-bones", "raise-bones", "rune-surge", "rune-surge",
+  "healing-mist", "mana-spring", "raise-bones", "raise-bones", "rune-surge", "rune-surge",
 ];
 
 export const NORMAL_ENEMIES: readonly EnemyDefinition[] = [

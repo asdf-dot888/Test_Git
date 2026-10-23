@@ -2,7 +2,7 @@ import { CARD_BY_ID, type EnemyCombatRecord, type PlayerSide, type RunState, typ
 import type { GameAction } from "./gameActions.js";
 import type { SoundEffectKind } from "./audio.js";
 
-export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "summon" | "draw" | "impact";
+export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "mana" | "summon" | "draw" | "impact";
 
 export type CombatAnchor =
   | { kind: "hand"; side: PlayerSide; slot: number; instanceId?: string }
@@ -28,6 +28,7 @@ function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardI
 }
 
 function playerSpellTarget(battle: NonNullable<RunState["battle"]>, effect: SpellEffect, targetId?: string): CombatAnchor {
+  if (effect.kind === "gainMana") return { kind: "hero", side: "player" };
   if (effect.kind === "damage") {
     if (effect.target === "enemyHero") return { kind: "hero", side: "enemy" };
     return { kind: "minion", side: "enemy", slot: Math.max(0, slotOf(battle.enemyBoard, targetId ?? "")) };
@@ -42,6 +43,7 @@ function playerSpellTarget(battle: NonNullable<RunState["battle"]>, effect: Spel
 }
 
 function enemySpellTarget(battle: NonNullable<RunState["battle"]>, effect: SpellEffect, targetId?: string): CombatAnchor {
+  if (effect.kind === "gainMana") return { kind: "hero", side: "enemy" };
   if (effect.kind === "damage") {
     return targetId
       ? { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId)) }
@@ -75,7 +77,7 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
       for (const [index, logged] of record.effects.entries()) {
         const effect = definition?.spellEffects?.[index];
         if (!effect) continue;
-        const kind: CombatEffectKind = effect.kind === "damage" ? "damage" : effect.kind;
+        const kind: CombatEffectKind = effect.kind === "damage" ? "damage" : effect.kind === "gainMana" ? "mana" : effect.kind;
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage") {
           cues.push("damage");
@@ -160,7 +162,7 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
     if (card && definition?.kind === "spell") {
       for (const effect of definition.spellEffects ?? []) {
-        const kind: CombatEffectKind = effect.kind === "damage" ? "damage" : effect.kind;
+        const kind: CombatEffectKind = effect.kind === "damage" ? "damage" : effect.kind === "gainMana" ? "mana" : effect.kind;
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage") {
           cues.push("damage");

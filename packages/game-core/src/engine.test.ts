@@ -72,11 +72,11 @@ function winCurrentBattle(run: RunState): RunState {
 }
 
 describe("card and enemy catalog", () => {
-  it("contains 30 unique cards split into 20 minions and 10 spells", () => {
-    expect(CARD_CATALOG).toHaveLength(30);
-    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(30);
+  it("contains 31 unique cards split into 20 minions and 11 spells", () => {
+    expect(CARD_CATALOG).toHaveLength(31);
+    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(31);
     expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(20);
-    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(10);
+    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(11);
     for (const card of CARD_CATALOG) {
       expect(card.cost).toBeGreaterThanOrEqual(0);
       expect(card.cost).toBeLessThanOrEqual(10);
@@ -110,6 +110,7 @@ describe("card and enemy catalog", () => {
       "dread-colossus": "특수 효과 없음",
       "shadow-bolt": "적 영웅에게 2의 피해를 줍니다.",
       "soul-lance": "적 하수인에게 3의 피해를 줍니다.",
+      "mana-spring": "마나 1을 얻습니다.",
       "healing-mist": "내 영웅의 체력을 4 회복합니다.",
       "raise-bones": "뼈 쥐 2마리를 소환합니다.",
       "rune-surge": "아군 하수인에게 공격력 +2 및 체력 +1을 부여합니다.",
@@ -129,8 +130,9 @@ describe("card and enemy catalog", () => {
     expect(STARTER_DECK_CARD_IDS).toHaveLength(30);
     const counts = new Map<string, number>();
     for (const id of STARTER_DECK_CARD_IDS) counts.set(id, (counts.get(id) ?? 0) + 1);
-    expect(counts.size).toBe(15);
-    expect([...counts.values()].every((count) => count === 2)).toBe(true);
+    expect(counts.get("mana-spring")).toBe(1);
+    expect(counts.get("healing-mist")).toBe(1);
+    expect([...counts.entries()].every(([id, count]) => count === (id === "mana-spring" || id === "healing-mist" ? 1 : 2))).toBe(true);
     expect(STARTER_DECK_CARD_IDS.filter((id) => CARD_BY_ID.get(id)?.kind === "minion")).toHaveLength(20);
     expect(STARTER_DECK_CARD_IDS.filter((id) => CARD_BY_ID.get(id)?.kind === "spell")).toHaveLength(10);
     expect(STARTER_DECK_CARD_IDS.every((id) => CARD_BY_ID.has(id))).toBe(true);
@@ -180,6 +182,15 @@ describe("seeded run setup and random helpers", () => {
     const counts = new Map<string, number>();
     for (const card of deck) counts.set(card.cardId, (counts.get(card.cardId) ?? 0) + 1);
     expect([...counts.values()].every((count) => count <= 2)).toBe(true);
+    expect(deck.some((card) => card.cardId === "mana-spring")).toBe(false);
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const generated = createRun(seed).battle!.enemyStarterDeck;
+      expect(generated).toHaveLength(30);
+      expect(generated.some((card) => card.cardId === "mana-spring")).toBe(false);
+      const generatedCounts = new Map<string, number>();
+      for (const card of generated) generatedCounts.set(card.cardId, (generatedCounts.get(card.cardId) ?? 0) + 1);
+      expect([...generatedCounts.values()].every((count) => count <= 2)).toBe(true);
+    }
     expect(first.battle?.enemyDrawPile).toHaveLength(27);
     expect(first.battle?.rngState).toBe(second.battle?.rngState);
   });
@@ -396,6 +407,21 @@ describe("player actions and battle rules", () => {
     const drawn = castSpell(drawRun, "insight");
     expect(drawn.battle?.hand).toHaveLength(10);
     expect(drawn.battle?.discardPile.some((card) => card.instanceId.startsWith("card-") || card.instanceId.startsWith("recycle-"))).toBe(true);
+  });
+
+  it("gains one current mana from mana spring without exceeding the maximum", () => {
+    for (const currentMana of [5, 9, 10]) {
+      const run = copyRun(createRun(500 + currentMana));
+      const battle = activeBattle(run);
+      const card = instance(`mana-spring-${currentMana}`, "mana-spring");
+      battle.playerMana.current = currentMana;
+      battle.hand = [card];
+
+      const cast = castSpell(run, card.instanceId);
+      expect(cast.battle?.playerMana).toEqual({ current: Math.min(10, currentMana + 1), max: 10 });
+      expect(cast.battle?.discardPile).toContainEqual(card);
+      expect(cast.battle?.hand).toHaveLength(0);
+    }
   });
 
   it("rejects a summon spell on a full board and does not consume its card", () => {

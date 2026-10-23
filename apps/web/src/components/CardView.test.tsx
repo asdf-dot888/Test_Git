@@ -23,4 +23,12 @@ describe("CardView", () => {
     expect(container.querySelector("img")?.getAttribute("src")).toBe("/art/cards/shadow-bolt.png");
     expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
   });
+
+  it("renders the player-only mana spell and its illustration", () => {
+    const { container } = render(<CardView instance={{ instanceId: "mana-spring-1", cardId: "mana-spring" }} selected={false} disabled={false} onSelect={vi.fn()} />);
+    expect(container.querySelector(".card-cost")?.textContent).toBe("0");
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("/art/cards/mana-spring.png");
+    expect(container.textContent).toContain("마력의 샘");
+    expect(container.textContent).toContain("마나 1을 얻습니다.");
+  });
 });

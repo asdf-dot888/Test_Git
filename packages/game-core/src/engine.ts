@@ -90,7 +90,7 @@ function createEnemyDeck(enemy: EnemyDefinition, seed: number, idPrefix: string)
   let state = normalizeSeed(seed);
   while (starterDeck.length < 30) {
     const candidates = CARD_CATALOG
-      .filter((card) => (counts.get(card.id) ?? 0) < 2)
+      .filter((card) => !card.playerOnly && (counts.get(card.id) ?? 0) < 2)
       .map((card) => ({ card, weight: enemyCardWeight(card, enemy) }));
     const totalWeight = candidates.reduce((total, candidate) => total + candidate.weight, 0);
     if (totalWeight <= 0) fail("INVALID_ACTION", `No valid cards are available for ${enemy.id}.`);
@@ -407,6 +407,11 @@ function applySpellEffect(
     case "draw":
       drawForSpell(run, battle, effect.count, caster);
       return run;
+    case "gainMana": {
+      const mana = caster === "player" ? battle.playerMana : battle.enemyMana;
+      mana.current = Math.min(mana.max, mana.current + effect.amount);
+      return run;
+    }
   }
 }
 
@@ -521,7 +526,7 @@ function playEnemyCard(run: RunState, handInstanceId: string, deferDefeat = fals
   }
 
   battle.enemyDiscardPile.push(instance);
-  const eventEffects: Array<{ kind: "damage" | "heal" | "summon" | "buff" | "draw"; targetId: string | null }> = [];
+  const eventEffects: Array<{ kind: "damage" | "heal" | "summon" | "buff" | "draw" | "gainMana"; targetId: string | null }> = [];
   for (const effect of card.spellEffects ?? []) {
     const targetId = selectEnemySpellTarget(effect, battle);
     const kind = effect.kind;

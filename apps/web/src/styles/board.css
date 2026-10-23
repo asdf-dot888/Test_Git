@@ -306,7 +306,7 @@
 .combat-effect-impact.is-area-impact { width: min(64vw, 520px); height: min(35vh, 220px); margin: 0; border-width: 3px; border-radius: 50%; box-shadow: 0 0 70px 24px rgb(231 69 43 / 42%), inset 0 0 44px rgb(255 191 105 / 58%); }
 .combat-effect-impact.effect-damage, .combat-effect-impact.effect-attack, .combat-effect-impact.effect-impact { border-color: #ffd1a0; box-shadow: 0 0 20px 8px rgb(240 96 71 / 64%), inset 0 0 12px rgb(255 239 210 / 75%); }
 .combat-effect-impact.effect-impact.is-area-impact { border-color: #ffb39a; box-shadow: 0 0 70px 24px rgb(231 69 43 / 42%), inset 0 0 44px rgb(255 191 105 / 58%); }
-.combat-effect-impact.effect-buff, .combat-effect-impact.effect-heal { border-color: #b9ffd8; box-shadow: 0 0 20px 8px rgb(74 231 168 / 58%), inset 0 0 12px rgb(221 255 238 / 78%); }
+.combat-effect-impact.effect-buff, .combat-effect-impact.effect-heal, .combat-effect-impact.effect-mana { border-color: #b9ffd8; box-shadow: 0 0 20px 8px rgb(74 231 168 / 58%), inset 0 0 12px rgb(221 255 238 / 78%); }
 .combat-effect-impact.effect-summon { border-color: #e0c4ff; box-shadow: 0 0 20px 8px rgb(166 112 255 / 58%), inset 0 0 12px rgb(248 230 255 / 78%); }
 @keyframes combat-effect-flight {
   0% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(.68); }

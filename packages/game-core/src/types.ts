@@ -7,7 +7,8 @@ export type SpellEffect =
   | { kind: "heal"; amount: number; target: "playerHero" | "playerMinion" }
   | { kind: "summon"; cardId: string; count: number }
   | { kind: "buff"; attack: number; health: number; target: "playerMinion" }
-  | { kind: "draw"; count: number };
+  | { kind: "draw"; count: number }
+  | { kind: "gainMana"; amount: number };
 
 export type MinionEffect =
   | { kind: "battlecrySummon"; cardId: string; count: number }
@@ -22,6 +23,7 @@ export interface CardDefinition {
   description: string;
   artKey: string;
   rewardTier: RewardTier;
+  playerOnly?: boolean;
   minion?: { attack: number; maxHealth: number; effect?: MinionEffect };
   spellEffects?: SpellEffect[];
 }
@@ -81,7 +83,7 @@ export interface EnemyChargeState {
 
 export type EnemyCombatRecord =
   | { type: "play-minion"; cardId: string; instanceId: string; handSlot: number; summonedIds: string[] }
-  | { type: "cast-spell"; cardId: string; instanceId: string; handSlot: number; effects: Array<{ kind: "damage" | "heal" | "summon" | "buff" | "draw"; targetId: string | null }> }
+  | { type: "cast-spell"; cardId: string; instanceId: string; handSlot: number; effects: Array<{ kind: "damage" | "heal" | "summon" | "buff" | "draw" | "gainMana"; targetId: string | null }> }
   | { type: "attack"; cardId: string; attackerId: string; targetId: string }
   | { type: "boss-area"; damage: 1; targetMinionIds: string[]; targetHeroId: "player" };
 
