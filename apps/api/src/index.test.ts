@@ -14,13 +14,13 @@ async function reservePort(): Promise<number> {
 describe("App Service server startup", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("uses PORT, serves the built React shell, and releases shutdown listeners on close", async () => {
+  it("serves the built React shell and health without Entra API or Cosmos configuration", async () => {
     vi.stubEnv("NODE_ENV", "test");
     const port = await reservePort();
     vi.stubEnv("PORT", String(port));
-    vi.stubEnv("ENTRA_TENANT_ID", "dummy-tenant");
-    vi.stubEnv("ENTRA_API_AUDIENCE", "api://dummy-audience");
-    vi.stubEnv("COSMOS_ENDPOINT", "https://dummy.documents.azure.com");
+    vi.stubEnv("ENTRA_TENANT_ID", "");
+    vi.stubEnv("ENTRA_API_AUDIENCE", "");
+    vi.stubEnv("COSMOS_ENDPOINT", "");
     const sigtermListeners = process.listenerCount("SIGTERM");
     const sigintListeners = process.listenerCount("SIGINT");
     const { startServer } = await import("./index.js");
@@ -36,14 +36,16 @@ describe("App Service server startup", () => {
       if (!address || typeof address === "string") throw new Error("App Service server did not bind a TCP port.");
       expect(address.port).toBe(port);
 
-      const [health, page] = await Promise.all([
+      const [health, page, runApi] = await Promise.all([
         fetch(`http://127.0.0.1:${port}/api/health`),
         fetch(`http://127.0.0.1:${port}/`),
+        fetch(`http://127.0.0.1:${port}/api/run/active`),
       ]);
       expect(health.status).toBe(200);
       await expect(health.json()).resolves.toEqual({ status: "ok" });
       expect(page.status).toBe(200);
       expect(await page.text()).toContain("<div id=\"root\">");
+      expect(runApi.status).toBe(404);
       expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners + 1);
       expect(process.listenerCount("SIGINT")).toBe(sigintListeners + 1);
     } finally {

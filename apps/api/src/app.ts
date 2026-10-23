@@ -16,18 +16,22 @@ export interface CreateAppOptions {
 
 export function createApp(options: CreateAppOptions = {}): Express {
   const config = options.config ?? loadConfig();
-  const authenticate = options.authenticate ?? createEntraAuth(config);
+  const canAuthenticate = Boolean(config.entraTenantId && config.entraApiAudience);
+  const authenticate = options.authenticate ?? (canAuthenticate ? createEntraAuth(config) : undefined);
   const app = express();
 
   app.use(express.json({ limit: "256kb" }));
-  app.use("/api", (request, response, next) => {
-    if (request.method === "GET" && request.path === "/health") return next();
-    return authenticate(request, response, next);
-  });
+  if (authenticate) {
+    app.use("/api", (request, response, next) => {
+      if (request.method === "GET" && request.path === "/health") return next();
+      return authenticate(request, response, next);
+    });
+  }
   app.get("/api/health", (_request, response) => {
     response.status(200).json({ status: "ok" });
   });
   if (options.repository) {
+    if (!authenticate) throw new Error("Entra API configuration is required when mounting protected game routes.");
     app.use("/api/run", createRunRouter({ repository: options.repository, ...options.runDependencies }));
   }
   app.use("/api", (_request, response) => {

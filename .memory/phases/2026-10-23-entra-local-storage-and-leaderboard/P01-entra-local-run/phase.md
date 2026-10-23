@@ -1,7 +1,7 @@
 # P01 — Entra Login and Browser-Local Run
 
 **Status:** in progress  
-**Progress:** 2 / 4 tasks complete (active: T03)
+**Progress:** 3 / 4 tasks complete (active: T04)
 
 ## Outcome
 
@@ -13,6 +13,6 @@ Players sign in through Microsoft Entra ID, then play with their active `RunStat
 | --- | --- | --- |
 | T01 | Account-scoped local run storage | done |
 | T02 | Entra-only authentication and local run lifecycle | done |
-| T03 | Run without Cosmos/API dependencies | in progress |
-| T04 | Configuration and operating documentation | pending |
+| T03 | Run without Cosmos/API dependencies | done |
+| T04 | Configuration and operating documentation | in progress |
 

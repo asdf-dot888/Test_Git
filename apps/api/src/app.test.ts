@@ -75,4 +75,25 @@ describe("production Express hosting", () => {
     expect(unknown.headers.get("content-type")).toContain("application/json");
     await expect(unknown.json()).resolves.toMatchObject({ error: { code: "NOT_FOUND" } });
   });
+
+  it("serves health and JSON 404s with no Entra API configuration", async () => {
+    const unconfiguredApp = createApp({
+      config: { entraTenantId: "", entraApiAudience: "", cosmosEndpoint: "", cosmosDatabase: "card-roguelike", cosmosContainer: "active-runs", port: 3001 },
+      webDistPath,
+    });
+    const unconfiguredServer = createServer(unconfiguredApp);
+    await new Promise<void>((resolve) => unconfiguredServer.listen(0, "127.0.0.1", resolve));
+    const address = unconfiguredServer.address();
+    if (!address || typeof address === "string") throw new Error("Test server did not bind to a TCP port.");
+
+    try {
+      const base = `http://127.0.0.1:${address.port}`;
+      const [health, missing] = await Promise.all([fetch(`${base}/api/health`), fetch(`${base}/api/run/active`)]);
+      expect(health.status).toBe(200);
+      expect(missing.status).toBe(404);
+      expect(missing.headers.get("content-type")).toContain("application/json");
+    } finally {
+      await new Promise<void>((resolve, reject) => unconfiguredServer.close((error) => error ? reject(error) : resolve()));
+    }
+  });
 });

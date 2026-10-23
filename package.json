@@ -11,8 +11,7 @@
     "packages/game-core"
   ],
   "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "dev:azure": "concurrently -k -n api,web \"npm run dev --workspace @board-game/api\" \"npm run dev --workspace @board-game/web\"",
+    "dev": "npm run dev --workspace @board-game/web",
     "package:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1",
     "build": "npm run build --workspace @board-game/game-core && npm run build --workspace @board-game/api && npm run build --workspace @board-game/web",
     "test": "vitest run",
