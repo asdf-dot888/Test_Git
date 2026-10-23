@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe("victory acknowledgement and rewards", () => {
-  it.each(["normal", "boss"] as const)("shows the same victory step before %s rewards and next encounter", async (tier) => {
+  it.each(["normal", "boss"] as const)("shows the same victory step before %s rewards and the roadmap", async (tier) => {
     vi.stubGlobal("Audio", FakeAudio);
     const run = createRun(tier === "normal" ? 601 : 602);
     run.pendingVictoryAcknowledgement = true;
@@ -48,7 +48,8 @@ describe("victory acknowledgement and rewards", () => {
     fireEvent.click(screen.getByRole("button", { name: "확인" }));
     expect(await screen.findByRole("heading", { name: "전리품을 선택하세요" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: tier === "normal" ? /생명의 실/ : /공포의 거신/ }));
-    expect(await screen.findByRole("heading", { name: "다음 전투에 진입할까요?" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /도전 가능/ })).toBeTruthy();
   });
 
   it("shows final boss acknowledgement before rewards and expedition completion", async () => {

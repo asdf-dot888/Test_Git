@@ -7,10 +7,10 @@
 [P01 Expedition Roadmap](./phases/2026-10-23-expedition-roadmap/P01-expedition-roadmap/phase.md)
 
 ## Active Task
-[T02 Roadmap Navigation](./phases/2026-10-23-expedition-roadmap/P01-expedition-roadmap/T02-roadmap-navigation.md)
+None — P01-T01 and P01-T02 are complete.
 
 ## Status
-- T01 complete; T02 implementation start ready.
+- Plan complete: P01 2/2 Tasks done.
 
 ## Next Step
-Read the T02 blueprint and connect the roadmap to new-run, continue-run, reward, encounter-start, and main-menu navigation.
+No active Task. Start a new memory plan for the next feature.

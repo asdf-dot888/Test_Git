@@ -38,6 +38,8 @@ function makeSync(deleteRun = vi.fn(async () => undefined)): RunSyncController {
 async function startGame(sync: RunSyncController) {
   render(<GameSessionView sync={sync} />);
   fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+  expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
+  fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
   await screen.findByRole("button", { name: "메뉴" });
 }
 
@@ -68,6 +70,8 @@ describe("in-game menu flow", () => {
     expect(await screen.findByRole("button", { name: "새 원정 시작" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "메뉴" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
     await screen.findByRole("button", { name: "메뉴" });
     expect(sync.createRun).toHaveBeenCalledTimes(2);
   });
@@ -91,6 +95,8 @@ describe("in-game menu flow", () => {
     const sync = makeSync();
     const first = render(<GameSessionView sync={sync} />);
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
     await screen.findByRole("button", { name: "메뉴" });
     fireEvent.click(screen.getByRole("button", { name: "메뉴" }));
     fireEvent.click(screen.getByRole("button", { name: "설정" }));
@@ -106,6 +112,8 @@ describe("in-game menu flow", () => {
 
     render(<GameSessionView sync={sync} />);
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
     await screen.findByRole("button", { name: "메뉴" });
     fireEvent.click(screen.getByRole("button", { name: "메뉴" }));
     fireEvent.click(screen.getByRole("button", { name: "설정" }));

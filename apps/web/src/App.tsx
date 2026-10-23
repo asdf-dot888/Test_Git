@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CARD_BY_ID, ENEMY_BY_ID } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
-import { EncounterContinueScreen } from "./components/EncounterContinueScreen.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
 import { GameBoard } from "./components/GameBoard.js";
+import { ExpeditionRoadmap } from "./components/ExpeditionRoadmap.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
 import { RunLockNotice } from "./components/RunLockNotice.js";
@@ -31,7 +31,7 @@ export function App() {
 export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const { session, dispatch: dispatchGameAction } = useGameSession();
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
-  const [screen, setScreen] = useState<"menu" | "game">("menu");
+  const [screen, setScreen] = useState<"menu" | "map" | "game">("menu");
   const [abandonOpen, setAbandonOpen] = useState(false);
   const [menuView, setMenuView] = useState<"closed" | "choices" | "settings">("closed");
   const [abandonToMenuOpen, setAbandonToMenuOpen] = useState(false);
@@ -210,7 +210,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
         : await sync.createRun(seed);
       dispatch({ type: "restore-run", run: created });
       setAbandonOpen(false);
-      setScreen("game");
+      setScreen("map");
     } finally {
       pendingReplacement.current = false;
     }
@@ -226,6 +226,22 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
 
   const returnToBattle = () => {
     setMenuView("closed");
+  };
+
+  const selectRoadmapEncounter = (encounterIndex: number) => {
+    if (!run || (sync.status !== "ready" && sync.status !== "saving")) return;
+    const encounter = run.encounters[encounterIndex];
+    if (!encounter) return;
+    if (encounter.status === "active") {
+      setScreen("game");
+      return;
+    }
+    const activeIndex = run.encounters.findIndex((entry) => entry.status === "active");
+    const nextPendingIndex = run.encounters.findIndex((entry) => entry.status === "pending");
+    if (encounter.status === "pending" && activeIndex < 0 && encounterIndex === nextPendingIndex) {
+      dispatch({ type: "continue-run" });
+      setScreen("game");
+    }
   };
 
   const confirmReturnToMenu = async () => {
@@ -295,7 +311,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
-      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen("game")} />
+      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
       <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
     </>;
@@ -328,16 +344,13 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
     </main>;
   }
 
-  if (battle?.status === "playerWon") {
-    const nextEncounter = run.encounters.find((encounter) => encounter.status === "pending") ?? null;
+  if (screen === "map" || battle?.status === "playerWon") {
     return <>
-      <EncounterContinueScreen
-        phase={run.phase}
-        completedBattles={run.completedBattles}
-        nextEncounter={nextEncounter}
-        disabled={sync.status !== "ready"}
-        onContinue={() => dispatch({ type: "continue-run" })}
-        onReturnToMenu={() => setScreen("menu")}
+      <ExpeditionRoadmap
+        run={run}
+        disabled={sync.status !== "ready" && sync.status !== "saving"}
+        onSelectEncounter={selectRoadmapEncounter}
+        onMainMenu={() => setScreen("menu")}
       />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
     </>;
