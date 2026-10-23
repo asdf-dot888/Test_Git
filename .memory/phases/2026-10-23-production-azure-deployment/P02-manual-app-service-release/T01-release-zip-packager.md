@@ -1,6 +1,6 @@
 # Task: T01 Windows용 release ZIP 생성기
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -36,10 +36,10 @@ Windows 개발자가 전체 테스트와 production build를 끝낸 다음, Linu
 
 ## Acceptance Criteria
 
-- [ ] `npm run package:release`가 build 후 `artifacts/board-card-roguelike-release.zip`을 만든다.
-- [ ] ZIP 내부에는 workspace source/metadata 및 세 workspace의 build output이 있고 root에 추가 wrapper directory가 없다.
-- [ ] `.env`, `.env.local`, `.git`, `node_modules`, `.memory`, `tmp`가 ZIP에 없다.
-- [ ] 생성물은 Git status에 표시되지 않는다.
+- [x] `npm run package:release`가 build 후 `artifacts/board-card-roguelike-release.zip`을 만든다.
+- [x] ZIP 내부에는 workspace source/metadata 및 세 workspace의 build output이 있고 root에 추가 wrapper directory가 없다.
+- [x] `.env`, `.env.local`, `.git`, `node_modules`, `.memory`, `tmp`가 ZIP에 없다.
+- [x] 생성물은 Git status에 표시되지 않는다.
 
 ## Validation
 
@@ -60,6 +60,6 @@ Task: T01-release-zip-packager
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과
+- commit: 4fd1a2d
