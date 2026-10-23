@@ -1,6 +1,6 @@
 # Task: T02 App Service 수동 배포 runbook
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -33,10 +33,10 @@
 
 ## Acceptance Criteria
 
-- [ ] IT 관리자와 개발자의 준비 항목 및 책임이 분리돼 있다.
-- [ ] 동일 origin, Node 24, Oryx build setting, Azure CLI 명령, 앱 설정 목록이 코드와 일치한다.
-- [ ] 배포 절차에 로그인·API·Cosmos 복원 smoke check가 있고 비밀값 노출 지침이 없다.
-- [ ] 리소스가 준비되기 전에는 실제 URL/배포가 완료됐다고 기술하지 않는다.
+- [x] IT 관리자와 개발자의 준비 항목 및 책임이 분리돼 있다.
+- [x] 동일 origin, Node 24, Oryx build setting, Azure CLI 명령, 앱 설정 목록이 코드와 일치한다.
+- [x] 배포 절차에 로그인·API·Cosmos 복원 smoke check가 있고 비밀값 노출 지침이 없다.
+- [x] 리소스가 준비되기 전에는 실제 URL/배포가 완료됐다고 기술하지 않는다.
 
 ## Validation
 
@@ -59,6 +59,6 @@ Task: T02-manual-deployment-runbook
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과
+- commit: recorded in git history

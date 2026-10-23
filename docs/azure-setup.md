@@ -38,13 +38,7 @@ SPA 앱 등록에는 `http://localhost:5173` redirect URI가 필요합니다. �
 
 ## 2. App Service Authentication 설정
 
-기존 Linux App Service의 Authentication 설정에서 Microsoft Entra ID provider를 선택하고 회사 단일 테넌트 issuer를 사용합니다.
-
-- 허용된 audience는 운영자가 선택한 App Service 인증 설정과 API `ENTRA_API_AUDIENCE` 모두에서 발급 토큰과 일치하도록 확인합니다.
-- 인증되지 않은 요청에 대한 동작은 인증 요구(require authentication)로 설정합니다. 앱의 health endpoint는 코드상 공개 상태 확인용이므로, App Service Authentication에 경로 제외 기능을 사용하는 경우 `/api/health`를 제외해 플랫폼 probe가 접근할 수 있게 합니다. 브라우저 로그인 redirect와 API 요청의 401/403 처리 모두 smoke check에서 확인합니다.
-- 공급자 callback redirect URI와 SPA의 사이트 origin redirect URI가 해당 앱 등록에 각각 등록되어 있는지 확인합니다.
-- API는 Easy Auth 설정과 별개로 bearer access token을 검증합니다. Easy Auth 통과만으로 API authorization 검사가 대체되지 않습니다.
-
+이 애플리케이션은 브라우저의 MSAL이 로그인하고 API가 Entra access token을 직접 검증합니다. 따라서 App Service의 Authentication/Easy Auth는 기본적으로 켜지 않습니다. Easy Auth에서 전체 사이트 인증을 강제하면 React 앱이 MSAL 로그인을 시작하기 전에 리디렉션될 수 있습니다. `/api/health`는 공개 상태 확인용이고, 게임 데이터 API는 애플리케이션의 bearer token 검증으로 보호합니다.
 ## 3. App Service 설정 값
 
 App Service의 Configuration > Application settings에 배포 환경에 맞는 값을 추가합니다.
@@ -107,3 +101,64 @@ npm run build
 7. 확인이 끝난 테스트 원정은 게임 내 종료/포기 동작으로 정리합니다.
 
 운영 배포는 실제 회사 테넌트, 앱 등록, App Service 및 Cosmos 접근 권한을 부여받은 운영자가 수행해야 합니다. 이 문서만으로 회사 리소스 생성이나 배포 권한이 생기지 않습니다.
+
+## 8. 수동 production 배포 (Linux App Service)
+
+이 저장소는 React SPA와 API를 같은 Node.js App Service origin에서 제공합니다. 아래 작업은 회사 Azure 관리자와 개발자가 나눠 진행합니다. 앱 등록, App Service, Cosmos DB가 준비되기 전에는 실제 게임 URL이 아직 없습니다.
+
+### 관리자 준비 항목
+
+- 기존 회사 tenant에서 single-tenant SPA 앱 등록과 API 앱 등록을 준비합니다. API에 delegated scope를 노출하고 SPA에 허용하며, SPA의 redirect URI에 최종 `https://<app-name>.azurewebsites.net` origin을 등록합니다.
+- Linux Node.js 24 LTS App Service를 준비하고, 앱 이름과 리소스 그룹을 개발자에게 전달합니다. 앱의 startup command는 `npm start`입니다.
+- Cosmos DB for NoSQL에 `card-roguelike` database와 `/userId` partition key를 사용하는 `active-runs` container를 준비합니다. App Service system-assigned managed identity를 켜고, 해당 identity에 필요한 Cosmos data-plane 권한만 부여합니다.
+- 배포 담당자에게 해당 리소스 그룹 내 필요한 범위의 권한과 tenant/subscription/resource group/app 이름, Cosmos endpoint, Entra의 tenant/client/audience/scope 값을 안전한 사내 채널로 전달합니다. 비밀 값은 이 저장소, ZIP, 채팅에 넣지 않습니다.
+
+### App Service 설정
+
+Azure Portal의 App Service > Configuration > Application settings에서 다음 값을 설정합니다. `VITE_` 값은 브라우저에 전달되는 공개 설정이며, Vite가 빌드할 때 번들에 포함되므로 secret을 넣지 않습니다.
+
+| 설정 | 값 |
+| --- | --- |
+| `ENTRA_TENANT_ID` | 회사 tenant ID |
+| `ENTRA_API_AUDIENCE` | API access token의 `aud`와 일치하는 API audience |
+| `VITE_ENTRA_TENANT_ID` | 회사 tenant ID |
+| `VITE_ENTRA_CLIENT_ID` | SPA 앱 등록의 client ID |
+| `VITE_ENTRA_API_SCOPE` | SPA가 요청할 API delegated scope 전체 값 |
+| `COSMOS_ENDPOINT` | Cosmos 계정의 HTTPS endpoint |
+| `COSMOS_DATABASE` | `card-roguelike` |
+| `COSMOS_CONTAINER` | `active-runs` |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` |
+
+App Service의 runtime stack은 Linux Node.js 24 LTS, startup command는 `npm start`로 설정합니다. 플랫폼이 제공하는 `PORT`를 사용하므로 직접 지정하지 않습니다. 앱은 MSAL 로그인과 자체 API token 검증을 사용하므로 App Service Authentication/Easy Auth의 전체 사이트 인증은 끈 상태로 둡니다.
+
+### 빌드 및 ZIP 업로드 (PowerShell)
+
+저장소 루트에서 Node.js 24와 Azure CLI를 사용합니다. `.env`에 production SPA의 공개 Entra 설정을 넣어야 빌드 결과가 올바른 redirect origin과 scope를 사용합니다. API 설정과 Cosmos endpoint는 App Service 설정으로 전달하며, Cosmos key나 client secret은 사용하지 않습니다.
+
+```powershell
+npm ci
+npm test
+npm run lint
+npm run build
+npm run package:release
+
+az login
+az account set --subscription "<subscription-id>"
+az webapp config set --resource-group "<resource-group>" --name "<app-name>" --linux-fx-version "NODE|24-lts"
+az webapp config appsettings set --resource-group "<resource-group>" --name "<app-name>" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+az webapp deploy --resource-group "<resource-group>" --name "<app-name>" --src-path "artifacts/board-card-roguelike-release.zip" --type zip
+```
+
+CLI 명령은 이미 준비된 App Service를 대상으로 합니다. 리소스가 준비되기 전에는 만들거나 배포할 수 없습니다. ZIP 내부는 저장소 루트 구조이며 `.env`, `.git`, `node_modules`, `.memory`는 포함되지 않습니다. ZIP 배포에서 App Service build automation을 사용하려면 `SCM_DO_BUILD_DURING_DEPLOYMENT=true`가 필요합니다. 배포 명령은 앱을 재시작합니다.
+
+production Entra 값이 바뀌면 `.env`를 갱신하고 `npm run package:release`를 다시 실행한 ZIP을 배포해야 합니다. `VITE_` 값은 빌드 시 번들에 고정됩니다. 앱 설정 화면의 `VITE_` 값을 바꾸는 것만으로 이미 만들어진 웹 번들이 바뀌지 않습니다.
+
+### 배포 후 smoke check
+
+1. `https://<app-name>.azurewebsites.net/api/health`에서 HTTP 200과 `{ "status": "ok" }`를 확인합니다. 이 확인은 API 프로세스 상태만 검사하며 Cosmos 연결까지 증명하지는 않습니다.
+2. 사이트에 접속해 회사 Entra 계정으로 로그인하고 게임 화면이 열리는지 확인합니다.
+3. 로그인 없이 보호된 게임 API를 호출했을 때 401, 잘못된 tenant/audience의 token으로 호출했을 때 403 응답을 확인합니다. token 문자열은 명령 기록이나 로그에 남기지 않습니다.
+4. 테스트 계정으로 새 원정을 시작해 상태를 저장하고, 새로고침 뒤 이어하기가 되는지 확인합니다. 다른 브라우저 세션에서는 사용자 데이터가 섞이지 않는지도 확인합니다.
+5. Azure Monitor/App Service 로그에서 앱 시작과 오류를 확인하되 access token이나 사용자 저장 데이터를 로그에 남기지 않습니다. 테스트 원정 데이터는 확인 뒤 게임 내 종료/초기화 동작으로 정리합니다.
+
+공식 명령 참고: [Azure CLI `az webapp`](https://learn.microsoft.com/en-us/cli/azure/webapp), [App Service ZIP 배포](https://learn.microsoft.com/en-us/azure/app-service/deploy-zip), [Linux Node.js 설정](https://learn.microsoft.com/en-us/azure/app-service/configure-language-nodejs).

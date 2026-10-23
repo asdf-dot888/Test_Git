@@ -10,8 +10,8 @@
 
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | 로컬 인증 우회 데모를 제거하고 Azure 개발 모드만 남긴다. | [P01](../phases/2026-10-23-production-azure-deployment/P01-azure-only-development/phase.md) |
-| P02 | `pending` | Windows용 배포 ZIP 생성과 Azure CLI 수동 배포 절차를 제공한다. | [P02](../phases/2026-10-23-production-azure-deployment/P02-manual-app-service-release/phase.md) |
+| P01 | `done` | 로컬 인증 우회 데모를 제거하고 Azure 개발 모드만 남긴다. | [P01](../phases/2026-10-23-production-azure-deployment/P01-azure-only-development/phase.md) |
+| P02 | `done` | Windows용 배포 ZIP 생성과 Azure CLI 수동 배포 절차를 제공한다. | [P02](../phases/2026-10-23-production-azure-deployment/P02-manual-app-service-release/phase.md) |
 
 ## External Prerequisites and Risks
 

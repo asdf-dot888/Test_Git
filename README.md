@@ -58,3 +58,7 @@ npm run build
 - Entra redirect URI 오류가 나면 앱 등록에 `http://localhost:5173`가 등록되어 있는지 확인하세요.
 - Cosmos 접근 오류가 나면 로컬 Azure 계정에 해당 데이터베이스의 데이터 권한이 있는지 운영자에게 확인하세요. 계정 key로 우회하지 마세요.
 - 로그인, Cosmos 저장, 세션 잠금 문제는 [문제 해결 안내](docs/troubleshooting.md)를 참고하세요.
+
+## Azure production 배포
+
+수동 production 배포 전제 조건과 Azure CLI ZIP 업로드, Entra/Cosmos smoke check는 [Azure 설정 및 운영 안내](docs/azure-setup.md)의 “수동 production 배포” 절을 참고하세요. release ZIP은 `npm run package:release`로 `artifacts/board-card-roguelike-release.zip`에 생성합니다. 실제 URL은 회사 Azure 관리자가 Entra, App Service, Cosmos 리소스를 준비하고 ZIP을 배포한 뒤에 정해집니다.
