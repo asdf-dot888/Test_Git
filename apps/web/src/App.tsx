@@ -8,6 +8,7 @@ import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
 import { RunLockNotice } from "./components/RunLockNotice.js";
 import { GameMenu } from "./components/GameMenu.js";
+import { TurnStartGlow } from "./components/TurnStartGlow.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
 import { useTurnTimer } from "./game/useTurnTimer.js";
@@ -42,6 +43,11 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const pendingReplacement = useRef(false);
   const playedAudioEventIds = useRef(new Set<number>());
   const startedTurnIds = useRef(new Set<string>());
+  const lastObservedRunId = useRef<string | null>(null);
+  const lastObservedLoadVersion = useRef<number | null>(null);
+  const lastObservedTurnId = useRef<string | null>(null);
+  const pendingTurnCueId = useRef<string | null>(null);
+  const [turnStartGlowId, setTurnStartGlowId] = useState<string | null>(null);
   const warningTurnId = useRef<string | null>(null);
   const lastWarningSecond = useRef<number | null>(null);
   const run = session.run;
@@ -104,10 +110,27 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   }, [audioController, session.combatEffects]);
 
   useEffect(() => {
-    if (!audioController || !activeTurnId || startedTurnIds.current.has(activeTurnId)) return;
-    startedTurnIds.current.add(activeTurnId);
-    audioController.playEffect("turn-start");
-  }, [activeTurnId, audioController]);
+    if (!activeTurnId || !run) return;
+    if (lastObservedRunId.current !== run.runId || lastObservedLoadVersion.current !== sync.loadVersion) {
+      lastObservedRunId.current = run.runId;
+      lastObservedLoadVersion.current = sync.loadVersion;
+      lastObservedTurnId.current = activeTurnId;
+      return;
+    }
+
+    const previousTurnId = lastObservedTurnId.current;
+    lastObservedTurnId.current = activeTurnId;
+    if (previousTurnId && previousTurnId !== activeTurnId && !startedTurnIds.current.has(activeTurnId)) {
+      startedTurnIds.current.add(activeTurnId);
+      pendingTurnCueId.current = activeTurnId;
+      setTurnStartGlowId(activeTurnId);
+    }
+
+    if (audioController && pendingTurnCueId.current === activeTurnId) {
+      audioController.playEffect("turn-start");
+      pendingTurnCueId.current = null;
+    }
+  }, [activeTurnId, audioController, run, sync.loadVersion]);
 
   useEffect(() => {
     if (warningTurnId.current !== activeTurnId) {
@@ -347,6 +370,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
           onEndTurn={() => dispatch({ type: "end-turn" })}
           onMenu={() => setMenuView("choices")}
         />
+      <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
       <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
       <AbandonRunDialog intent="main-menu" open={abandonToMenuOpen} busy={abandonToMenuBusy} onCancel={() => setAbandonToMenuOpen(false)} onConfirm={() => { void confirmReturnToMenu(); }} />

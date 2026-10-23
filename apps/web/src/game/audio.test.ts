@@ -26,6 +26,54 @@ class FakeAudio {
   }
 }
 
+class FakeAudioParam {
+  value = 0;
+  setValueAtTime(value: number): void { this.value = value; }
+  linearRampToValueAtTime(value: number): void { this.value = value; }
+  exponentialRampToValueAtTime(value: number): void { this.value = value; }
+}
+
+class FakeGainNode {
+  gain = new FakeAudioParam();
+  connect(): void {}
+  disconnect(): void {}
+}
+
+class FakeOscillatorNode {
+  type = "sine";
+  frequency = new FakeAudioParam();
+  onended: (() => void) | null = null;
+  starts: number[] = [];
+  stops: number[] = [];
+  connect(): void {}
+  disconnect(): void {}
+  start(at: number): void { this.starts.push(at); }
+  stop(at: number): void { this.stops.push(at); }
+}
+
+class FakeAudioContext {
+  static instances: FakeAudioContext[] = [];
+  currentTime = 0;
+  state: AudioContextState = "running";
+  destination = {} as AudioDestinationNode;
+  oscillators: FakeOscillatorNode[] = [];
+  gains: FakeGainNode[] = [];
+  close = vi.fn(async () => undefined);
+  resume = vi.fn(async () => undefined);
+
+  constructor() { FakeAudioContext.instances.push(this); }
+  createGain(): FakeGainNode {
+    const gain = new FakeGainNode();
+    this.gains.push(gain);
+    return gain;
+  }
+  createOscillator(): FakeOscillatorNode {
+    const oscillator = new FakeOscillatorNode();
+    this.oscillators.push(oscillator);
+    return oscillator;
+  }
+}
+
 function setup() {
   const players: FakeAudio[] = [];
   const controller = createAudioController((src) => {
@@ -119,22 +167,57 @@ describe("createAudioController", () => {
 
     expect(players.map((player) => player.src)).toEqual([
       "/audio/sfx/ui-click.ogg",
-      "/audio/sfx/timer-warning.ogg",
       "/audio/sfx/attack.ogg",
       "/audio/sfx/spell.ogg",
       "/audio/sfx/timer-warning.ogg",
     ]);
-    expect(players.map((player) => player.volume)).toEqual([0.72, 0.72, 0.72, 0.72, 0.288]);
+    expect(players.map((player) => player.volume)).toEqual([0.72, 0.72, 0.72, 0.288]);
 
     controller.setSettings({ musicVolume: 0.5, effectsVolume: 0.5, muted: false });
-    expect(players.map((player) => player.volume)).toEqual([0.5, 0.5, 0.5, 0.5, 0.2]);
+    expect(players.map((player) => player.volume)).toEqual([0.5, 0.5, 0.5, 0.2]);
     controller.setSettings({ musicVolume: 0.5, effectsVolume: 0.5, muted: true });
     expect(players.every((player) => player.volume === 0)).toBe(true);
     controller.setSettings({ musicVolume: 0.5, effectsVolume: 0.5, muted: false });
-    expect(players[4]?.volume).toBe(0.2);
+    expect(players[3]?.volume).toBe(0.2);
     controller.playEffect("timer-warning", 4);
-    expect(players[5]?.volume).toBe(0.5);
+    expect(players[4]?.volume).toBe(0.5);
     controller.dispose();
+  });
+
+  it("plays a distinct synthesized rising two-note turn cue and applies effects volume and mute", () => {
+    FakeAudioContext.instances = [];
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const { controller, players } = setup();
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 0.6, muted: false });
+    controller.playEffect("turn-start");
+
+    const context = FakeAudioContext.instances[0]!;
+    expect(players).toHaveLength(0);
+    expect(context.oscillators).toHaveLength(2);
+    expect(context.oscillators.map((oscillator) => oscillator.frequency.value)).toEqual([587.33, 783.99]);
+    expect(context.oscillators.every((oscillator) => oscillator.type === "triangle")).toBe(true);
+    expect(context.gains[0]?.gain.value).toBeCloseTo(0.21);
+
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 0.6, muted: true });
+    expect(context.gains[0]?.gain.value).toBe(0);
+    controller.dispose();
+    expect(context.close).toHaveBeenCalledOnce();
+  });
+
+  it("does not fail when WebAudio is unavailable or turn effects are muted", () => {
+    vi.stubGlobal("AudioContext", undefined);
+    const { controller, players } = setup();
+    expect(() => controller.playEffect("turn-start")).not.toThrow();
+    expect(players).toHaveLength(0);
+    controller.dispose();
+
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    FakeAudioContext.instances = [];
+    const muted = setup().controller;
+    muted.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: true });
+    muted.playEffect("turn-start");
+    expect(FakeAudioContext.instances).toHaveLength(0);
+    muted.dispose();
   });
 
   it("clamps volumes, applies mute, and retries blocked music after unlock", async () => {

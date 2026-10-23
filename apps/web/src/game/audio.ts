@@ -20,7 +20,7 @@ const MUSIC_SOURCES: Record<MusicKind, string> = {
   boss: "/audio/bgm/boss.ogg",
 };
 
-const EFFECT_SOURCES: Record<SoundEffectKind, string> = {
+const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start">, string> = {
   "hero-attack": "/audio/sfx/attack.ogg",
   "minion-attack": "/audio/sfx/attack.ogg",
   spell: "/audio/sfx/spell.ogg",
@@ -28,7 +28,6 @@ const EFFECT_SOURCES: Record<SoundEffectKind, string> = {
   damage: "/audio/sfx/damage.ogg",
   death: "/audio/sfx/death.ogg",
   "ui-click": "/audio/sfx/ui-click.ogg",
-  "turn-start": "/audio/sfx/timer-warning.ogg",
   "turn-end": "/audio/sfx/attack.ogg",
   summon: "/audio/sfx/spell.ogg",
   "timer-warning": "/audio/sfx/timer-warning.ogg",
@@ -52,6 +51,61 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
   const effectPlayers = new Map<HTMLAudioElement, number>();
   const fadingMusic = new Set<HTMLAudioElement>();
   const timers = new Set<ReturnType<typeof setInterval>>();
+  let audioContext: AudioContext | null = null;
+  const turnCues = new Set<{ master: GainNode; oscillators: OscillatorNode[] }>();
+
+  function getAudioContext(): AudioContext | null {
+    if (audioContext || typeof globalThis.AudioContext === "undefined") return audioContext;
+    try {
+      audioContext = new globalThis.AudioContext();
+      return audioContext;
+    } catch {
+      return null;
+    }
+  }
+
+  function playTurnStartCue(): void {
+    if (disposed || effectVolume(0.35) === 0) return;
+    const context = getAudioContext();
+    if (!context) return;
+    try {
+      const master = context.createGain();
+      master.gain.setValueAtTime(effectVolume(0.35), context.currentTime);
+      master.connect(context.destination);
+      const cue = { master, oscillators: [] as OscillatorNode[] };
+      turnCues.add(cue);
+      const notes = [
+        { frequency: 587.33, start: 0, duration: 0.19 },
+        { frequency: 783.99, start: 0.2, duration: 0.24 },
+      ];
+      for (const note of notes) {
+        const oscillator = context.createOscillator();
+        const envelope = context.createGain();
+        const start = context.currentTime + note.start;
+        oscillator.type = "triangle";
+        oscillator.frequency.setValueAtTime(note.frequency, start);
+        envelope.gain.setValueAtTime(0.0001, start);
+        envelope.gain.linearRampToValueAtTime(0.55, start + 0.025);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, start + note.duration);
+        oscillator.connect(envelope);
+        envelope.connect(master);
+        oscillator.onended = () => {
+          oscillator.disconnect();
+          envelope.disconnect();
+          cue.oscillators = cue.oscillators.filter((active) => active !== oscillator);
+          if (cue.oscillators.length === 0) {
+            master.disconnect();
+            turnCues.delete(cue);
+          }
+        };
+        cue.oscillators.push(oscillator);
+        oscillator.start(start);
+        oscillator.stop(start + note.duration + 0.01);
+      }
+    } catch {
+      // Audio support is optional; a missing WebAudio implementation must not affect gameplay.
+    }
+  }
 
   const musicVolume = () => settings.muted ? 0 : settings.musicVolume;
   const effectVolume = (scale = 1) => settings.muted ? 0 : clampVolume(settings.effectsVolume * scale);
@@ -114,6 +168,10 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
   return {
     async unlock() {
       if (disposed) return;
+      const context = getAudioContext();
+      if (context?.state === "suspended") {
+        try { await context.resume(); } catch { /* Browser audio may remain unavailable. */ }
+      }
       if (currentMusic && !musicStarted) await attemptPlay(currentMusic, true);
     },
 
@@ -146,6 +204,10 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
 
     playEffect(kind, volumeScale = 1) {
       if (disposed) return;
+      if (kind === "turn-start") {
+        playTurnStartCue();
+        return;
+      }
       const playerScale = clampVolume(volumeScale);
       let player: HTMLAudioElement;
       try {
@@ -175,6 +237,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       };
       if (currentMusic && !fadingMusic.has(currentMusic)) currentMusic.volume = musicVolume();
       for (const [player, scale] of effectPlayers) player.volume = effectVolume(scale);
+      for (const cue of turnCues) cue.master.gain.setValueAtTime(effectVolume(0.35), audioContext?.currentTime ?? 0);
     },
 
     dispose() {
@@ -185,6 +248,16 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       if (currentMusic) stopAudio(currentMusic);
       for (const player of effectPlayers.keys()) stopAudio(player);
       for (const music of fadingMusic) stopAudio(music);
+      for (const cue of turnCues) {
+        for (const oscillator of cue.oscillators) {
+          try { oscillator.stop(); } catch { /* Oscillator may already have stopped. */ }
+          oscillator.disconnect();
+        }
+        cue.master.disconnect();
+      }
+      turnCues.clear();
+      if (audioContext) void audioContext.close().catch(() => undefined);
+      audioContext = null;
       effectPlayers.clear();
       fadingMusic.clear();
       currentMusic = null;

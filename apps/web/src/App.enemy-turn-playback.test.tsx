@@ -51,6 +51,7 @@ describe("enemy turn playback in the game screen", () => {
     run.battle!.playerBoard = [{ instanceId: "player-target", cardId: "ash-wolf", owner: "player", attack: 1, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false }];
     render(<GameSessionView sync={syncWith(run)} />);
     await act(async () => { await Promise.resolve(); });
+    expect(document.body.querySelector(".turn-start-glow")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
     fireEvent.click(screen.getByRole("button", { name: /턴 종료/ }));
     await advance(80);
@@ -89,6 +90,12 @@ describe("enemy turn playback in the game screen", () => {
     await advance(1);
     expect((screen.getByRole("button", { name: /턴 종료/ }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByText("00:20")).toBeTruthy();
+    expect(document.body.querySelectorAll(".turn-start-glow")).toHaveLength(1);
+    await advance(1_000);
+    expect(document.body.querySelector(".turn-start-glow")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "메뉴" }));
+    fireEvent.click(screen.getByRole("button", { name: "돌아가기" }));
+    expect(document.body.querySelector(".turn-start-glow")).toBeNull();
   });
 
   it("shows the lethal action before routing to the defeat screen", async () => {
