@@ -7,14 +7,15 @@ import {
   chooseReward,
   createRun,
   discardBeforeDraw,
-  endPlayerTurn,
+  endPlayerTurnWithPlayback,
   hydrateRunForCurrentBattle,
   playMinion,
   skipReward,
   type RunState,
+  type EnemyTurnPlaybackStep,
   type TurnTimerState,
 } from "@board-game/game-core";
-import { collectCombatEffectEvents, type CombatEffectEvent } from "./combatEffects.js";
+import { collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
 export type GameAction =
   | { type: "start-run"; seed: number }
@@ -34,6 +35,7 @@ export type GameAction =
   | { type: "skip-reward" }
   | { type: "continue-run"; nextSeed?: number }
   | { type: "clear-combat-effect"; eventId: number }
+  | { type: "advance-enemy-turn-playback" }
   | { type: "clear-error" };
 
 export interface GameSession {
@@ -46,6 +48,7 @@ export interface GameSession {
   resolving: boolean;
   combatEffects: CombatEffectEvent[];
   nextCombatEffectId: number;
+  enemyTurnPlayback: { steps: EnemyTurnPlaybackStep[]; currentIndex: number } | null;
 }
 
 export const initialGameSession: GameSession = {
@@ -58,6 +61,7 @@ export const initialGameSession: GameSession = {
   resolving: false,
   combatEffects: [],
   nextCombatEffectId: 1,
+  enemyTurnPlayback: null,
 };
 
 type InternalAction = GameAction | { type: "resolution-start" };
@@ -74,6 +78,22 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
     resolving: false,
     combatEffects: [],
     nextCombatEffectId: previous.nextCombatEffectId,
+    enemyTurnPlayback: null,
+  };
+}
+
+function sessionForEnemyTurn(resolution: ReturnType<typeof endPlayerTurnWithPlayback>, previous: GameSession): GameSession {
+  const run = structuredClone(resolution.run);
+  if (run.battle?.enemyTurnEvents) delete run.battle.enemyTurnEvents;
+  const firstStep = resolution.steps[0];
+  const events = firstStep
+    ? collectEnemyActionEffects(firstStep.beforeRun, firstStep.presentationRun, firstStep.action, previous.nextCombatEffectId)
+    : [];
+  return {
+    ...sessionForRun(run, previous),
+    enemyTurnPlayback: resolution.steps.length > 0 ? { steps: resolution.steps, currentIndex: 0 } : null,
+    combatEffects: events,
+    nextCombatEffectId: previous.nextCombatEffectId + events.length,
   };
 }
 
@@ -121,6 +141,21 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
   if (action.type === "clear-error") return { ...session, error: null };
   if (action.type === "clear-run") return { ...initialGameSession };
   if (action.type === "resolution-start") return { ...session, resolving: true, error: null };
+  if (action.type === "advance-enemy-turn-playback") {
+    const playback = session.enemyTurnPlayback;
+    if (!playback) return session;
+    const nextIndex = playback.currentIndex + 1;
+    const nextStep = playback.steps[nextIndex];
+    if (!nextStep) return { ...session, enemyTurnPlayback: null, combatEffects: [] };
+    const events = collectEnemyActionEffects(nextStep.beforeRun, nextStep.presentationRun, nextStep.action, session.nextCombatEffectId);
+    return {
+      ...session,
+      enemyTurnPlayback: { ...playback, currentIndex: nextIndex },
+      combatEffects: events,
+      nextCombatEffectId: session.nextCombatEffectId + events.length,
+    };
+  }
+  if (session.enemyTurnPlayback) return session;
   if (action.type === "start-run") return sessionForRun(createRun(action.seed), session);
   if (action.type === "restore-run") return sessionForRun(hydrateRunForCurrentBattle(action.run), session);
   if (action.type === "cancel-selection") {
@@ -144,7 +179,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId), session, action);
     if (action.type === "cast-spell") return sessionForAction(castSpell(session.run, action.instanceId, action.targetId), session, action);
     if (action.type === "attack") return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
-    if (action.type === "end-turn") return sessionForAction(endPlayerTurn(session.run), session, action);
+    if (action.type === "end-turn") return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run), session);
     if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);
     if (action.type === "choose-reward") return sessionForRun(chooseReward(session.run, action.cardId), session);
     if (action.type === "acknowledge-victory") return sessionForRun(acknowledgeVictory(session.run), session);

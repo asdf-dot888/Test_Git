@@ -11,6 +11,7 @@ import { GameMenu } from "./components/GameMenu.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
 import { useTurnTimer } from "./game/useTurnTimer.js";
+import { useEnemyTurnPlayback } from "./game/useEnemyTurnPlayback.js";
 import { createAudioController, type AudioController, type AudioSettings } from "./game/audio.js";
 import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
@@ -44,10 +45,13 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const warningTurnId = useRef<string | null>(null);
   const lastWarningSecond = useRef<number | null>(null);
   const run = session.run;
-  const battle = run?.battle;
+  const playback = session.enemyTurnPlayback;
+  const playbackStep = playback?.steps[playback.currentIndex];
+  const displayRun = playbackStep?.presentationRun ?? run;
+  const battle = displayRun?.battle;
   const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
-  const activeTurnId = screen === "game" && battle?.activeSide === "player" && battle.status === "active"
-    ? `${battle.battleId}:${battle.turnNumber}`
+  const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active"
+    ? `${run.battle.battleId}:${run.battle.turnNumber}`
     : null;
   const dispatch = useCallback((action: GameAction) => {
     if (action.type === "end-turn") audioController?.playEffect("turn-end");
@@ -55,9 +59,17 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   }, [audioController, dispatchGameAction]);
   const turnTimer = useTurnTimer({
     run: run ?? null,
-    paused: screen !== "game" || menuView !== "closed" || session.resolving || session.combatEffects.length > 0,
+    paused: screen !== "game" || menuView !== "closed" || session.resolving || Boolean(playback) || session.combatEffects.length > 0,
     onTimerChange: (timer) => dispatch({ type: "set-turn-timer", timer }),
     onTimeout: () => dispatch({ type: "end-turn" }),
+  });
+
+  useEnemyTurnPlayback({
+    active: Boolean(playback),
+    stepKey: playback?.currentIndex ?? null,
+    paused: screen !== "game" || menuView !== "closed",
+    hasEffects: session.combatEffects.length > 0,
+    onAdvance: () => dispatchGameAction({ type: "advance-enemy-turn-playback" }),
   });
 
   useEffect(() => {
@@ -280,7 +292,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
     </>;
   }
 
-  if (run.status === "victory" || run.status === "defeat") {
+  if ((run.status === "victory" || run.status === "defeat") && !playbackStep) {
     const victory = run.status === "victory";
     return <main className={`run-screen ${victory ? "outcome-victory" : "outcome-defeat"}`}>
       <section className="run-card outcome-card" role="status">
@@ -313,18 +325,19 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   return (
     <>
       <GameBoard
-          run={run}
+          run={displayRun ?? run}
           turnTimer={{
             text: `00:${String(turnTimer.remainingSeconds).padStart(2, "0")}`,
             remainingSeconds: turnTimer.remainingSeconds,
-            visible: screen === "game" && menuView === "closed" && !turnTimer.isPaused && !session.resolving && session.combatEffects.length === 0 && battle.activeSide === "player" && battle.status === "active",
+            visible: screen === "game" && menuView === "closed" && !turnTimer.isPaused && !session.resolving && !playback && session.combatEffects.length === 0 && battle.activeSide === "player" && battle.status === "active",
           }}
           combatEffects={session.combatEffects}
+          combatEffectsPaused={menuView !== "closed"}
           onCombatEffectComplete={(eventId) => dispatch({ type: "clear-combat-effect", eventId })}
           selectedCardInstanceId={session.selectedCardInstanceId}
           selectedAttackerId={session.selectedAttackerId}
           targetMode={session.targetMode}
-          isResolving={session.resolving}
+          isResolving={session.resolving || Boolean(playback)}
           actionsDisabled={sync.status !== "ready" && sync.status !== "saving"}
           error={session.error}
           onSelectCard={selectCard}

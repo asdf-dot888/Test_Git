@@ -17,6 +17,7 @@ export interface GameBoardProps {
   run: RunState;
   turnTimer: { text: string; remainingSeconds: number; visible: boolean };
   combatEffects?: CombatEffectEvent[];
+  combatEffectsPaused?: boolean;
   onCombatEffectComplete?(eventId: number): void;
   selectedCardInstanceId: string | null;
   selectedAttackerId: string | null;
@@ -45,7 +46,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
@@ -107,7 +108,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], onCombatEffectCo
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
       {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}
     </main>
-    <CombatEffectLayer events={combatEffects} onComplete={(eventId) => onCombatEffectComplete?.(eventId)} />
+    <CombatEffectLayer events={combatEffects} paused={combatEffectsPaused} onComplete={(eventId) => onCombatEffectComplete?.(eventId)} />
     </>
   );
 }

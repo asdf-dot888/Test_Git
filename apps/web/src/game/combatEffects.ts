@@ -97,10 +97,32 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
       pushEvent(events, firstEventId, record.cardId, "attack",
         { kind: "minion", side: "enemy", slot: Math.max(0, attackerSlot) }, target,
         targetDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
+      if (targetSlot >= 0) {
+        const attackerDied = !next.enemyBoard.some((minion) => minion.instanceId === record.attackerId);
+        const defender = previous.playerBoard[targetSlot];
+        pushEvent(events, firstEventId, defender?.cardId ?? null, "attack",
+          { kind: "minion", side: "player", slot: targetSlot },
+          { kind: "minion", side: "enemy", slot: Math.max(0, attackerSlot) },
+          attackerDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
+      }
       continue;
     }
     pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" }, ["damage"], true);
   }
+}
+
+export function collectEnemyActionEffects(
+  beforeRun: RunState,
+  presentationRun: RunState,
+  action: EnemyCombatRecord,
+  firstEventId: number,
+): CombatEffectEvent[] {
+  const previous = beforeRun.battle;
+  const next = presentationRun.battle;
+  if (!previous || !next) return [];
+  const events: CombatEffectEvent[] = [];
+  collectEnemyTurnEvents(events, firstEventId, [action], previous, next);
+  return events;
 }
 
 export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunState, action: GameAction, firstEventId: number): CombatEffectEvent[] {

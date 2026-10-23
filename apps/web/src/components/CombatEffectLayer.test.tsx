@@ -45,6 +45,26 @@ describe("CombatEffectLayer", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  it("pauses the current effect timeout and resumes with the remaining duration", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const onComplete = vi.fn();
+    const event = { id: 21, assetCardId: null, effectKind: "damage" as const, soundCues: [], source: { kind: "hero" as const, side: "enemy" as const }, target: { kind: "hero" as const, side: "player" as const } };
+    const view = render(<CombatEffectLayer events={[event]} onComplete={onComplete} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    view.rerender(<CombatEffectLayer events={[event]} paused onComplete={onComplete} />);
+    expect(document.body.querySelector(".combat-effect-layer")?.className).toContain("is-paused");
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(onComplete).not.toHaveBeenCalled();
+    view.rerender(<CombatEffectLayer events={[event]} paused={false} onComplete={onComplete} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(899); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
   it("uses the spell illustration for hand events and the generic impact for hero-only hits", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));

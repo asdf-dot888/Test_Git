@@ -4,6 +4,7 @@ import type { CombatAnchor, CombatEffectEvent } from "../game/combatEffects.js";
 
 interface CombatEffectLayerProps {
   events: CombatEffectEvent[];
+  paused?: boolean;
   onComplete(eventId: number): void;
 }
 
@@ -56,10 +57,16 @@ function anchorPoint(anchor: CombatAnchor, event: CombatEffectEvent, isSource: b
   return element ? centerOf(element) : fallbackPoint(anchor);
 }
 
-function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; index: number; onComplete(id: number): void }) {
+function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffectEvent; index: number; paused: boolean; onComplete(id: number): void }) {
   const [geometry, setGeometry] = useState<EffectGeometry | null>(null);
   const completeRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
+  const remainingMs = useRef<number | null>(null);
+  const deadline = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+  const shakeRemainingMs = useRef<number | null>(null);
+  const shakeDeadline = useRef<number | null>(null);
+  const shakeTimeout = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     onCompleteRef.current = onComplete;
@@ -73,29 +80,85 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
         target: anchorPoint(event.target, event, false),
       });
     });
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [event, index]);
+
+  useEffect(() => {
+    if (completeRef.current) return;
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const timeout = window.setTimeout(() => {
+    if (remainingMs.current === null) remainingMs.current = (reducedMotion ? 220 : 1_400) + Math.min(index, 8) * 120;
+    if (paused) {
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+      if (deadline.current !== null) {
+        remainingMs.current = Math.max(0, deadline.current - Date.now());
+        deadline.current = null;
+      }
+      return;
+    }
+    deadline.current = Date.now() + remainingMs.current;
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null;
+      deadline.current = null;
+      remainingMs.current = 0;
       if (completeRef.current) return;
       completeRef.current = true;
       onCompleteRef.current(event.id);
-    }, (reducedMotion ? 220 : 1_400) + Math.min(index, 8) * 120);
+    }, remainingMs.current);
     return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timeout);
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+      if (deadline.current !== null) {
+        remainingMs.current = Math.max(0, deadline.current - Date.now());
+        deadline.current = null;
+      }
     };
-  }, [event, index]);
+  }, [event.id, index, paused]);
 
   useEffect(() => {
     if (!event.areaImpact || (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)) return;
     const board = document.querySelector<HTMLElement>(".battle-board");
     if (!board) return;
     board.classList.add("is-shaking");
-    const timeout = window.setTimeout(() => board.classList.remove("is-shaking"), 500);
     return () => {
-      window.clearTimeout(timeout);
       board.classList.remove("is-shaking");
+      board.style.animationPlayState = "";
     };
   }, [event.areaImpact, event.id]);
+
+  useEffect(() => {
+    if (!event.areaImpact || (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)) return;
+    const board = document.querySelector<HTMLElement>(".battle-board");
+    if (!board) return;
+    if (shakeRemainingMs.current === null) shakeRemainingMs.current = 500;
+    board.style.animationPlayState = paused ? "paused" : "running";
+    if (paused) {
+      if (shakeTimeout.current !== null) window.clearTimeout(shakeTimeout.current);
+      shakeTimeout.current = null;
+      if (shakeDeadline.current !== null) {
+        shakeRemainingMs.current = Math.max(0, shakeDeadline.current - Date.now());
+        shakeDeadline.current = null;
+      }
+      return;
+    }
+    shakeDeadline.current = Date.now() + shakeRemainingMs.current;
+    shakeTimeout.current = window.setTimeout(() => {
+      shakeTimeout.current = null;
+      shakeDeadline.current = null;
+      shakeRemainingMs.current = 0;
+      board.classList.remove("is-shaking");
+    }, shakeRemainingMs.current);
+    return () => {
+      if (shakeTimeout.current !== null) window.clearTimeout(shakeTimeout.current);
+      shakeTimeout.current = null;
+      if (shakeDeadline.current !== null) {
+        shakeRemainingMs.current = Math.max(0, shakeDeadline.current - Date.now());
+        shakeDeadline.current = null;
+      }
+    };
+  }, [event.areaImpact, event.id, paused]);
 
   if (!geometry) return null;
   const delay = Math.min(index, 8) * 120;
@@ -105,6 +168,7 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
     "--effect-dx": `${geometry.target.x - geometry.source.x}px`,
     "--effect-dy": `${geometry.target.y - geometry.source.y}px`,
     animationDelay: `${delay}ms`,
+    animationPlayState: paused ? "paused" as const : "running" as const,
   } as CSSProperties;
   const boardBounds = event.areaImpact ? document.querySelector<HTMLElement>(".battle-board")?.getBoundingClientRect() : undefined;
   const areaWidth = Math.min(window.innerWidth * 0.64, 520);
@@ -124,7 +188,7 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
   return <>
     <span
       className={`combat-effect-impact effect-${event.effectKind}${event.areaImpact ? " is-area-impact" : ""}`}
-      style={impactStyle}
+      style={{ ...impactStyle, animationPlayState: paused ? "paused" : "running" }}
       onAnimationEnd={finish}
       aria-hidden="true"
     />
@@ -155,11 +219,11 @@ function EffectSprite({ event, index, onComplete }: { event: CombatEffectEvent; 
   </>;
 }
 
-export function CombatEffectLayer({ events, onComplete }: CombatEffectLayerProps) {
+export function CombatEffectLayer({ events, paused = false, onComplete }: CombatEffectLayerProps) {
   if (typeof document === "undefined" || events.length === 0) return null;
   return createPortal(
-    <div className="combat-effect-layer" aria-hidden="true">
-      {events.map((event, index) => <EffectSprite key={event.id} event={event} index={index} onComplete={onComplete} />)}
+    <div className={`combat-effect-layer${paused ? " is-paused" : ""}`} aria-hidden="true">
+      {events.map((event, index) => <EffectSprite key={event.id} event={event} index={index} paused={paused} onComplete={onComplete} />)}
     </div>,
     document.body,
   );
