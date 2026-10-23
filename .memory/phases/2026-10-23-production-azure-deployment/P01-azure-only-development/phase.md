@@ -9,4 +9,4 @@
 | T03 | `in_progress` | README와 Azure 안내를 인증 필수 로컬 실행 방식에 맞춘다. | [T03](./T03-update-local-dev-docs.md) |
 
 ## Progress
-- done: 2/3 (active: T03)
+- done: 3/3 (complete)

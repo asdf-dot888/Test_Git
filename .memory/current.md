@@ -4,14 +4,14 @@
 [Production Azure deployment](./plans/2026-10-23-production-azure-deployment.md)
 
 ## Active Phase
-[P01 Azure-only development](./phases/2026-10-23-production-azure-deployment/P01-azure-only-development/phase.md)
+[P02 Manual App Service release](./phases/2026-10-23-production-azure-deployment/P02-manual-app-service-release/phase.md)
 
 ## Active Task
-[T03 Update local development documentation](./phases/2026-10-23-production-azure-deployment/P01-azure-only-development/T03-update-local-dev-docs.md)
+[T01 Release ZIP packager](./phases/2026-10-23-production-azure-deployment/P02-manual-app-service-release/T01-release-zip-packager.md)
 
 ## Status
-- T01 and T02 are complete. Local development now requires complete Azure settings and the game entry is always protected by Entra authentication.
-- Azure resource creation and deployment can proceed after local documentation and release packaging are ready.
+- P01 Azure-only development is complete. Local startup requires Entra and Cosmos configuration; documentation reflects the setup.
+- Azure account access is available. Existing resources in grill-me-edu have not been reused.
 
 ## Next Step (IMPORTANT)
-Read T03 and update the local development documentation for Azure-only startup and required configuration.
+Read P02-T01 and implement the allowlist-based Windows release ZIP packager; run its packaging and build validations.

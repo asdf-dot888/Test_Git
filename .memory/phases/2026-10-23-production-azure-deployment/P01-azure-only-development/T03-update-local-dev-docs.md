@@ -1,6 +1,6 @@
 # Task: T03 Azure 인증 로컬 실행 문서
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -30,9 +30,9 @@ README와 Azure 운영 문서에서 로그인 없는 로컬 데모 안내를 제
 
 ## Acceptance Criteria
 
-- [ ] 신규 개발자가 README만 보고 인증 없는 로컬 실행 방법을 찾지 않는다.
-- [ ] `.env`가 비어 있으면 실패하고, 완전한 설정과 권한이 있어야 로컬 Entra/Cosmos 흐름이 시작된다고 설명한다.
-- [ ] 문서와 예시 파일에 실제 사내 식별자나 비밀값이 없다.
+- [x] 신규 개발자가 README만 보고 인증 없는 로컬 실행 방법을 찾지 않는다.
+- [x] `.env`가 비어 있으면 실패하고, 완전한 설정과 권한이 있어야 로컬 Entra/Cosmos 흐름이 시작된다고 설명한다.
+- [x] 문서와 예시 파일에 실제 사내 식별자나 비밀값이 없다.
 
 ## Validation
 
@@ -53,6 +53,6 @@ Task: T03-update-local-dev-docs
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과
+- commit: recorded in Git history

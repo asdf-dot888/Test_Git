@@ -8,6 +8,19 @@
 - 브라우저 로그인은 MSAL로 단일 사내 테넌트를 사용합니다. API는 access token의 서명, v2 issuer, audience, tenant를 검증하고 검증된 Entra `oid`를 사용자 키로 사용합니다.
 - API는 Cosmos DB에 `DefaultAzureCredential`로 접속합니다. App Service에서는 Managed Identity를, 개발자 로컬에서는 승인된 Azure 개발자 자격 증명을 사용합니다. 키 기반 연결 문자열은 사용하지 않습니다.
 
+## 로컬 Azure 개발 모드
+
+로컬 실행에도 사내 Entra 인증과 Cosmos 연결을 동일하게 요구합니다. 저장소 루트에서 `.env.example`을 `.env`로 복사한 뒤 회사 운영자가 제공한 아래 여섯 값을 설정합니다. `.env`는 Git에 포함하지 않습니다.
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+필수 변수는 `ENTRA_TENANT_ID`, `ENTRA_API_AUDIENCE`, `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID`, `VITE_ENTRA_API_SCOPE`, `COSMOS_ENDPOINT`입니다. `VITE_ENTRA_TENANT_ID`는 `ENTRA_TENANT_ID`와 같은 테넌트를 가리켜야 합니다. `COSMOS_DATABASE`, `COSMOS_CONTAINER`, `PORT`는 기본값을 사용할 수 있으며 필수 인증 설정을 대신하지 않습니다.
+
+SPA 앱 등록에는 `http://localhost:5173` redirect URI가 필요합니다. 모든 필수 값이 설정되면 저장소 루트에서 `npm run dev`를 실행합니다. 값이 하나라도 비어 있으면 launcher가 누락 변수명을 보여주고 종료하며, Vite와 API 프로세스를 시작하지 않습니다. 로컬 개발에 사용하는 Azure 계정에도 아래 Cosmos 데이터 평면 권한이 부여되어 있어야 합니다.
+
 ## 1. Entra 앱 등록 값 준비
 
 회사에서 승인한 **single-tenant** 앱 등록을 사용하거나 운영자에게 앱 등록을 요청합니다. API 보호용 등록과 SPA 등록을 분리했다면 각 항목의 값을 올바른 앱에서 가져옵니다.
