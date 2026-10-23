@@ -25,6 +25,13 @@ function syncWith(run: RunState): RunSyncController {
   };
 }
 
+function enterActiveEncounter(): void {
+  fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
+  const activeEncounter = document.querySelector<HTMLButtonElement>(".expedition-roadmap__node-button[aria-current='step']");
+  if (!activeEncounter) throw new Error("The current expedition encounter was not available.");
+  fireEvent.click(activeEncounter);
+}
+
 async function advance(ms: number): Promise<void> {
   await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 }
@@ -52,7 +59,7 @@ describe("enemy turn playback in the game screen", () => {
     render(<GameSessionView sync={syncWith(run)} />);
     await act(async () => { await Promise.resolve(); });
     expect(document.body.querySelector(".turn-start-glow")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
+    enterActiveEncounter();
     fireEvent.click(screen.getByRole("button", { name: /턴 종료/ }));
     await advance(80);
     await advance(0);
@@ -112,7 +119,7 @@ describe("enemy turn playback in the game screen", () => {
     run.battle!.playerHero.health = 1;
     render(<GameSessionView sync={syncWith(run)} />);
     await act(async () => { await Promise.resolve(); });
-    fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
+    enterActiveEncounter();
     fireEvent.click(screen.getByRole("button", { name: /턴 종료/ }));
     await advance(80);
     await advance(0);

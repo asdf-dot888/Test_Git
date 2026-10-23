@@ -27,6 +27,13 @@ function makeReadySync(): RunSyncController {
   };
 }
 
+function enterActiveEncounter(): void {
+  fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
+  const activeEncounter = document.querySelector<HTMLButtonElement>(".expedition-roadmap__node-button[aria-current='step']");
+  if (!activeEncounter) throw new Error("The current expedition encounter was not available.");
+  fireEvent.click(activeEncounter);
+}
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -40,9 +47,9 @@ describe("game pointer and keyboard interactions", () => {
       constructor(src: string) { super(src); players.push(this); }
     });
     render(<GameSessionView sync={makeReadySync()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
+    enterActiveEncounter();
     const menuButton = await screen.findByRole("button", { name: "메뉴" });
-    await waitFor(() => expect(players.some((player) => player.src === "/audio/sfx/timer-warning.ogg")).toBe(true));
+    await waitFor(() => expect(players.some((player) => player.src === "/audio/bgm/normal.ogg")).toBe(true));
 
     fireEvent.pointerDown(menuButton);
     expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(1);
@@ -64,7 +71,7 @@ describe("game pointer and keyboard interactions", () => {
       constructor(src: string) { super(src); players.push(this); }
     });
     render(<GameSessionView sync={makeReadySync()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
+    enterActiveEncounter();
     const menuButton = await screen.findByRole("button", { name: "메뉴" });
     fireEvent.click(menuButton);
     expect(screen.getByRole("dialog", { name: "게임 메뉴" })).toBeTruthy();

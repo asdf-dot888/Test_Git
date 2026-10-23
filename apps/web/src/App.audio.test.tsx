@@ -65,6 +65,13 @@ function makeReadySync(): RunSyncController {
   };
 }
 
+function enterActiveEncounter(): void {
+  fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
+  const activeEncounter = document.querySelector<HTMLButtonElement>(".expedition-roadmap__node-button[aria-current='step']");
+  if (!activeEncounter) throw new Error("The current expedition encounter was not available.");
+  fireEvent.click(activeEncounter);
+}
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -84,8 +91,9 @@ describe("audio lifecycle under React StrictMode", () => {
     const sync = makeReadySync();
     const view = render(<StrictMode><GameSessionView sync={sync} /></StrictMode>);
 
-    fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
+    enterActiveEncounter();
     await screen.findByRole("button", { name: "메뉴" });
+    await waitFor(() => expect(players.some((player) => player.src === "/audio/bgm/normal.ogg")).toBe(true));
 
     const music = players.find((player) => player.src === "/audio/bgm/normal.ogg");
     expect(music).toBeDefined();

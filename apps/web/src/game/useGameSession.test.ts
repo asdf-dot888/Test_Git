@@ -96,7 +96,8 @@ describe("game action adapter", () => {
     expect(finalHit.run?.status).toBe("victory");
     expect(finalHit.run?.pendingReward).not.toBeNull();
     const deckSize = finalHit.run!.deck.length;
-    const skipped = reduceGameAction(finalHit, { type: "skip-reward" });
+    const acknowledged = reduceGameAction(finalHit, { type: "acknowledge-victory" });
+    const skipped = reduceGameAction(acknowledged, { type: "skip-reward" });
     expect(skipped.run?.deck).toHaveLength(deckSize);
     expect(skipped.run?.pendingReward).toBeNull();
     expect(skipped.run?.status).toBe("victory");

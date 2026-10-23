@@ -1,6 +1,6 @@
 # Task: T02 웹 앱 데모 인증 우회 제거
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -35,9 +35,9 @@ Vite 개발 데모 플래그를 웹 bootstrap에서 제거해 개발·운영 모
 
 ## Acceptance Criteria
 
-- [ ] 개발 환경에서도 구성값 누락 화면 또는 Entra 로그인 화면 뒤에만 게임 `App`이 표시된다.
-- [ ] 데모용 메모리 sync adapter, 배너, 진입 플래그가 제거된다.
-- [ ] API/Cosmos 동기화는 기존 `useRunSync` 흐름을 유지한다.
+- [x] 개발 환경에서도 구성값 누락 화면 또는 Entra 로그인 화면 뒤에만 게임 `App`이 표시된다.
+- [x] 데모용 메모리 sync adapter, 배너, 진입 플래그가 제거된다.
+- [x] API/Cosmos 동기화는 기존 `useRunSync` 흐름을 유지한다.
 
 ## Validation
 
@@ -59,6 +59,6 @@ Task: T02-remove-demo-auth-bypass
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과
+- commit: recorded in Git history
