@@ -18,24 +18,14 @@ if (process.env.NODE_ENV === "production") {
     process.stderr.write(`Azure development configuration is incomplete. Missing: ${selection.missing.join(", ")}\n`);
     process.exitCode = 1;
   } else {
-    const isDemo = selection.mode === "demo";
     const command = process.platform === "win32" ? "npm.cmd" : "npm";
-    const args = isDemo
-      ? ["run", "dev", "--workspace", "@board-game/web"]
-      : ["run", "dev:azure"];
-    const childEnvironment = { ...process.env };
+    const args = ["run", "dev:azure"];
 
-    if (isDemo) {
-      childEnvironment.VITE_DEMO_MODE = "true";
-      process.stdout.write("Azure settings are empty. Starting the local browser demo.\n");
-    } else {
-      delete childEnvironment.VITE_DEMO_MODE;
-      process.stdout.write("Azure settings are complete. Starting the authenticated API and web app.\n");
-    }
+    process.stdout.write("Azure settings are complete. Starting the authenticated API and web app.\n");
 
     const child = spawn(command, args, {
       cwd: process.cwd(),
-      env: childEnvironment,
+      env: process.env,
       stdio: "inherit",
       shell: process.platform === "win32",
     });

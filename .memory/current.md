@@ -1,16 +1,17 @@
-﻿# Current Context
+# Current Context
 
 ## Active Plan
-[Player Turn Timer Warning Visual](./plans/2026-10-23-player-turn-timer-warning-visual.md)
+[Production Azure deployment](./plans/2026-10-23-production-azure-deployment.md)
 
 ## Active Phase
-[P01 Board Edge Warning](./phases/2026-10-23-player-turn-timer-warning-visual/P01-board-edge-warning/phase.md)
+[P01 Azure-only development](./phases/2026-10-23-production-azure-deployment/P01-azure-only-development/phase.md)
 
 ## Active Task
-None — P01-T01 is complete.
+[T02 Remove demo authentication bypass](./phases/2026-10-23-production-azure-deployment/P01-azure-only-development/T02-remove-demo-auth-bypass.md)
 
 ## Status
-- Plan complete: P01 1/1 Task done.
+- T01 is complete. Azure development configuration is now required.
+- Azure resource creation and deployment still depend on IT/Azure administrator provisioning.
 
-## Next Step
-No active Task. Start a new memory plan for the next feature.
+## Next Step (IMPORTANT)
+Read T02 and remove the browser authentication bypass and memory-only demo game state.

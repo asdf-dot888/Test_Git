@@ -4,17 +4,20 @@ import { AZURE_DEV_REQUIRED_KEYS, resolveDevelopmentMode } from "./dev-mode.mjs"
 const completeEnvironment = Object.fromEntries(AZURE_DEV_REQUIRED_KEYS.map((key) => [key, `configured-${key}`]));
 
 describe("resolveDevelopmentMode", () => {
-  it("selects the local demo when Azure integration settings are absent", () => {
-    expect(resolveDevelopmentMode({})).toEqual({ mode: "demo", missing: [] });
+  it("rejects an empty environment and reports every required Azure setting", () => {
+    expect(resolveDevelopmentMode({})).toEqual({ mode: "invalid", missing: AZURE_DEV_REQUIRED_KEYS });
   });
 
-  it("treats whitespace-only values as absent and ignores non-auth defaults", () => {
+  it("treats whitespace-only values as missing and ignores optional defaults", () => {
     expect(resolveDevelopmentMode({
       ENTRA_TENANT_ID: "  ",
       PORT: "3001",
       COSMOS_DATABASE: "card-roguelike",
       COSMOS_CONTAINER: "active-runs",
-    })).toEqual({ mode: "demo", missing: [] });
+    })).toEqual({
+      mode: "invalid",
+      missing: AZURE_DEV_REQUIRED_KEYS,
+    });
   });
 
   it("rejects partial Azure settings and returns the missing keys in configured order", () => {

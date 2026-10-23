@@ -10,10 +10,8 @@ export const AZURE_DEV_REQUIRED_KEYS = [
 ];
 
 export function resolveDevelopmentMode(environment = process.env) {
-  const configured = AZURE_DEV_REQUIRED_KEYS.filter((key) => environment[key]?.trim());
   const missing = AZURE_DEV_REQUIRED_KEYS.filter((key) => !environment[key]?.trim());
 
-  if (configured.length === 0) return { mode: "demo", missing: [] };
   if (missing.length === 0) return { mode: "azure", missing: [] };
   return { mode: "invalid", missing };
 }
