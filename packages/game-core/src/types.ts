@@ -85,6 +85,17 @@ export type EnemyCombatRecord =
   | { type: "attack"; cardId: string; attackerId: string; targetId: string }
   | { type: "boss-area"; damage: 1; targetMinionIds: string[]; targetHeroId: "player" };
 
+export interface EnemyTurnPlaybackStep {
+  action: EnemyCombatRecord;
+  beforeRun: RunState;
+  presentationRun: RunState;
+}
+
+export interface EnemyTurnResolution {
+  run: RunState;
+  steps: EnemyTurnPlaybackStep[];
+}
+
 export interface EncounterState {
   phase: 1 | 2 | 3;
   kind: "normal" | "boss";

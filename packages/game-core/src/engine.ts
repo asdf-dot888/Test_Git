@@ -8,6 +8,8 @@ import type {
   EncounterState,
   EnemyCombatRecord,
   EnemyDefinition,
+  EnemyTurnPlaybackStep,
+  EnemyTurnResolution,
   MinionState,
   PlayerSide,
   RunState,
@@ -163,11 +165,11 @@ function createMinion(
   };
 }
 
-function dealDamageToPlayerHero(run: RunState, amount: number): RunState {
+function dealDamageToPlayerHero(run: RunState, amount: number, deferDefeat = false): RunState {
   const battle = run.battle;
   if (!battle) return run;
   battle.playerHero.health = Math.max(0, battle.playerHero.health - amount);
-  if (battle.playerHero.health === 0) return finishDefeat(run);
+  if (battle.playerHero.health === 0 && !deferDefeat) return finishDefeat(run);
   return run;
 }
 
@@ -357,7 +359,13 @@ function validateTargetId(targetId: string | undefined): asserts targetId is str
   if (!targetId) fail("INVALID_TARGET", "Select a valid target for this effect.");
 }
 
-function applySpellEffect(run: RunState, effect: SpellEffect, targetId?: string, caster: PlayerSide = "player"): RunState {
+function applySpellEffect(
+  run: RunState,
+  effect: SpellEffect,
+  targetId?: string,
+  caster: PlayerSide = "player",
+  deferDefeat = false,
+): RunState {
   const battle = run.battle;
   if (!battle) return run;
   const ownHero = caster === "player" ? battle.playerHero : battle.enemyHero;
@@ -368,7 +376,7 @@ function applySpellEffect(run: RunState, effect: SpellEffect, targetId?: string,
   switch (effect.kind) {
     case "damage": {
       if (caster === "player" && effect.target === "enemyHero") return dealDamageToEnemyHero(run, effect.amount);
-      if (caster === "enemy" && battle.playerBoard.length === 0) return dealDamageToPlayerHero(run, effect.amount);
+      if (caster === "enemy" && battle.playerBoard.length === 0) return dealDamageToPlayerHero(run, effect.amount, deferDefeat);
       validateTargetId(targetId);
       const target = opposingBoard.find((minion) => minion.instanceId === targetId);
       if (!target) fail("INVALID_TARGET", "The selected opposing minion is unavailable.");
@@ -492,7 +500,7 @@ function selectEnemyCard(battle: BattleState, enemy: EnemyDefinition): CardInsta
   return tied[picked.value]!.instance;
 }
 
-function playEnemyCard(run: RunState, handInstanceId: string): RunState {
+function playEnemyCard(run: RunState, handInstanceId: string, deferDefeat = false): RunState {
   const battle = run.battle;
   if (!battle) return run;
   const handSlot = battle.enemyHand.findIndex((card) => card.instanceId === handInstanceId);
@@ -517,15 +525,32 @@ function playEnemyCard(run: RunState, handInstanceId: string): RunState {
   for (const effect of card.spellEffects ?? []) {
     const targetId = selectEnemySpellTarget(effect, battle);
     const kind = effect.kind;
-    run = applySpellEffect(run, effect, targetId, "enemy");
+    run = applySpellEffect(run, effect, targetId, "enemy", deferDefeat);
     eventEffects.push({ kind, targetId: targetId ?? null });
-    if (run.status !== "active") break;
+    if (run.status !== "active" || (deferDefeat && run.battle?.playerHero.health === 0)) break;
   }
   run.battle?.enemyTurnEvents?.push({ type: "cast-spell", cardId: card.id, instanceId: instance.instanceId, handSlot, effects: eventEffects });
   return run;
 }
 
-function resolveEnemyMinionAttacks(run: RunState): RunState {
+function addEnemyTurnStep(
+  steps: EnemyTurnPlaybackStep[],
+  action: EnemyCombatRecord,
+  beforeRun: RunState,
+  presentationRun: RunState,
+): void {
+  const before = cloneRun(beforeRun);
+  const presentation = cloneRun(presentationRun);
+  if (before.battle) delete before.battle.enemyTurnEvents;
+  if (presentation.battle) delete presentation.battle.enemyTurnEvents;
+  steps.push({ action: structuredClone(action), beforeRun: before, presentationRun: presentation });
+}
+
+function resolveEnemyMinionAttacks(
+  run: RunState,
+  onAttack?: (action: EnemyCombatRecord, beforeRun: RunState, afterRun: RunState) => void,
+  deferDefeat = false,
+): RunState {
   const initialBattle = run.battle;
   if (!initialBattle) return run;
   const attackerIds = initialBattle.enemyBoard.map((minion) => minion.instanceId);
@@ -534,6 +559,7 @@ function resolveEnemyMinionAttacks(run: RunState): RunState {
     if (!battle) break;
     const attacker = battle.enemyBoard.find((minion) => minion.instanceId === attackerId);
     if (!attacker || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) continue;
+    const beforeRun = onAttack ? cloneRun(run) : run;
     const target = [...battle.playerBoard]
       .map((minion, index) => ({ minion, index }))
       .sort((left, right) => {
@@ -545,29 +571,33 @@ function resolveEnemyMinionAttacks(run: RunState): RunState {
           || left.index - right.index;
       })[0]?.minion;
     if (target) {
-      battle.enemyTurnEvents?.push({ type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: target.instanceId });
+      const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: target.instanceId };
+      battle.enemyTurnEvents?.push(action);
       applyMinionCombatDamage(attacker, target);
       attacker.hasAttacked = true;
       run = removeDeadMinions(run, "player");
       run = removeDeadMinions(run, "enemy");
+      onAttack?.(action, beforeRun, run);
     } else {
-      battle.enemyTurnEvents?.push({ type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id });
+      const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
+      battle.enemyTurnEvents?.push(action);
       attacker.hasAttacked = true;
-      run = dealDamageToPlayerHero(run, attacker.attack);
-      if (run.status !== "active") return run;
+      run = dealDamageToPlayerHero(run, attacker.attack, deferDefeat);
+      onAttack?.(action, beforeRun, run);
+      if (run.status !== "active" || (deferDefeat && run.battle?.playerHero.health === 0)) return run;
     }
   }
   return run;
 }
 
-function resolveBossAreaAttack(run: RunState): RunState {
+function resolveBossAreaAttack(run: RunState, deferDefeat = false): RunState {
   const battle = run.battle;
   if (!battle) return run;
   const targetMinionIds = battle.playerBoard.map((minion) => minion.instanceId);
   battle.enemyTurnEvents?.push({ type: "boss-area", damage: 1, targetMinionIds, targetHeroId: "player" });
   for (const minion of [...battle.playerBoard]) minion.health -= 1;
   run = removeDeadMinions(run, "player");
-  return dealDamageToPlayerHero(run, 1);
+  return dealDamageToPlayerHero(run, 1, deferDefeat);
 }
 
 function beginEncounter(run: RunState, encounterIndex: number, battleSeed: number): RunState {
@@ -729,8 +759,9 @@ export function discardBeforeDraw(run: RunState, handInstanceId: string): RunSta
   return next;
 }
 
-export function resolveEnemyTurn(run: RunState): RunState {
+export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution {
   let next = cloneRun(run);
+  const steps: EnemyTurnPlaybackStep[] = [];
   let battle = assertActiveRun(next);
   if (battle.activeSide !== "enemy") fail("WRONG_TURN", "The enemy turn is not active.");
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
@@ -754,33 +785,56 @@ export function resolveEnemyTurn(run: RunState): RunState {
   if (drawn) battle.enemyHand.push(drawn);
 
   let plays = 0;
-  while (plays < 30 && next.status === "active") {
+  while (plays < 30 && next.status === "active" && next.battle?.playerHero.health !== 0) {
     battle = next.battle!;
     const selected = selectEnemyCard(battle, enemy);
     if (!selected) break;
     const beforeHandSize = battle.enemyHand.length;
-    next = playEnemyCard(next, selected.instanceId);
+    const priorEventCount = battle.enemyTurnEvents?.length ?? 0;
+    const beforeRun = cloneRun(next);
+    next = playEnemyCard(next, selected.instanceId, true);
     plays += 1;
-    if (next.status !== "active" || !next.battle) return next;
+    if (!next.battle) return { run: next, steps };
+    const eventList = next.battle.enemyTurnEvents ?? [];
+    const action = eventList.length > priorEventCount ? eventList[eventList.length - 1] : undefined;
+    if (action) addEnemyTurnStep(steps, action, beforeRun, next);
+    if (next.battle.playerHero.health === 0) return { run: finishDefeat(next), steps };
     if (next.battle.enemyHand.length >= beforeHandSize && plays >= 30) break;
   }
 
+  if (next.battle?.playerHero.health === 0) return { run: finishDefeat(next), steps };
   battle = next.battle!;
   if (enemy.kind === "boss" && battle.turnNumber % 3 === 0) {
-    next = resolveBossAreaAttack(next);
-    if (next.status !== "active" || !next.battle) return next;
+    const beforeRun = cloneRun(next);
+    const priorEventCount = battle.enemyTurnEvents?.length ?? 0;
+    next = resolveBossAreaAttack(next, true);
+    const eventList = next.battle?.enemyTurnEvents ?? [];
+    const action = eventList.length > priorEventCount ? eventList[eventList.length - 1] : undefined;
+    if (action) addEnemyTurnStep(steps, action, beforeRun, next);
+    if (next.battle?.playerHero.health === 0) return { run: finishDefeat(next), steps };
   }
-  next = resolveEnemyMinionAttacks(next);
-  if (next.status !== "active" || !next.battle) return next;
-  return startPlayerTurn(next);
+  next = resolveEnemyMinionAttacks(next, (action, beforeRun, afterRun) => {
+    addEnemyTurnStep(steps, action, beforeRun, afterRun);
+  }, true);
+  if (next.battle?.playerHero.health === 0) return { run: finishDefeat(next), steps };
+  if (next.status !== "active" || !next.battle) return { run: next, steps };
+  return { run: startPlayerTurn(next), steps };
 }
 
-export function endPlayerTurn(run: RunState): RunState {
+export function resolveEnemyTurn(run: RunState): RunState {
+  return resolveEnemyTurnWithPlayback(run).run;
+}
+
+export function endPlayerTurnWithPlayback(run: RunState): EnemyTurnResolution {
   const next = cloneRun(run);
   const battle = assertPlayerTurn(next);
   battle.activeSide = "enemy";
   battle.enemyBoard = battle.enemyBoard.map((minion) => ({ ...minion, hasAttacked: false }));
-  return resolveEnemyTurn(next);
+  return resolveEnemyTurnWithPlayback(next);
+}
+
+export function endPlayerTurn(run: RunState): RunState {
+  return endPlayerTurnWithPlayback(run).run;
 }
 
 export function chooseReward(run: RunState, cardId: string): RunState {

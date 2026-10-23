@@ -16,10 +16,12 @@ import {
   createRun,
   discardBeforeDraw,
   endPlayerTurn,
+  endPlayerTurnWithPlayback,
   gameConstants,
   hydrateRunForCurrentBattle,
   playMinion,
   resolveEnemyTurn,
+  resolveEnemyTurnWithPlayback,
   skipReward,
   startBattle,
 } from "./engine.js";
@@ -418,6 +420,88 @@ describe("player actions and battle rules", () => {
 });
 
 describe("enemy turns, rewards, and run progression", () => {
+  it("returns ordered action snapshots while preserving the legacy end-turn result", () => {
+    const run = copyRun(createRun(236));
+    const battle = activeBattle(run);
+    battle.enemyId = "boss-grave-king";
+    battle.turnNumber = 3;
+    battle.enemyMana.current = 1;
+    battle.enemyHand = [instance("boss-minion", "ash-wolf")];
+    battle.enemyDrawPile = [instance("boss-expensive", "eclipse")];
+    battle.enemyBoard = [minion({ instanceId: "boss-attacker", owner: "enemy", attack: 2, health: 5, maxHealth: 5, summonedTurn: 0 })];
+    battle.playerBoard = [minion({ instanceId: "player-target", attack: 1, health: 5, maxHealth: 5 })];
+    const inputSnapshot = copyRun(run);
+
+    const resolution = endPlayerTurnWithPlayback(run);
+    const legacyResult = endPlayerTurn(run);
+
+    expect(resolution.run).toEqual(legacyResult);
+    expect(run).toEqual(inputSnapshot);
+    expect(resolution.steps.map((step) => step.action.type)).toEqual(["play-minion", "boss-area", "attack"]);
+    expect(resolution.steps[0]?.action).toMatchObject({ type: "play-minion", instanceId: "boss-minion" });
+    expect(resolution.steps[1]?.presentationRun.battle?.playerBoard[0]?.health).toBe(4);
+    expect(resolution.steps[2]?.presentationRun.battle?.playerBoard[0]?.health).toBe(2);
+    for (const step of resolution.steps) {
+      expect(step.beforeRun.battle?.activeSide).toBe("enemy");
+      expect(step.presentationRun.battle?.activeSide).toBe("enemy");
+      expect(step.beforeRun.battle).not.toHaveProperty("enemyTurnEvents");
+      expect(step.presentationRun.battle).not.toHaveProperty("enemyTurnEvents");
+    }
+  });
+
+  it("groups every effect of one enemy spell into one playback action", () => {
+    const run = asEnemyTurn(createRun(237));
+    const battle = activeBattle(run);
+    battle.enemyMana.current = 6;
+    battle.enemyHand = [instance("boss-spell", "soul-storm")];
+    battle.enemyDrawPile = [instance("boss-expensive", "eclipse")];
+
+    const resolution = resolveEnemyTurnWithPlayback(run);
+
+    expect(resolution.steps).toHaveLength(1);
+    expect(resolution.steps[0]?.action).toMatchObject({ type: "cast-spell", instanceId: "boss-spell", effects: [{ kind: "damage" }, { kind: "draw" }] });
+    expect(resolution.steps[0]?.presentationRun.battle?.playerHero.health).toBe(26);
+    expect(resolution.run.battle?.playerHero.health).toBe(26);
+  });
+
+  it("keeps lethal spell, minion, and boss area snapshots before terminal defeat cleanup", () => {
+    const lethalSpell = asEnemyTurn(createRun(238));
+    activeBattle(lethalSpell).enemyMana.current = 1;
+    activeBattle(lethalSpell).enemyHand = [instance("lethal-spell", "shadow-bolt")];
+    activeBattle(lethalSpell).enemyDrawPile = [instance("expensive-spell", "eclipse")];
+    activeBattle(lethalSpell).playerHero.health = 2;
+
+    const spellResult = resolveEnemyTurnWithPlayback(lethalSpell);
+    expect(spellResult.run).toMatchObject({ status: "defeat", battle: null });
+    expect(spellResult.steps.at(-1)?.action.type).toBe("cast-spell");
+    expect(spellResult.steps.at(-1)?.presentationRun).toMatchObject({ status: "active", battle: { playerHero: { health: 0 } } });
+
+    const lethalAttack = asEnemyTurn(createRun(239));
+    activeBattle(lethalAttack).enemyMana.current = 0;
+    activeBattle(lethalAttack).enemyHand = [];
+    activeBattle(lethalAttack).enemyDrawPile = [instance("expensive-card", "eclipse")];
+    activeBattle(lethalAttack).enemyBoard = [minion({ instanceId: "lethal-attacker", owner: "enemy", attack: 3, summonedTurn: 0 })];
+    activeBattle(lethalAttack).playerHero.health = 2;
+
+    const attackResult = resolveEnemyTurnWithPlayback(lethalAttack);
+    expect(attackResult.run).toMatchObject({ status: "defeat", battle: null });
+    expect(attackResult.steps.at(-1)?.action).toMatchObject({ type: "attack", targetId: "player" });
+    expect(attackResult.steps.at(-1)?.presentationRun.battle?.playerHero.health).toBe(0);
+
+    const lethalArea = asEnemyTurn(createRun(240));
+    activeBattle(lethalArea).enemyId = "boss-grave-king";
+    activeBattle(lethalArea).turnNumber = 3;
+    activeBattle(lethalArea).enemyMana.current = 0;
+    activeBattle(lethalArea).enemyHand = [];
+    activeBattle(lethalArea).enemyDrawPile = [instance("area-expensive-card", "eclipse")];
+    activeBattle(lethalArea).playerHero.health = 1;
+
+    const areaResult = resolveEnemyTurnWithPlayback(lethalArea);
+    expect(areaResult.run).toMatchObject({ status: "defeat", battle: null });
+    expect(areaResult.steps.at(-1)?.action.type).toBe("boss-area");
+    expect(areaResult.steps.at(-1)?.presentationRun.battle?.playerHero.health).toBe(0);
+  });
+
   it("plays multiple affordable cards with refreshed enemy mana and waits to attack with new minions", () => {
     const run = copyRun(createRun(48));
     const battle = activeBattle(run);
