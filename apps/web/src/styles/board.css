@@ -328,6 +328,87 @@
 }
 .game-guide-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(5 5 5 / 78%); }
 .game-guide-panel { width: min(100%, 700px); max-height: min(90dvh, 820px); padding: clamp(20px, 4vw, 34px); overflow: auto; color: #e9dcc4; border: 1px solid rgb(219 173 101 / 52%); border-radius: 16px; background: radial-gradient(ellipse at 50% 0, #38302a, #1d1b1d 70%); box-shadow: 0 28px 90px rgb(0 0 0 / 68%); }
+
+.expedition-roadmap { position: fixed; z-index: 20; inset: 0; min-height: 100dvh; padding: clamp(14px, 3vw, 34px); overflow: auto; color: #f4ead7; background: #09090b url("/art/expedition-route-background.png") center / cover no-repeat; }
+.expedition-roadmap__shade { position: fixed; inset: 0; background: linear-gradient(180deg, rgb(5 5 7 / 74%), rgb(8 8 10 / 42%) 45%, rgb(5 5 7 / 82%)); pointer-events: none; }
+.expedition-roadmap__panel { position: relative; z-index: 1; width: min(100%, 1100px); min-height: calc(100dvh - clamp(28px, 6vw, 68px)); margin: 0 auto; padding: clamp(18px, 3vw, 32px); display: grid; grid-template-rows: auto minmax(380px, 1fr) auto; gap: 16px; border: 1px solid rgb(208 163 117 / 24%); border-radius: 18px; background: rgb(9 9 11 / 52%); box-shadow: inset 0 0 70px rgb(0 0 0 / 42%), 0 20px 70px rgb(0 0 0 / 35%); backdrop-filter: blur(2px); }
+.expedition-roadmap__header { position: relative; display: grid; justify-items: center; gap: 5px; text-align: center; }
+.expedition-roadmap__header h1 { margin: 3px 0 0; color: #fff0d5; font-size: clamp(27px, 4vw, 42px); letter-spacing: .12em; text-shadow: 0 4px 22px #000; }
+.expedition-roadmap__header p { margin: 0; color: #c5b9a7; font-size: 13px; }
+.expedition-roadmap__phase { margin-top: 4px; color: #d6a076; font-size: 11px; letter-spacing: .18em; }
+.expedition-roadmap__route { position: relative; min-height: 390px; isolation: isolate; }
+.expedition-roadmap__route-line { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.expedition-roadmap__route-line path { fill: none; stroke: #702b29; stroke-width: 13; stroke-linecap: round; filter: drop-shadow(0 0 8px rgb(170 49 40 / 38%)); }
+.expedition-roadmap__route-line .expedition-roadmap__route-glow { stroke: #bd5140; stroke-width: 3; opacity: .72; filter: drop-shadow(0 0 8px #e36e53); }
+.expedition-roadmap__nodes { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; }
+.expedition-roadmap__node { position: absolute; width: clamp(174px, 23%, 224px); transform: translate(-50%, -50%); }
+.expedition-roadmap__node--1 { top: 12%; left: 14%; }
+.expedition-roadmap__node--2 { top: 34%; left: 83%; }
+.expedition-roadmap__node--3 { top: 60%; left: 18%; }
+.expedition-roadmap__node--4 { top: 84%; left: 83%; width: clamp(198px, 27%, 260px); }
+.expedition-roadmap__node-button { width: 100%; min-height: 102px; padding: 9px; display: flex; align-items: center; gap: 10px; color: #f4ead7; text-align: left; border: 1px solid rgb(190 153 111 / 58%); border-radius: 12px; background: linear-gradient(145deg, rgb(38 31 29 / 96%), rgb(15 15 17 / 96%)); box-shadow: 0 10px 26px rgb(0 0 0 / 54%), inset 0 1px rgb(255 255 255 / 5%); cursor: pointer; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.expedition-roadmap__node-button:hover:not(:disabled) { transform: translateY(-3px); border-color: #e3bd77; box-shadow: 0 12px 30px rgb(0 0 0 / 60%), 0 0 18px rgb(200 133 69 / 20%); }
+.expedition-roadmap__node-button:focus-visible, .expedition-roadmap__footer button:focus-visible { outline: 3px solid #f1d18a; outline-offset: 3px; }
+.expedition-roadmap__node-button:disabled { cursor: not-allowed; }
+.expedition-roadmap__portrait-frame { flex: 0 0 68px; width: 68px; height: 68px; display: grid; place-items: center; overflow: hidden; border: 2px solid #ad8c63; border-radius: 50%; background: #161416; box-shadow: 0 0 0 3px rgb(0 0 0 / 58%); transition: filter .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.expedition-roadmap__portrait-frame img { width: 100%; height: 100%; object-fit: cover; }
+.expedition-roadmap__node-copy { min-width: 0; display: grid; gap: 3px; }
+.expedition-roadmap__node-index, .expedition-roadmap__node-kind { color: #b7a890; font-size: 9px; letter-spacing: .09em; }
+.expedition-roadmap__node-copy strong { overflow: hidden; color: #fff1d5; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.expedition-roadmap__node-status { color: #bda98e; font-size: 10px; }
+.expedition-roadmap__node.is-complete .expedition-roadmap__portrait-frame { filter: grayscale(1); }
+.expedition-roadmap__node.is-complete .expedition-roadmap__node-button { border-color: rgb(125 124 120 / 55%); }
+.expedition-roadmap__node.is-active { z-index: 2; }
+.expedition-roadmap__node.is-active .expedition-roadmap__portrait-frame { border-color: #72d78f; box-shadow: 0 0 0 3px rgb(51 160 84 / 38%), 0 0 24px rgb(78 221 117 / 54%); }
+.expedition-roadmap__node.is-active .expedition-roadmap__node-status { color: #91e3a5; font-weight: 800; }
+.expedition-roadmap__node.is-active .expedition-roadmap__node-button { border-color: rgb(101 207 128 / 78%); }
+.expedition-roadmap__node.is-available .expedition-roadmap__portrait-frame { border-color: #e1b968; box-shadow: 0 0 16px rgb(226 174 89 / 34%); }
+.expedition-roadmap__node.is-available .expedition-roadmap__node-status { color: #edca83; font-weight: 700; }
+.expedition-roadmap__node.is-boss .expedition-roadmap__portrait-frame { flex-basis: 86px; width: 86px; height: 86px; border-width: 3px; border-radius: 18px; }
+.expedition-roadmap__node.is-boss .expedition-roadmap__node-button { min-height: 118px; border-color: rgb(181 94 65 / 78%); background: linear-gradient(145deg, rgb(57 29 27 / 97%), rgb(18 14 16 / 97%)); }
+.expedition-roadmap__node.is-boss .expedition-roadmap__node-copy strong { color: #ffd9b4; font-size: 15px; }
+.expedition-roadmap__node.is-boss.is-active .expedition-roadmap__portrait-frame { border-color: #72d78f; }
+.expedition-roadmap__footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #c6b69d; font-size: 11px; }
+.expedition-roadmap__footer .menu-secondary { min-height: 40px; }
+.expedition-roadmap__finished { align-self: center; text-align: center; color: #e9d9bd; }
+.expedition-roadmap__finished > span { color: #dbb66d; font-size: 38px; }
+.expedition-roadmap__finished h2 { margin: 8px 0; color: #fff0d5; font-size: 28px; }
+.expedition-roadmap__finished p { color: #c5b9a7; }
+@media (max-width: 760px) {
+  .expedition-roadmap { padding: 10px; }
+  .expedition-roadmap__panel { min-height: calc(100dvh - 20px); padding: 15px 11px; grid-template-rows: auto minmax(490px, 1fr) auto; gap: 10px; border-radius: 13px; }
+  .expedition-roadmap__header p { font-size: 11px; }
+  .expedition-roadmap__route { min-height: 490px; }
+  .expedition-roadmap__route-line path { stroke-width: 22; }
+  .expedition-roadmap__route-line .expedition-roadmap__route-glow { stroke-width: 4; }
+  .expedition-roadmap__route-line path:first-child { d: path("M 120 55 C 270 90, 690 100, 850 170 S 300 270, 145 345 S 660 430, 850 540"); }
+  .expedition-roadmap__node { width: min(47%, 205px); }
+  .expedition-roadmap__node--1 { top: 10%; left: 24%; }
+  .expedition-roadmap__node--2 { top: 34%; left: 76%; }
+  .expedition-roadmap__node--3 { top: 61%; left: 24%; }
+  .expedition-roadmap__node--4 { top: 88%; left: 76%; width: min(53%, 230px); }
+  .expedition-roadmap__node-button { min-height: 86px; padding: 7px; gap: 7px; }
+  .expedition-roadmap__portrait-frame { flex-basis: 52px; width: 52px; height: 52px; }
+  .expedition-roadmap__node.is-boss .expedition-roadmap__portrait-frame { flex-basis: 64px; width: 64px; height: 64px; }
+  .expedition-roadmap__node.is-boss .expedition-roadmap__node-button { min-height: 96px; }
+  .expedition-roadmap__node-copy strong { font-size: 11px; }
+  .expedition-roadmap__node-index, .expedition-roadmap__node-kind { font-size: 8px; }
+  .expedition-roadmap__node-status { font-size: 9px; }
+}
+@media (max-width: 390px) {
+  .expedition-roadmap__panel { padding-inline: 8px; }
+  .expedition-roadmap__node { width: 50%; }
+  .expedition-roadmap__node--1, .expedition-roadmap__node--3 { left: 25%; }
+  .expedition-roadmap__node--2, .expedition-roadmap__node--4 { left: 75%; }
+  .expedition-roadmap__node-button { gap: 5px; padding: 6px; }
+  .expedition-roadmap__portrait-frame { flex-basis: 44px; width: 44px; height: 44px; }
+  .expedition-roadmap__node.is-boss .expedition-roadmap__portrait-frame { flex-basis: 54px; width: 54px; height: 54px; }
+  .expedition-roadmap__node-copy strong { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .expedition-roadmap__node-button, .expedition-roadmap__portrait-frame { transition: none; }
+  .expedition-roadmap__node-button:hover:not(:disabled) { transform: none; }
+}
 .game-guide-header { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
 .game-guide-header button { min-height: 36px; }
 .game-guide-panel h2 { margin: 18px 0 20px; color: #fff2d9; font-size: clamp(24px, 5vw, 34px); }
