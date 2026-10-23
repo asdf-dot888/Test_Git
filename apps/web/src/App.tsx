@@ -6,11 +6,10 @@ import { GameBoard } from "./components/GameBoard.js";
 import { ExpeditionRoadmap } from "./components/ExpeditionRoadmap.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
-import { RunLockNotice } from "./components/RunLockNotice.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { TurnStartGlow } from "./components/TurnStartGlow.js";
 import { useGameSession } from "./game/useGameSession.js";
-import { useRunSync, type RunSyncController } from "./game/useRunSync.js";
+import { useLocalRun, type LocalRunController } from "./game/useLocalRun.js";
 import { useTurnTimer } from "./game/useTurnTimer.js";
 import { useEnemyTurnPlayback } from "./game/useEnemyTurnPlayback.js";
 import { createAudioController, type AudioController, type AudioSettings } from "./game/audio.js";
@@ -24,11 +23,18 @@ function secureSeed(): number {
 }
 
 export function App() {
-  const sync = useRunSync();
+  const sync = useLocalRun();
   return <GameSessionView sync={sync} />;
 }
 
-export function GameSessionView({ sync }: { sync: RunSyncController }) {
+export function GameSessionView({ sync }: { sync: LocalRunController }) {
+  return <>
+    {sync.warning && <aside className="run-sync-banner" role="status">{sync.warning}</aside>}
+    <GameSessionContent sync={sync} />
+  </>;
+}
+
+function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const { session, dispatch: dispatchGameAction } = useGameSession();
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "map" | "game">("menu");
@@ -39,7 +45,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => loadAudioSettings());
   const [audioController, setAudioController] = useState<AudioController | null>(null);
   const appliedLoadVersion = useRef(0);
-  const restoringRemoteRun = useRef(false);
+  const restoringSavedRun = useRef(false);
   const pendingReplacement = useRef(false);
   const playedAudioEventIds = useRef(new Set<number>());
   const startedTurnIds = useRef(new Set<string>());
@@ -187,25 +193,25 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   useEffect(() => {
     if (sync.loadVersion <= appliedLoadVersion.current) return;
     appliedLoadVersion.current = sync.loadVersion;
-    restoringRemoteRun.current = true;
+    restoringSavedRun.current = true;
     dispatch(sync.run ? { type: "restore-run", run: sync.run } : { type: "clear-run" });
   }, [dispatch, sync.loadVersion, sync.run]);
 
   useEffect(() => {
     if (pendingReplacement.current) return;
-    if (restoringRemoteRun.current) {
-      restoringRemoteRun.current = false;
+    if (restoringSavedRun.current) {
+      restoringSavedRun.current = false;
       return;
     }
     if (!syncLoaded || (syncStatus !== "ready" && syncStatus !== "saving") || !session.run || session.run === syncedRun) return;
     void saveRun(session.run).catch(() => undefined);
   }, [saveRun, session.run, syncLoaded, syncStatus, syncedRun]);
 
-  const startNewServerRun = async (reason: "completed" | "abandoned") => {
+  const startNewLocalRun = async (reason: "completed" | "abandoned") => {
     pendingReplacement.current = true;
     try {
       const seed = secureSeed();
-      const created = sync.etag
+      const created = sync.run
         ? await sync.replaceRun(reason, seed)
         : await sync.createRun(seed);
       dispatch({ type: "restore-run", run: created });
@@ -217,11 +223,11 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
   };
 
   const beginRun = () => {
-    if (run?.status === "active" && sync.etag) {
+    if (run?.status === "active") {
       setAbandonOpen(true);
       return;
     }
-    void startNewServerRun(run ? "completed" : "abandoned").catch(() => undefined);
+    void startNewLocalRun(run ? "completed" : "abandoned").catch(() => undefined);
   };
 
   const returnToBattle = () => {
@@ -255,7 +261,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
       setMenuView("closed");
       setScreen("menu");
     } catch {
-      // The sync controller preserves the run and exposes its normal error state.
+      // Keep the player in the current session if clearing local storage fails.
     } finally {
       pendingReplacement.current = false;
       setAbandonToMenuBusy(false);
@@ -296,24 +302,12 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
     if (session.selectedAttackerId) dispatch({ type: "attack", attackerId: session.selectedAttackerId, targetId });
   };
 
-  if (sync.status === "locked" || sync.status === "conflict" || sync.status === "error") {
-    const isConflict = sync.status === "conflict";
-    const isLocked = sync.status === "locked";
-    return <RunLockNotice
-      title={isLocked ? "다른 기기에서 진행 중입니다" : isConflict ? "저장 내용이 달라졌습니다" : "저장 상태를 확인할 수 없습니다"}
-      message={sync.message ?? "저장 상태를 확인해 주세요."}
-      expiresAt={sync.expiresAt}
-      retryLabel={isConflict || isLocked ? "서버 저장본 다시 확인" : "저장 다시 시도"}
-      onRetry={() => { void (isConflict || isLocked ? sync.reload() : session.run ? sync.retrySave(session.run) : sync.retry()).catch(() => undefined); }}
-    />;
-  }
-
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
       <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
-      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
+      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewLocalRun("abandoned").catch(() => undefined); }} />
     </>;
   }
 
@@ -339,7 +333,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
         <h1>{victory ? "어둠의 군주를 물리쳤습니다" : "원정이 끝났습니다"}</h1>
         <p>{victory ? "세 페이즈를 모두 돌파했습니다." : "영웅의 체력이 다했습니다. 고정된 시작 덱으로 다시 도전하세요."}</p>
         <div className="outcome-stats"><span>완료한 전투 <b>{run.completedBattles} / 12</b></span><span>덱 카드 <b>{run.deck.length}장</b></span></div>
-        <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => { void startNewServerRun("completed").catch(() => undefined); }}>새 원정 시작</button>
+        <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => { void startNewLocalRun("completed").catch(() => undefined); }}>새 원정 시작</button>
       </section>
     </main>;
   }
@@ -385,7 +379,7 @@ export function GameSessionView({ sync }: { sync: RunSyncController }) {
         />
       <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
-      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewServerRun("abandoned").catch(() => undefined); }} />
+      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewLocalRun("abandoned").catch(() => undefined); }} />
       <AbandonRunDialog intent="main-menu" open={abandonToMenuOpen} busy={abandonToMenuBusy} onCancel={() => setAbandonToMenuOpen(false)} onConfirm={() => { void confirmReturnToMenu(); }} />
       {menuView !== "closed" && <GameMenu
         view={menuView}

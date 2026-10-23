@@ -12,7 +12,7 @@ export function AuthConfigurationPage({ missing = [], error }: AuthConfiguration
         {error ? <p>{error}</p> : <>
           <p>사내 계정 로그인을 시작하기 전에 아래 환경 변수를 설정하세요.</p>
           <ul>{missing.map((key) => <li key={key}><code>{key}</code></li>)}</ul>
-          <p className="auth-note">Tenant ID, SPA client ID와 API scope는 사내 Azure 관리자에게서 받아 .env.local에 설정합니다.</p>
+          <p className="auth-note">Tenant ID와 SPA client ID를 설정하고, Entra 앱 등록의 SPA 리디렉션 URI에 현재 접속 주소를 추가하세요. 게임 진행 정보는 이 브라우저에 저장됩니다.</p>
         </>}
       </section>
     </main>

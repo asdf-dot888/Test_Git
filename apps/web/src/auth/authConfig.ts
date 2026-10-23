@@ -1,7 +1,6 @@
 export interface AuthConfig {
   tenantId: string;
   clientId: string;
-  apiScope: string;
   redirectUri: string;
 }
 
@@ -15,7 +14,6 @@ export type AuthEnvironment = Record<string, string | undefined>;
 const requiredVariables = [
   "VITE_ENTRA_TENANT_ID",
   "VITE_ENTRA_CLIENT_ID",
-  "VITE_ENTRA_API_SCOPE",
 ] as const;
 
 export function readAuthConfig(
@@ -25,7 +23,6 @@ export function readAuthConfig(
   const values = {
     tenantId: environment.VITE_ENTRA_TENANT_ID?.trim() ?? "",
     clientId: environment.VITE_ENTRA_CLIENT_ID?.trim() ?? "",
-    apiScope: environment.VITE_ENTRA_API_SCOPE?.trim() ?? "",
   };
   const missing = requiredVariables.filter((key) => !environment[key]?.trim());
   if (missing.length > 0) return { config: null, missing: [...missing] };
@@ -46,7 +43,6 @@ export function buildMsalConfig(config: AuthConfig) {
 
 export function createAuthRequests(config: AuthConfig) {
   return {
-    loginRequest: { scopes: [config.apiScope] },
-    apiRequest: { scopes: [config.apiScope] },
+    loginRequest: { scopes: ["openid", "profile"] },
   };
 }

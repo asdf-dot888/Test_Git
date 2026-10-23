@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { createRun, type RunState } from "@board-game/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameSessionView } from "./App.js";
-import type { RunSyncController } from "./game/useRunSync.js";
+import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
   loop = false;
@@ -17,7 +17,7 @@ class FakeAudio {
   pause(): void { this.paused = true; }
 }
 
-function syncWith(run: RunState): RunSyncController {
+function syncWith(run: RunState): LocalRunController {
   return {
     status: "ready", etag: null, expiresAt: null, message: null, run, loaded: true, loadVersion: 1,
     saveRun: vi.fn(async () => undefined), createRun: vi.fn(async () => run), replaceRun: vi.fn(async () => run),

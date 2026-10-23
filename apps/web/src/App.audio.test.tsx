@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CARD_BY_ID, createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
-import type { RunSyncController } from "./game/useRunSync.js";
+import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
   static gestureUnlocked = false;
@@ -27,7 +27,7 @@ class FakeAudio {
   pause(): void { this.paused = true; }
 }
 
-function makeReadySync(): RunSyncController {
+function makeReadySync(): LocalRunController {
   let run = createRun(1);
   for (let seed = 2; seed < 10_000; seed += 1) {
     const candidate = createRun(seed);

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
-import type { RunSyncController } from "./game/useRunSync.js";
+import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
   loop = false;
@@ -16,7 +16,7 @@ class FakeAudio {
   pause(): void { this.paused = true; }
 }
 
-function makeSync(run: ReturnType<typeof createRun> | null = null): RunSyncController {
+function makeSync(run: ReturnType<typeof createRun> | null = null): LocalRunController {
   return {
     status: "ready", etag: run ? "etag" : null, expiresAt: null, message: null, run, loaded: true, loadVersion: run ? 1 : 0,
     saveRun: vi.fn(async () => undefined), createRun: vi.fn(async (seed: number) => createRun(seed)),

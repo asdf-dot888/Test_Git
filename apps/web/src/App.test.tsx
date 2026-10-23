@@ -6,10 +6,10 @@ import { AuthContext, type AuthContextValue } from "./auth/authState.js";
 const authValue: AuthContextValue = {
   isAuthenticated: true,
   isLoading: false,
+  userId: "player-oid",
   displayName: "Player",
   signIn: vi.fn(async () => undefined),
   signOut: vi.fn(async () => undefined),
-  getApiToken: vi.fn(async () => "token"),
 };
 
 describe("App", () => {

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
-import type { RunSyncController } from "./game/useRunSync.js";
+import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
   loop = false;
@@ -16,7 +16,7 @@ class FakeAudio {
   pause(): void { this.paused = true; }
 }
 
-function makeSync(deleteRun = vi.fn(async () => undefined)): RunSyncController {
+function makeSync(deleteRun = vi.fn(async () => undefined)): LocalRunController {
   return {
     status: "ready",
     etag: null,
@@ -35,7 +35,7 @@ function makeSync(deleteRun = vi.fn(async () => undefined)): RunSyncController {
   };
 }
 
-async function startGame(sync: RunSyncController) {
+async function startGame(sync: LocalRunController) {
   render(<GameSessionView sync={sync} />);
   fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
   expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();

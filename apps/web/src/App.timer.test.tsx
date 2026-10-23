@@ -4,7 +4,7 @@ import { createRun, type RunState } from "@board-game/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_AUDIO_SETTINGS } from "./game/audioSettings.js";
 import { GameSessionView } from "./App.js";
-import type { RunSyncController } from "./game/useRunSync.js";
+import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
   loop = false;
@@ -36,7 +36,7 @@ describe("turn timer application wiring", () => {
     run.battle!.hand = [{ instanceId: "timer-minion", cardId: "ash-wolf" }];
     const savedRuns: RunState[] = [];
     const saveRun = vi.fn(async (savedRun: RunState) => { savedRuns.push(savedRun); });
-    const sync: RunSyncController = {
+    const sync: LocalRunController = {
       status: "ready", etag: "etag-1", expiresAt: null, message: null, run, loaded: true, loadVersion: 1,
       saveRun,
       createRun: vi.fn(async () => run), replaceRun: vi.fn(async () => run), deleteRun: vi.fn(async () => undefined),
