@@ -369,7 +369,6 @@ function applySpellEffect(
   const battle = run.battle;
   if (!battle) return run;
   const ownHero = caster === "player" ? battle.playerHero : battle.enemyHero;
-  const opposingHero = caster === "player" ? battle.enemyHero : battle.playerHero;
   const ownBoard = caster === "player" ? battle.playerBoard : battle.enemyBoard;
   const opposingBoard = caster === "player" ? battle.enemyBoard : battle.playerBoard;
 
@@ -418,7 +417,8 @@ function startPlayerTurn(run: RunState): RunState {
   battle.activeSide = "player";
   // Normalize saved runs created under the previous, growing-cap rule.
   battle.playerMana.max = MAX_MANA;
-  battle.playerMana.current = Math.min(MAX_MANA, battle.playerMana.current + 1);
+  const manaRecovery = battle.turnNumber <= 3 ? 1 : battle.turnNumber <= 6 ? 2 : 3;
+  battle.playerMana.current = Math.min(MAX_MANA, battle.playerMana.current + manaRecovery);
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   drawForPlayerTurn(run, battle);
   return run;

@@ -263,13 +263,15 @@ describe("player actions and battle rules", () => {
     expect(() => playMinion(run, "sixth")).toThrowError(expect.objectContaining({ code: "MAX_BOARD" }));
   });
 
-  it("regenerates one remaining mana each turn up to ten", () => {
+  it("recovers mana by turn tier and caps at ten", () => {
     let run = createRun(22);
+    let expectedMana = 5;
     for (let turn = 2; turn <= 12; turn += 1) {
       activeBattle(run).playerHero.health = 30;
       activeBattle(run).hand = [];
       run = endPlayerTurn(run);
-      const expectedMana = Math.min(10, 5 + turn - 1);
+      const recovery = turn <= 3 ? 1 : turn <= 6 ? 2 : 3;
+      expectedMana = Math.min(10, expectedMana + recovery);
       expect(run.battle?.playerMana).toEqual({ current: expectedMana, max: 10 });
     }
     expect(run.battle?.playerMana).toEqual({ current: 10, max: 10 });
@@ -294,6 +296,40 @@ describe("player actions and battle rules", () => {
     activeBattle(legacy).playerHero.health = 30;
     activeBattle(legacy).hand = [];
     expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 6, max: 10 });
+  });
+
+  it.each([
+    [2, 1],
+    [3, 1],
+    [4, 2],
+    [6, 2],
+    [7, 3],
+  ])("recovers %i-turn tier amount on the incoming player turn", (incomingTurn, recovery) => {
+    const run = copyRun(createRun(300 + incomingTurn));
+    const battle = activeBattle(run);
+    battle.turnNumber = incomingTurn - 1;
+    battle.playerMana.current = 0;
+    battle.playerHero.health = 30;
+    battle.hand = [];
+
+    const next = endPlayerTurn(run);
+    expect(next.battle?.turnNumber).toBe(incomingTurn);
+    expect(next.battle?.playerMana).toEqual({ current: recovery, max: 10 });
+  });
+
+  it("adds the incoming turn recovery to carried mana and preserves enemy +1 recovery", () => {
+    const run = copyRun(createRun(307));
+    const battle = activeBattle(run);
+    battle.turnNumber = 6;
+    battle.playerMana.current = 4;
+    battle.playerHero.health = 30;
+    battle.hand = [];
+    battle.enemyMana.current = 0;
+    battle.enemyHand = [instance("enemy-eclipse", "eclipse")];
+
+    const next = endPlayerTurn(run);
+    expect(next.battle?.playerMana).toEqual({ current: 7, max: 10 });
+    expect(next.battle?.enemyMana).toEqual({ current: 1, max: 10 });
   });
 
   it("enforces minion target priority and applies damage from both minions", () => {
