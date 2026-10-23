@@ -50,6 +50,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
+  const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
   const targetSide = targetMode === "spell"
     ? spellTargetSide(selectedCardInstanceId, run)
@@ -73,7 +74,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>
 
-      <section className="battle-board" id="battle" aria-label="카드 전투 보드">
+      <section className={`battle-board${showTimerWarning ? " is-timer-critical" : ""}`} id="battle" aria-label="카드 전투 보드">
         <div className="battle-opponent">
           <div className="enemy-resource-bar">
             <EnemyHand count={battle.enemyHand.length} instanceIds={battle.enemyHand.map((card) => card.instanceId)} />

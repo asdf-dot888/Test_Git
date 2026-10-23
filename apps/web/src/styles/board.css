@@ -24,6 +24,11 @@
 .battle-board::before { position: absolute; z-index: -1; content: ""; inset: 0; background: linear-gradient(180deg, rgb(28 23 19 / 27%), transparent 30%, transparent 65%, rgb(25 22 19 / 32%)); }
 .battle-board.is-shaking { animation: boss-board-shake 500ms ease-in-out; border-color: rgb(235 122 86 / 78%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 60px rgb(180 48 31 / 38%); }
 @keyframes boss-board-shake { 0%, 100% { transform: translateX(0); } 12%, 38%, 64%, 88% { transform: translateX(-7px); } 25%, 51%, 77% { transform: translateX(7px); } }
+.battle-board.is-timer-critical { animation: battle-board-timer-breath 1.35s ease-in-out infinite; }
+@keyframes battle-board-timer-breath {
+  0%, 100% { border-color: rgb(233 196 133 / 35%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); }
+  50% { border-color: rgb(255 83 91 / 95%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), 0 0 26px 5px rgb(224 55 59 / 58%), inset 0 0 40px rgb(35 23 10 / 26%), inset 0 0 32px rgb(214 45 48 / 30%); }
+}
 .battle-opponent, .battle-player { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(175px, .8fr) minmax(0, 2fr); align-items: center; gap: clamp(12px, 3vw, 38px); }
 .battle-opponent { grid-template-rows: auto 1fr; }
 .enemy-resource-bar { grid-column: 1 / -1; min-width: 0; display: flex; align-items: center; gap: clamp(8px, 2vw, 22px); padding: 2px 4px 6px; }

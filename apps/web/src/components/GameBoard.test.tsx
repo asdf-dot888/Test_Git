@@ -95,4 +95,29 @@ describe("GameBoard", () => {
     const critical = renderTimer({ text: "00:05", remainingSeconds: 5, visible: true });
     expect(critical).toContain("turn-timer is-critical");
   });
+
+  it("adds the board-edge warning only while the visible timer has five or fewer seconds", () => {
+    const renderBoard = (remainingSeconds: number, visible: boolean) => renderToStaticMarkup(
+      <GameBoard
+        run={createRun(415)}
+        turnTimer={{ text: `00:${String(remainingSeconds).padStart(2, "0")}`, remainingSeconds, visible }}
+        selectedCardInstanceId={null}
+        selectedAttackerId={null}
+        targetMode="none"
+        isResolving={false}
+        error={null}
+        onSelectCard={vi.fn()}
+        onSelectTarget={vi.fn()}
+        onDiscardCard={vi.fn()}
+        onCancelTarget={vi.fn()}
+        onEndTurn={vi.fn()}
+        onMenu={vi.fn()}
+      />,
+    );
+
+    expect(renderBoard(5, true)).toContain('class="battle-board is-timer-critical"');
+    expect(renderBoard(6, true)).toContain('class="battle-board"');
+    expect(renderBoard(5, false)).toContain('class="battle-board"');
+    expect(renderBoard(1, true)).toContain('class="battle-board is-timer-critical"');
+  });
 });

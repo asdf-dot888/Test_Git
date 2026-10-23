@@ -49,6 +49,7 @@ describe("turn timer application wiring", () => {
     expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 20_000 });
 
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" })); await Promise.resolve(); });
+    fireEvent.click(screen.getByRole("button", { name: /진행 중/ }));
     expect(savedRuns.at(-1)?.turnTimer?.deadlineAt).toBe(120_000);
     expect(savedRuns.at(-1)?.turnTimer?.pausedRemainingMs).toBeNull();
     expect(screen.getByText("00:20")).toBeTruthy();
@@ -57,13 +58,20 @@ describe("turn timer application wiring", () => {
     expect(container.querySelector(".turn-timer")?.className).toContain("is-hidden");
     fireEvent.click(container.querySelector(".game-menu-panel .menu-primary")!);
     expect(container.querySelector(".turn-timer")?.className).not.toContain("is-hidden");
-    const saveCountAfterResume = saveRun.mock.calls.length;
     const warningsBeforeCountdown = players.filter((player) => player.src === "/audio/sfx/timer-warning.ogg").length;
 
     for (let second = 0; second < 15; second += 1) {
       await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     }
     expect(screen.getByText("00:05").className).toContain("is-critical");
+    expect(container.querySelector(".battle-board")?.classList.contains("is-timer-critical")).toBe(true);
+    fireEvent.click(container.querySelector(".menu-button")!);
+    expect(screen.getByText("00:05").className).toContain("is-hidden");
+    expect(container.querySelector(".battle-board")?.classList.contains("is-timer-critical")).toBe(false);
+    fireEvent.click(container.querySelector(".game-menu-panel .menu-primary")!);
+    expect(screen.getByText("00:05").className).not.toContain("is-hidden");
+    expect(container.querySelector(".battle-board")?.classList.contains("is-timer-critical")).toBe(true);
+    const saveCountAfterResume = saveRun.mock.calls.length;
     for (let second = 0; second < 4; second += 1) {
       await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     }
