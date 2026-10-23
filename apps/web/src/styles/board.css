@@ -326,6 +326,17 @@
   .combat-effect-sprite { animation-duration: 160ms; animation-delay: 0ms !important; }
   .combat-effect-impact { animation-duration: 160ms; animation-delay: 0ms !important; }
 }
+.game-guide-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(5 5 5 / 78%); }
+.game-guide-panel { width: min(100%, 700px); max-height: min(90dvh, 820px); padding: clamp(20px, 4vw, 34px); overflow: auto; color: #e9dcc4; border: 1px solid rgb(219 173 101 / 52%); border-radius: 16px; background: radial-gradient(ellipse at 50% 0, #38302a, #1d1b1d 70%); box-shadow: 0 28px 90px rgb(0 0 0 / 68%); }
+.game-guide-header { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.game-guide-header button { min-height: 36px; }
+.game-guide-panel h2 { margin: 18px 0 20px; color: #fff2d9; font-size: clamp(24px, 5vw, 34px); }
+.game-guide-content { display: grid; gap: 12px; }
+.game-guide-content section { padding: 14px 16px; border: 1px solid rgb(219 173 101 / 18%); border-radius: 9px; background: rgb(255 255 255 / 3%); }
+.game-guide-content h3 { margin: 0 0 7px; color: var(--gold-bright); font-size: 15px; }
+.game-guide-content p { margin: 0; color: #c5baaa; font-size: 13px; line-height: 1.7; }
+.game-guide-content p + p { margin-top: 8px; }
+.game-guide-content strong { color: #f5dfb2; }
 .dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(5, 5, 5, .76); }
 .abandon-dialog { width: min(100%, 500px); }
 .abandon-dialog h2 { margin: 14px 0; font-size: clamp(20px, 4vw, 28px); }
