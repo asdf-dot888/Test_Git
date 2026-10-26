@@ -1,7 +1,7 @@
 # Plan: Entra Login, Browser-Local Runs, and Informal Progress Leaderboard
 
 **Date:** 2026-10-23  
-**Status:** planned  
+**Status:** P01 complete; P02 replaced by [2026-10-26 Cosmos Leaderboard API](./2026-10-26-cosmos-leaderboard-api.md)
 **Decision record:** `.memory/decisions/2026-10-23-entra-local-storage-and-leaderboard.md`
 
 ## Goal
@@ -21,8 +21,8 @@ Require Microsoft Entra ID sign-in to play, while keeping the active game run in
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| P01 — Entra login and browser-local run | Remove game API/Cosmos from the current playable path; authenticate and persist runs in the browser | pending |
-| P02 — Informal progress leaderboard | Add a separate authenticated API/Cosmos flow for best completed progress and top-10 display | pending, intentionally after P01 |
+| P01 — Entra login and browser-local run | Remove game API/Cosmos from the current playable path; authenticate and persist runs in the browser | done |
+| P02 — Informal progress leaderboard | Replaced by the Static Web Apps Free managed API plan linked above | superseded |
 
 ## Execution rules
 

@@ -1,11 +1,11 @@
-# P02 — Informal Progress Leaderboard
+# P02 — Informal Progress Leaderboard (Superseded)
 
-**Status:** pending (P01 complete; waiting for Azure API/Cosmos provisioning)  
-**Progress:** 0 / 2 tasks
+**Status:** superseded by `.memory/plans/2026-10-26-cosmos-leaderboard-api.md`  
+**Progress:** replaced; no tasks active
 
 ## Outcome
 
-Add a separate Entra-protected API and Cosmos DB container for an informal internal top-10 ranking of employees' best completed campaign progress. The browser submits progress after a battle victory. Active run state remains in browser storage.
+This original blueprint assumed a separate Express/App Service API with Managed Identity. The confirmed implementation uses Static Web Apps Free managed Functions and a server-side Cosmos key. Use the linked 2026-10-26 plan for all remaining leaderboard work.
 
 ## Prerequisites
 
@@ -17,6 +17,6 @@ Add a separate Entra-protected API and Cosmos DB container for an informal inter
 
 | Task | Name | Status |
 | --- | --- | --- |
-| T01 | Cosmos-backed best-progress API | pending |
-| T02 | Victory submission and top-10 UI | pending |
+| T01 | Cosmos-backed best-progress API | superseded |
+| T02 | Victory submission and top-10 UI | superseded |
 

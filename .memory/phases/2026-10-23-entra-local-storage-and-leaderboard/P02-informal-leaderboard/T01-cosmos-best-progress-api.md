@@ -1,6 +1,6 @@
 # T01 — Cosmos-Backed Best-Progress API
 
-**Status:** pending  
+**Status:** superseded by `.memory/phases/2026-10-26-cosmos-leaderboard-api/P01-swa-leaderboard/T01-managed-leaderboard-api.md`  
 **Plan:** `2026-10-23-entra-local-storage-and-leaderboard`  
 **Phase:** P02 — Informal Progress Leaderboard
 

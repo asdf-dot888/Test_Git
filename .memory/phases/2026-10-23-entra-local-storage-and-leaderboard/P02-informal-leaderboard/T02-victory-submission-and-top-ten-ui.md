@@ -1,6 +1,6 @@
 # T02 — Victory Submission and Top-10 UI
 
-**Status:** pending  
+**Status:** superseded by `.memory/phases/2026-10-26-cosmos-leaderboard-api/P01-swa-leaderboard/T03-game-leaderboard-ui.md`  
 **Plan:** `2026-10-23-entra-local-storage-and-leaderboard`  
 **Phase:** P02 — Informal Progress Leaderboard
 
