@@ -14,6 +14,7 @@ function wrapper({ children }: PropsWithChildren) {
     isLoading: false,
     userId: currentUserId,
     displayName: currentUserId,
+    getLeaderboardAccessToken: vi.fn(async () => "test-token"),
     signIn: vi.fn(async () => undefined),
     signOut: vi.fn(async () => undefined),
   };

@@ -44,5 +44,6 @@ export function buildMsalConfig(config: AuthConfig) {
 export function createAuthRequests(config: AuthConfig) {
   return {
     loginRequest: { scopes: ["openid", "profile"] },
+    leaderboardRequest: { scopes: [`api://${config.clientId}/leaderboard.access`] },
   };
 }

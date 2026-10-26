@@ -1,0 +1,81 @@
+export interface LeaderboardRecord {
+  id: "best-progress";
+  userId: string;
+  displayName: string;
+  completedBattles: number;
+  recordedAt: string;
+  schemaVersion: 1;
+}
+
+export class LeaderboardApiError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+    this.name = "LeaderboardApiError";
+  }
+}
+
+export async function getTopTen(token: string, fetcher: typeof fetch = fetch): Promise<LeaderboardRecord[]> {
+  const body = await requestJson("/api/leaderboard", token, undefined, fetcher);
+  if (!isObject(body) || !Array.isArray(body.items) || body.items.length > 10 || !body.items.every(isLeaderboardRecord)) {
+    throw new LeaderboardApiError("랭킹 정보를 읽을 수 없습니다.");
+  }
+  return body.items;
+}
+
+export async function submitProgress(
+  token: string,
+  completedBattles: number,
+  fetcher: typeof fetch = fetch,
+): Promise<{ record: LeaderboardRecord; updated: boolean }> {
+  if (!Number.isInteger(completedBattles) || completedBattles < 1 || completedBattles > 12) {
+    throw new LeaderboardApiError("유효하지 않은 원정 진행도입니다.");
+  }
+  const body = await requestJson("/api/leaderboard/progress", token, { completedBattles }, fetcher);
+  if (!isObject(body) || !isLeaderboardRecord(body.record) || typeof body.updated !== "boolean") {
+    throw new LeaderboardApiError("랭킹 응답을 읽을 수 없습니다.");
+  }
+  return { record: body.record, updated: body.updated };
+}
+
+async function requestJson(
+  path: string,
+  token: string,
+  payload: { completedBattles: number } | undefined,
+  fetcher: typeof fetch,
+): Promise<unknown> {
+  let response: Response;
+  try {
+    response = await fetcher(path, {
+      method: payload ? "POST" : "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(payload ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
+    });
+  } catch {
+    throw new LeaderboardApiError("랭킹 서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.");
+  }
+
+  if (!response.ok) throw new LeaderboardApiError("랭킹 요청에 실패했습니다. 잠시 후 다시 시도하세요.", response.status);
+  try {
+    return await response.json() as unknown;
+  } catch {
+    throw new LeaderboardApiError("랭킹 서버 응답을 읽을 수 없습니다.", response.status);
+  }
+}
+
+function isLeaderboardRecord(value: unknown): value is LeaderboardRecord {
+  if (!isObject(value)) return false;
+  return value.id === "best-progress"
+    && typeof value.userId === "string" && value.userId.length > 0
+    && typeof value.displayName === "string" && value.displayName.length > 0
+    && typeof value.completedBattles === "number" && Number.isInteger(value.completedBattles)
+    && value.completedBattles >= 1 && value.completedBattles <= 12
+    && typeof value.recordedAt === "string" && !Number.isNaN(Date.parse(value.recordedAt))
+    && value.schemaVersion === 1;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

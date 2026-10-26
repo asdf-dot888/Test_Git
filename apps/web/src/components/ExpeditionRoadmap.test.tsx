@@ -18,7 +18,7 @@ function makeRun(statuses: Array<"pending" | "active" | "complete"> = ["active",
 describe("ExpeditionRoadmap", () => {
   it("shows only four encounters from the target phase with matching enemy portraits", () => {
     const run = makeRun();
-    const { container } = render(<ExpeditionRoadmap run={run} onSelectEncounter={vi.fn()} onMainMenu={vi.fn()} />);
+    const { container } = render(<ExpeditionRoadmap run={run} onSelectEncounter={vi.fn()} onMainMenu={vi.fn()} onLeaderboard={vi.fn()} />);
 
     expect(screen.getByText("PHASE 1").textContent).toBe("PHASE 1");
     expect(container.querySelectorAll(".expedition-roadmap__node")).toHaveLength(4);
@@ -31,7 +31,7 @@ describe("ExpeditionRoadmap", () => {
   it("marks completed portraits grayscale, highlights the active encounter, and only selects it", () => {
     const run = makeRun(["complete", "active", "pending", "pending"]);
     const onSelectEncounter = vi.fn();
-    const { container } = render(<ExpeditionRoadmap run={run} onSelectEncounter={onSelectEncounter} onMainMenu={vi.fn()} />);
+    const { container } = render(<ExpeditionRoadmap run={run} onSelectEncounter={onSelectEncounter} onMainMenu={vi.fn()} onLeaderboard={vi.fn()} />);
     const nodes = container.querySelectorAll<HTMLElement>(".expedition-roadmap__node");
 
     expect(nodes[0]?.classList.contains("is-complete")).toBe(true);
@@ -47,7 +47,7 @@ describe("ExpeditionRoadmap", () => {
   it("allows only the first pending encounter when there is no active encounter", () => {
     const run = makeRun(["complete", "pending", "pending", "pending"]);
     const onSelectEncounter = vi.fn();
-    render(<ExpeditionRoadmap run={run} onSelectEncounter={onSelectEncounter} onMainMenu={vi.fn()} />);
+    render(<ExpeditionRoadmap run={run} onSelectEncounter={onSelectEncounter} onMainMenu={vi.fn()} onLeaderboard={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: /도전 가능/ }));
     expect(onSelectEncounter).toHaveBeenCalledWith(1);
@@ -58,12 +58,15 @@ describe("ExpeditionRoadmap", () => {
     const run = makeRun();
     const originalStatuses = run.encounters.map((encounter) => encounter.status);
     const onMainMenu = vi.fn();
-    const { rerender } = render(<ExpeditionRoadmap run={run} onSelectEncounter={vi.fn()} onMainMenu={onMainMenu} />);
+    const onLeaderboard = vi.fn();
+    const { rerender } = render(<ExpeditionRoadmap run={run} onSelectEncounter={vi.fn()} onMainMenu={onMainMenu} onLeaderboard={onLeaderboard} />);
+    fireEvent.click(screen.getByRole("button", { name: "랭킹" }));
+    expect(onLeaderboard).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: "메인 메뉴" }));
     expect(onMainMenu).toHaveBeenCalledOnce();
     expect(run.encounters.map((encounter) => encounter.status)).toEqual(originalStatuses);
 
-    rerender(<ExpeditionRoadmap run={run} disabled onSelectEncounter={vi.fn()} onMainMenu={onMainMenu} />);
+    rerender(<ExpeditionRoadmap run={run} disabled onSelectEncounter={vi.fn()} onMainMenu={onMainMenu} onLeaderboard={onLeaderboard} />);
     expect(screen.getAllByRole("button").every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
   });
 });

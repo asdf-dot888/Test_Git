@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { createRun, type RunState } from "@board-game/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameSessionView } from "./App.js";
+import { renderWithTestAuth } from "./App.testUtils.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -56,7 +57,7 @@ describe("enemy turn playback in the game screen", () => {
     run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "eclipse" }];
     run.battle!.enemyBoard = [{ instanceId: "enemy-attacker", cardId: "bone-rat", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
     run.battle!.playerBoard = [{ instanceId: "player-target", cardId: "ash-wolf", owner: "player", attack: 1, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false }];
-    render(<GameSessionView sync={syncWith(run)} />);
+    renderWithTestAuth(<GameSessionView sync={syncWith(run)} />);
     await act(async () => { await Promise.resolve(); });
     expect(document.body.querySelector(".turn-start-glow")).toBeNull();
     enterActiveEncounter();
@@ -117,7 +118,7 @@ describe("enemy turn playback in the game screen", () => {
     run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "eclipse" }];
     run.battle!.enemyBoard = [{ instanceId: "enemy-attacker", cardId: "bone-rat", owner: "enemy", attack: 3, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
     run.battle!.playerHero.health = 1;
-    render(<GameSessionView sync={syncWith(run)} />);
+    renderWithTestAuth(<GameSessionView sync={syncWith(run)} />);
     await act(async () => { await Promise.resolve(); });
     enterActiveEncounter();
     fireEvent.click(screen.getByRole("button", { name: /턴 종료/ }));

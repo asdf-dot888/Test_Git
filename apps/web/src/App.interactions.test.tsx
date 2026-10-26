@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
+import { renderWithTestAuth } from "./App.testUtils.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -46,7 +47,7 @@ describe("game pointer and keyboard interactions", () => {
     vi.stubGlobal("Audio", class extends FakeAudio {
       constructor(src: string) { super(src); players.push(this); }
     });
-    render(<GameSessionView sync={makeReadySync()} />);
+    renderWithTestAuth(<GameSessionView sync={makeReadySync()} />);
     enterActiveEncounter();
     const menuButton = await screen.findByRole("button", { name: "메뉴" });
     await waitFor(() => expect(players.some((player) => player.src === "/audio/bgm/normal.ogg")).toBe(true));
@@ -70,7 +71,7 @@ describe("game pointer and keyboard interactions", () => {
     vi.stubGlobal("Audio", class extends FakeAudio {
       constructor(src: string) { super(src); players.push(this); }
     });
-    render(<GameSessionView sync={makeReadySync()} />);
+    renderWithTestAuth(<GameSessionView sync={makeReadySync()} />);
     enterActiveEncounter();
     const menuButton = await screen.findByRole("button", { name: "메뉴" });
     fireEvent.click(menuButton);

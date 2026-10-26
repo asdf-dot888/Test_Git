@@ -8,6 +8,7 @@ import { MainMenu } from "./components/MainMenu.js";
 import { RewardScreen } from "./components/RewardScreen.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { TurnStartGlow } from "./components/TurnStartGlow.js";
+import { LeaderboardModal, type LeaderboardLoadState } from "./components/LeaderboardModal.js";
 import { useGameSession } from "./game/useGameSession.js";
 import { useLocalRun, type LocalRunController } from "./game/useLocalRun.js";
 import { useTurnTimer } from "./game/useTurnTimer.js";
@@ -15,6 +16,8 @@ import { useEnemyTurnPlayback } from "./game/useEnemyTurnPlayback.js";
 import { createAudioController, type AudioController, type AudioSettings } from "./game/audio.js";
 import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
+import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord } from "./leaderboard/leaderboardClient.js";
+import { useAuth } from "./auth/useAuth.js";
 
 function secureSeed(): number {
   const seed = new Uint32Array(1);
@@ -35,9 +38,16 @@ export function GameSessionView({ sync }: { sync: LocalRunController }) {
 }
 
 function GameSessionContent({ sync }: { sync: LocalRunController }) {
+  const auth = useAuth();
   const { session, dispatch: dispatchGameAction } = useGameSession();
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "map" | "game">("menu");
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [leaderboardState, setLeaderboardState] = useState<LeaderboardLoadState>("loading");
+  const [leaderboardRecords, setLeaderboardRecords] = useState<LeaderboardRecord[]>([]);
+  const [leaderboardError, setLeaderboardError] = useState<string | undefined>();
+  const [pendingLeaderboardProgress, setPendingLeaderboardProgress] = useState<number | null>(null);
+  const [leaderboardNotice, setLeaderboardNotice] = useState<string | null>(null);
   const [abandonOpen, setAbandonOpen] = useState(false);
   const [menuView, setMenuView] = useState<"closed" | "choices" | "settings">("closed");
   const [abandonToMenuOpen, setAbandonToMenuOpen] = useState(false);
@@ -56,6 +66,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const [turnStartGlowId, setTurnStartGlowId] = useState<string | null>(null);
   const warningTurnId = useRef<string | null>(null);
   const lastWarningSecond = useRef<number | null>(null);
+  const submittedProgressIds = useRef(new Set<string>());
   const run = session.run;
   const playback = session.enemyTurnPlayback;
   const playbackStep = playback?.steps[playback.currentIndex];
@@ -234,6 +245,55 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     setMenuView("closed");
   };
 
+  const loadLeaderboard = async () => {
+    setLeaderboardState("loading");
+    setLeaderboardError(undefined);
+    try {
+      const token = await auth.getLeaderboardAccessToken(true);
+      setLeaderboardRecords(await getTopTen(token));
+      setLeaderboardState("success");
+    } catch (error) {
+      setLeaderboardError(error instanceof LeaderboardApiError
+        ? error.message
+        : "랭킹을 불러오지 못했습니다. 로그인 권한이나 네트워크를 확인하고 다시 시도하세요.");
+      setLeaderboardState("error");
+    }
+  };
+
+  const openLeaderboard = () => {
+    setLeaderboardOpen(true);
+    void loadLeaderboard();
+  };
+
+  const closeLeaderboard = () => setLeaderboardOpen(false);
+
+  const submitLeaderboardProgress = async (completedBattles: number, allowInteraction: boolean) => {
+    try {
+      const token = await auth.getLeaderboardAccessToken(allowInteraction);
+      await submitProgress(token, completedBattles);
+      setPendingLeaderboardProgress(null);
+      setLeaderboardNotice(null);
+    } catch {
+      setPendingLeaderboardProgress(completedBattles);
+      setLeaderboardNotice("이번 승리 기록을 랭킹에 제출하지 못했습니다. 다시 시도할 수 있습니다.");
+    }
+  };
+
+  const acknowledgeVictory = () => {
+    if (run) {
+      const submissionId = `${run.runId}:${run.completedBattles}`;
+      if (!submittedProgressIds.current.has(submissionId)) {
+        submittedProgressIds.current.add(submissionId);
+        void submitLeaderboardProgress(run.completedBattles, false);
+      }
+    }
+    dispatch({ type: "acknowledge-victory" });
+  };
+
+  const retryLeaderboardProgress = () => {
+    if (pendingLeaderboardProgress !== null) void submitLeaderboardProgress(pendingLeaderboardProgress, true);
+  };
+
   const selectRoadmapEncounter = (encounterIndex: number) => {
     if (!run || (sync.status !== "ready" && sync.status !== "saving")) return;
     const encounter = run.encounters[encounterIndex];
@@ -302,10 +362,29 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     if (session.selectedAttackerId) dispatch({ type: "attack", attackerId: session.selectedAttackerId, targetId });
   };
 
+  const leaderboardModal = (
+    <LeaderboardModal
+      open={leaderboardOpen}
+      state={leaderboardState}
+      records={leaderboardRecords}
+      {...(leaderboardError ? { errorMessage: leaderboardError } : {})}
+      onClose={closeLeaderboard}
+      onRetry={() => { void loadLeaderboard(); }}
+    />
+  );
+  const leaderboardSubmitNotice = leaderboardNotice && pendingLeaderboardProgress !== null ? (
+    <aside className="leaderboard-submit-notice" role="status">
+      <p>{leaderboardNotice}</p>
+      <button className="menu-secondary" type="button" onClick={retryLeaderboardProgress}>랭킹 제출 재시도</button>
+    </aside>
+  ) : null;
+
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
-      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} />
+      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} onLeaderboard={openLeaderboard} />
+      {leaderboardModal}
+      {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
       <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewLocalRun("abandoned").catch(() => undefined); }} />
     </>;
@@ -313,7 +392,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
   if (run.pendingVictoryAcknowledgement) {
     return <>
-      <VictoryScreen disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={() => dispatch({ type: "acknowledge-victory" })} />
+      <VictoryScreen disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={acknowledgeVictory} />
+      {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
     </>;
   }
@@ -321,6 +401,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   if (run.pendingReward) {
     return <>
       <RewardScreen reward={run.pendingReward} disabled={sync.status !== "ready" && sync.status !== "saving"} onChoose={(cardId) => dispatch({ type: "choose-reward", cardId })} onSkip={() => dispatch({ type: "skip-reward" })} />
+      {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
     </>;
   }
@@ -335,6 +416,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         <div className="outcome-stats"><span>완료한 전투 <b>{run.completedBattles} / 12</b></span><span>덱 카드 <b>{run.deck.length}장</b></span></div>
         <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => { void startNewLocalRun("completed").catch(() => undefined); }}>새 원정 시작</button>
       </section>
+      {leaderboardSubmitNotice}
     </main>;
   }
 
@@ -345,7 +427,10 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         disabled={sync.status !== "ready" && sync.status !== "saving"}
         onSelectEncounter={selectRoadmapEncounter}
         onMainMenu={() => setScreen("menu")}
+        onLeaderboard={openLeaderboard}
       />
+      {leaderboardModal}
+      {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
     </>;
   }
@@ -377,6 +462,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onEndTurn={() => dispatch({ type: "end-turn" })}
           onMenu={() => setMenuView("choices")}
         />
+      {leaderboardSubmitNotice}
       <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
       <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewLocalRun("abandoned").catch(() => undefined); }} />

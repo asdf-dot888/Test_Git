@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
+import { renderWithTestAuth } from "./App.testUtils.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -40,7 +41,7 @@ describe("victory acknowledgement and rewards", () => {
     run.encounters[0]!.status = "complete";
     run.completedBattles = 1;
     run.encounterInPhase = 1;
-    render(<GameSessionView sync={syncWith(run)} />);
+    renderWithTestAuth(<GameSessionView sync={syncWith(run)} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
     expect(await screen.findByRole("heading", { name: "승리" })).toBeTruthy();
@@ -61,7 +62,7 @@ describe("victory acknowledgement and rewards", () => {
     run.encounters.forEach((encounter) => { encounter.status = "complete"; });
     run.pendingVictoryAcknowledgement = true;
     run.pendingReward = { tier: "boss", choices: ["dread-colossus"], encounterIndex: 11 };
-    render(<GameSessionView sync={syncWith(run)} />);
+    renderWithTestAuth(<GameSessionView sync={syncWith(run)} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
     expect(await screen.findByRole("heading", { name: "승리" })).toBeTruthy();

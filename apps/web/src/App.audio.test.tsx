@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { CARD_BY_ID, createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
+import { renderWithTestAuth } from "./App.testUtils.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -89,7 +90,7 @@ describe("audio lifecycle under React StrictMode", () => {
       }
     });
     const sync = makeReadySync();
-    const view = render(<StrictMode><GameSessionView sync={sync} /></StrictMode>);
+    const view = renderWithTestAuth(<StrictMode><GameSessionView sync={sync} /></StrictMode>);
 
     enterActiveEncounter();
     await screen.findByRole("button", { name: "메뉴" });

@@ -1,6 +1,6 @@
 # Task: T03 Game Leaderboard UI
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -78,13 +78,13 @@ Acquire the delegated leaderboard token only when the player uses leaderboard fe
 
 ## Acceptance Criteria
 
-- [ ] Initial login still asks only for `openid` and `profile`; API consent is requested on leaderboard use.
-- [ ] One victory submits only the completed count once, and gameplay/reward flow proceeds even when submission fails.
-- [ ] Defeats and autosaves never submit leaderboard progress.
-- [ ] The main menu has a dedicated `랭킹` option, and the expedition roadmap has a crown button near the upper-right corner; no crown button appears on battle or reward screens.
-- [ ] Both entry points open the same top-ten modal; closing it returns to the originating screen without changing the run.
-- [ ] The ranking modal shows loading, empty, error/retry, and up to ten ranked employee rows.
-- [ ] Full run data and bearer tokens never enter leaderboard request bodies, UI, or logs.
+- [x] Initial login still asks only for `openid` and `profile`; API consent is requested on leaderboard use.
+- [x] One victory submits only the completed count once, and gameplay/reward flow proceeds even when submission fails.
+- [x] Defeats and autosaves never submit leaderboard progress.
+- [x] The main menu has a dedicated `랭킹` option, and the expedition roadmap has a crown button near the upper-right corner; no crown button appears on battle or reward screens.
+- [x] Both entry points open the same top-ten modal; closing it returns to the originating screen without changing the run.
+- [x] The ranking modal shows loading, empty, error/retry, and up to ten ranked employee rows.
+- [x] Full run data and bearer tokens never enter leaderboard request bodies, UI, or logs.
 
 ## Validation
 
@@ -107,6 +107,7 @@ Task: T03-game-leaderboard-ui
 
 ## Progress
 
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed: 31 targeted tests, web production build, and ESLint on all changed source/test files.
+- Full `npm run lint -- apps/web/src` still reports three existing errors in `apps/web/src/game/useLocalRun.ts` (`useRef`, effect state update, `_reason`); no T03 files fail lint.
+- commit: `feat(web): add Entra-backed progress leaderboard`

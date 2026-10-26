@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { createRun, type RunState } from "@board-game/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_AUDIO_SETTINGS } from "./game/audioSettings.js";
 import { GameSessionView } from "./App.js";
+import { renderWithTestAuth } from "./App.testUtils.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -43,7 +44,7 @@ describe("turn timer application wiring", () => {
       reload: vi.fn(async () => undefined), retrySave: vi.fn(async () => undefined), retry: vi.fn(async () => undefined),
     };
 
-    const { container } = render(<GameSessionView sync={sync} />);
+    const { container } = renderWithTestAuth(<GameSessionView sync={sync} />);
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     expect(savedRuns.some((saved) => saved.turnTimer?.pausedRemainingMs === 20_000)).toBe(true);
     expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 20_000 });

@@ -15,7 +15,10 @@ describe("Entra SPA configuration", () => {
 
   it("uses OIDC sign-in scopes and the current origin for redirect", () => {
     const config = { tenantId: "tenant", clientId: "client", redirectUri: "http://localhost:5173" };
-    expect(createAuthRequests(config).loginRequest.scopes).toEqual(["openid", "profile"]);
+    expect(createAuthRequests(config)).toEqual({
+      loginRequest: { scopes: ["openid", "profile"] },
+      leaderboardRequest: { scopes: ["api://client/leaderboard.access"] },
+    });
     expect(buildMsalConfig(config).auth.redirectUri).toBe("http://localhost:5173");
   });
 });

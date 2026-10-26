@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
+import { renderWithTestAuth } from "./App.testUtils.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -36,7 +37,7 @@ function makeSync(deleteRun = vi.fn(async () => undefined)): LocalRunController 
 }
 
 async function startGame(sync: LocalRunController) {
-  render(<GameSessionView sync={sync} />);
+  renderWithTestAuth(<GameSessionView sync={sync} />);
   fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
   expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
   fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
@@ -93,7 +94,7 @@ describe("in-game menu flow", () => {
   it("persists volume controls across menu visits and component mounts", async () => {
     vi.stubGlobal("Audio", FakeAudio);
     const sync = makeSync();
-    const first = render(<GameSessionView sync={sync} />);
+    const first = renderWithTestAuth(<GameSessionView sync={sync} />);
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
@@ -110,7 +111,7 @@ describe("in-game menu flow", () => {
     });
     first.unmount();
 
-    render(<GameSessionView sync={sync} />);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));

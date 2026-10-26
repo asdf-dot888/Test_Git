@@ -8,6 +8,7 @@ const authValue: AuthContextValue = {
   isLoading: false,
   userId: "player-oid",
   displayName: "Player",
+  getLeaderboardAccessToken: vi.fn(async () => "test-token"),
   signIn: vi.fn(async () => undefined),
   signOut: vi.fn(async () => undefined),
 };

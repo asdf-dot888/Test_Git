@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildr
 import { InteractionStatus } from "@azure/msal-browser";
 import { useMsal } from "@azure/msal-react";
 import { createAuthRequests, type AuthConfig } from "./authConfig.js";
-import { AuthContext, type AuthContextValue } from "./authState.js";
+import { acquireLeaderboardAccessToken, AuthContext, type AuthContextValue } from "./authState.js";
 import { useAuth } from "./useAuth.js";
 
 export function AuthProvider({ children, config }: PropsWithChildren<{ config: AuthConfig }>) {
   const { instance, accounts, inProgress } = useMsal();
-  const { loginRequest } = useMemo(() => createAuthRequests(config), [config]);
+  const { loginRequest, leaderboardRequest } = useMemo(() => createAuthRequests(config), [config]);
   const account = instance.getActiveAccount() ?? accounts[0] ?? null;
 
   useEffect(() => {
@@ -22,14 +22,20 @@ export function AuthProvider({ children, config }: PropsWithChildren<{ config: A
     await instance.logoutRedirect({ account });
   }, [account, instance]);
 
+  const getLeaderboardAccessToken = useCallback(
+    (allowInteraction = true) => acquireLeaderboardAccessToken(instance, account, leaderboardRequest, allowInteraction),
+    [account, instance, leaderboardRequest],
+  );
+
   const value = useMemo<AuthContextValue>(() => ({
     isAuthenticated: account !== null,
     isLoading: inProgress !== InteractionStatus.None,
     userId: account ? (typeof account.idTokenClaims?.oid === "string" ? account.idTokenClaims.oid : account.localAccountId) : null,
     displayName: account?.name ?? null,
+    getLeaderboardAccessToken,
     signIn,
     signOut,
-  }), [account, inProgress, signIn, signOut]);
+  }), [account, getLeaderboardAccessToken, inProgress, signIn, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

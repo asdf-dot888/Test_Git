@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
+import { renderWithTestAuth } from "./App.testUtils.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -35,7 +36,7 @@ describe("expedition roadmap navigation", () => {
   it("opens the roadmap for a new run and starts the active encounter only after selection", async () => {
     vi.stubGlobal("Audio", FakeAudio);
     const sync = makeSync();
-    render(<GameSessionView sync={sync} />);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
 
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
@@ -49,7 +50,7 @@ describe("expedition roadmap navigation", () => {
   it("continues an active saved battle through its active roadmap node", async () => {
     vi.stubGlobal("Audio", FakeAudio);
     const run = createRun(412);
-    render(<GameSessionView sync={makeSync(run)} />);
+    renderWithTestAuth(<GameSessionView sync={makeSync(run)} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
@@ -65,7 +66,7 @@ describe("expedition roadmap navigation", () => {
     run.battle!.enemyId = run.encounters[3]!.enemyId;
     run.completedBattles = 4;
     run.pendingReward = { tier: "boss", choices: ["dread-colossus"], encounterIndex: 3 };
-    render(<GameSessionView sync={makeSync(run)} />);
+    renderWithTestAuth(<GameSessionView sync={makeSync(run)} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
     expect(await screen.findByRole("heading", { name: "전리품을 선택하세요" })).toBeTruthy();
@@ -78,7 +79,7 @@ describe("expedition roadmap navigation", () => {
   it("returns to the main menu without deleting the run and can reopen its roadmap", async () => {
     vi.stubGlobal("Audio", FakeAudio);
     const sync = makeSync();
-    render(<GameSessionView sync={sync} />);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
 

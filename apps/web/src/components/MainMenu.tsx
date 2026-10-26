@@ -6,9 +6,10 @@ interface MainMenuProps {
   disabled?: boolean;
   onStart(): void;
   onContinue(): void;
+  onLeaderboard(): void;
 }
 
-export function MainMenu({ canContinue, disabled = false, onStart, onContinue }: MainMenuProps) {
+export function MainMenu({ canContinue, disabled = false, onStart, onContinue, onLeaderboard }: MainMenuProps) {
   const [guideOpen, setGuideOpen] = useState(false);
 
   return (
@@ -21,6 +22,7 @@ export function MainMenu({ canContinue, disabled = false, onStart, onContinue }:
         {canContinue && <button className="menu-primary" type="button" disabled={disabled} onClick={onContinue}>원정 계속하기</button>}
         <button className={canContinue ? "menu-secondary" : "menu-primary"} type="button" disabled={disabled} onClick={onStart}>새 원정 시작</button>
         <button className="menu-secondary" type="button" disabled={disabled} onClick={() => setGuideOpen(true)}>게임 방법</button>
+        <button className="menu-secondary" type="button" disabled={disabled} onClick={onLeaderboard}>랭킹</button>
         <span className="menu-note">전투는 이 브라우저 세션에서 이어집니다.</span>
       </div>
       <GameGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
