@@ -1,6 +1,7 @@
 export type CardKind = "minion" | "spell";
 export type RewardTier = "normal" | "boss";
 export type PlayerSide = "player" | "enemy";
+export type PlayerClass = "warrior" | "assassin" | "demonist";
 
 export type SpellEffect =
   | { kind: "damage"; amount: number; target: "enemyHero" | "enemyMinion" }
@@ -24,8 +25,20 @@ export interface CardDefinition {
   artKey: string;
   rewardTier: RewardTier;
   playerOnly?: boolean;
+  tokenOnly?: boolean;
+  classId?: PlayerClass;
+  race?: "demon";
   minion?: { attack: number; maxHealth: number; effect?: MinionEffect };
   spellEffects?: SpellEffect[];
+}
+
+export interface PlayerClassDefinition {
+  id: PlayerClass;
+  name: string;
+  archetype: string;
+  heroPowerName: string;
+  heroPowerDescription: string;
+  starterCardIds: readonly string[];
 }
 
 export interface CardInstance {
@@ -126,6 +139,7 @@ export interface RunState {
   encounterInPhase: 0 | 1 | 2 | 3;
   completedBattles: number;
   status: "active" | "victory" | "defeat";
+  playerClass?: PlayerClass;
   deck: CardInstance[];
   starterDeck: CardInstance[];
   battle: BattleState | null;

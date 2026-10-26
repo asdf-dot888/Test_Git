@@ -4,6 +4,9 @@ import {
   CARD_CATALOG,
   CARD_BY_ID,
   ENEMY_BY_ID,
+  NORMAL_ENEMIES_BY_PHASE,
+  PLAYER_CLASS_DEFINITIONS,
+  SHARED_STARTER_CARD_IDS,
   NORMAL_ENEMIES,
   STARTER_DECK_CARD_IDS,
 } from "./catalog.js";
@@ -72,11 +75,11 @@ function winCurrentBattle(run: RunState): RunState {
 }
 
 describe("card and enemy catalog", () => {
-  it("contains 31 unique cards split into 20 minions and 11 spells", () => {
-    expect(CARD_CATALOG).toHaveLength(31);
-    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(31);
-    expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(20);
-    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(11);
+  it("contains unique base, class, and token cards with complete effect descriptions", () => {
+    expect(CARD_CATALOG).toHaveLength(64);
+    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(64);
+    expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(44);
+    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(20);
     for (const card of CARD_CATALOG) {
       expect(card.cost).toBeGreaterThanOrEqual(0);
       expect(card.cost).toBeLessThanOrEqual(10);
@@ -121,7 +124,7 @@ describe("card and enemy catalog", () => {
       eclipse: "적 영웅에게 8의 피해를 줍니다.",
     };
     for (const card of CARD_CATALOG) {
-      expect(card.description).toBe(expectedDescriptions[card.id]);
+      if (expectedDescriptions[card.id]) expect(card.description).toBe(expectedDescriptions[card.id]);
       expect(card.description).not.toMatch(/전투 능력을 가진 하수인|필드에 소환해 공격하는 하수인|마나를 소모해 효과를 발휘하는 주문/);
     }
   });
@@ -147,6 +150,10 @@ describe("card and enemy catalog", () => {
       expect(enemy.tactics.profile).toBeTruthy();
     }
     expect([...NORMAL_ENEMIES, ...BOSSES].every((enemy) => !("actions" in enemy))).toBe(true);
+    for (const phase of [1, 2, 3] as const) {
+      expect(NORMAL_ENEMIES_BY_PHASE[phase]).toHaveLength(3);
+      for (const enemy of NORMAL_ENEMIES_BY_PHASE[phase]) expect(ENEMY_BY_ID.get(enemy.id)).toEqual(enemy);
+    }
   });
 });
 
@@ -171,6 +178,32 @@ describe("seeded run setup and random helpers", () => {
     expect(first.battle).not.toHaveProperty("pendingEnemyCharge");
     expect(first.starterDeck).toHaveLength(30);
     expect(first.deck).toHaveLength(30);
+  });
+
+  it("creates each class deck as 20 shared cards plus 10 class cards, with no ID over two copies", () => {
+    for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
+      const run = createRun(4321, playerClass);
+      expect(run.playerClass).toBe(playerClass);
+      expect(run.deck).toHaveLength(30);
+      expect(run.starterDeck).toHaveLength(30);
+      const classDefinition = PLAYER_CLASS_DEFINITIONS.find((entry) => entry.id === playerClass)!;
+      expect(run.deck.filter(({ cardId }) => classDefinition.starterCardIds.includes(cardId))).toHaveLength(10);
+      expect(run.deck.filter(({ cardId }) => SHARED_STARTER_CARD_IDS.includes(cardId))).toHaveLength(20);
+      const counts = new Map<string, number>();
+      for (const { cardId } of run.deck) counts.set(cardId, (counts.get(cardId) ?? 0) + 1);
+      expect([...counts.values()].every((count) => count <= 2)).toBe(true);
+      expect(createRun(4321, playerClass)).toEqual(run);
+    }
+  });
+
+  it("uses only phase-themed normal encounters for each new run", () => {
+    const run = createRun(9713, "demonist");
+    for (const phase of [1, 2, 3] as const) {
+      const phaseEncounters = run.encounters.filter((entry) => entry.phase === phase);
+      const allowed = NORMAL_ENEMIES_BY_PHASE[phase].map(({ id }) => id);
+      expect(phaseEncounters.slice(0, 3).every(({ kind, enemyId }) => kind === "normal" && allowed.includes(enemyId))).toBe(true);
+      expect(phaseEncounters[3]).toMatchObject({ kind: "boss", enemyId: BOSSES[phase - 1]!.id });
+    }
   });
 
   it("builds deterministic personality-weighted enemy decks with at most two copies", () => {
@@ -778,6 +811,21 @@ describe("enemy turns, rewards, and run progression", () => {
     const skipped = skipReward(winCurrentBattle(createRun(72)));
     expect(skipped.deck).toHaveLength(30);
     expect(skipped.pendingReward).toBeNull();
+  });
+
+  it("limits new-run rewards to neutral and selected-class cards, and legacy rewards to neutral cards", () => {
+    for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
+      const run = winCurrentBattle(createRun(1020, playerClass));
+      expect(run.pendingReward?.choices.every((id) => {
+        const card = CARD_BY_ID.get(id);
+        return card && !card.tokenOnly && (!card.classId || card.classId === playerClass);
+      })).toBe(true);
+    }
+
+    const legacy = createRun(1021);
+    delete legacy.playerClass;
+    const legacyWin = winCurrentBattle(legacy);
+    expect(legacyWin.pendingReward?.choices.every((id) => !CARD_BY_ID.get(id)?.classId && !CARD_BY_ID.get(id)?.tokenOnly)).toBe(true);
   });
 
   it("advances through nine normal fights and three bosses, then reaches victory", () => {

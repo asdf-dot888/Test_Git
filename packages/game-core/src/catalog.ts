@@ -1,8 +1,11 @@
-import type { CardDefinition, EnemyDefinition, MinionEffect, SpellEffect } from "./types.js";
+import type { CardDefinition, EnemyDefinition, MinionEffect, PlayerClass, PlayerClassDefinition, SpellEffect } from "./types.js";
 
 const SUMMONED_CARD_NAMES: Readonly<Record<string, string>> = {
   "bone-rat": "뼈 쥐",
   "cinder-imp": "불씨 임프",
+  "demon-lesser-imp": "하급 임프",
+  "demon-ashling": "잿불 악마",
+  "demon-cinder-fiend": "숯불 마귀",
 };
 
 function summonedCardName(cardId: string): string {
@@ -95,7 +98,7 @@ const spell = (
   spellEffects,
 });
 
-export const CARD_CATALOG: readonly CardDefinition[] = [
+const BASE_CARD_CATALOG: readonly CardDefinition[] = [
   minion("ash-wolf", "잿빛 늑대", 1, 2, 1),
   minion("crypt-guard", "묘지기 경비병", 2, 2, 3),
   minion("cinder-imp", "불씨 임프", 1, 1, 2, "normal", { kind: "battlecrySummon", cardId: "bone-rat", count: 1 }),
@@ -130,12 +133,77 @@ export const CARD_CATALOG: readonly CardDefinition[] = [
   spell("eclipse", "일식", 8, [{ kind: "damage", amount: 8, target: "enemyHero" }], "boss"),
 ];
 
+function forClass(card: CardDefinition, classId: PlayerClass, race?: "demon"): CardDefinition {
+  return { ...card, classId, ...(race ? { race } : {}) };
+}
+
+function demonToken(card: CardDefinition): CardDefinition {
+  return { ...card, classId: "demonist", race: "demon", tokenOnly: true };
+}
+
+const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
+  forClass(minion("warrior-vanguard", "전위병", 1, 1, 4), "warrior"),
+  forClass(minion("warrior-shield-maiden", "방패 여전사", 2, 2, 4, "normal", { kind: "battlecryBuff", attack: 0, health: 1, target: "self" }), "warrior"),
+  forClass(minion("warrior-stonewall", "돌벽 수호자", 3, 2, 6), "warrior"),
+  forClass(minion("warrior-banner-captain", "깃발 대장", 3, 3, 3, "normal", { kind: "battlecryBuff", attack: 1, health: 1, target: "otherFriendly" }), "warrior"),
+  forClass(minion("warrior-oath-knight", "맹세의 기사", 4, 3, 6), "warrior"),
+  forClass(minion("warrior-iron-ram", "철갑 돌격수", 4, 4, 4), "warrior"),
+  forClass(minion("warrior-bastion-colossus", "성채 거인", 6, 5, 8), "warrior"),
+  forClass(spell("warrior-brace", "철벽 태세", 1, [{ kind: "buff", attack: 0, health: 2, target: "playerMinion" }]), "warrior"),
+  forClass(spell("warrior-hammerfall", "심판의 망치", 3, [{ kind: "damage", amount: 3, target: "enemyMinion" }]), "warrior"),
+  forClass(spell("warrior-rally", "전장의 함성", 2, [{ kind: "buff", attack: 1, health: 1, target: "playerMinion" }]), "warrior"),
+
+  forClass(minion("assassin-quickblade", "쾌검 암살자", 1, 3, 1), "assassin"),
+  forClass(minion("assassin-night-knife", "밤의 비수", 2, 3, 2), "assassin"),
+  forClass(minion("assassin-venom-dancer", "맹독 무희", 3, 4, 2, "normal", { kind: "battlecryBuff", attack: 1, health: 0, target: "self" }), "assassin"),
+  forClass(minion("assassin-shadow-duelist", "그림자 결투가", 3, 3, 2, "normal", { kind: "deathSummon", cardId: "bone-rat", count: 1 }), "assassin"),
+  forClass(minion("assassin-silk-stalker", "비단 추적자", 4, 5, 2), "assassin"),
+  forClass(minion("assassin-blood-viper", "핏빛 독사", 4, 4, 3), "assassin"),
+  forClass(minion("assassin-executioner", "처형인", 5, 6, 2), "assassin"),
+  forClass(spell("assassin-venom-coat", "맹독 칼날", 1, [{ kind: "buff", attack: 2, health: 0, target: "playerMinion" }]), "assassin"),
+  forClass(spell("assassin-shuriken", "그림자 수리검", 2, [{ kind: "damage", amount: 3, target: "enemyMinion" }]), "assassin"),
+  forClass(spell("assassin-smoke-step", "연막 보법", 2, [{ kind: "draw", count: 1 }, { kind: "gainMana", amount: 1 }]), "assassin"),
+
+  forClass(minion("demonist-imp-caller", "임프 소환사", 2, 1, 3, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 1 }), "demonist"),
+  forClass(minion("demonist-hellbound-adept", "지옥에 묶인 수련자", 2, 2, 2), "demonist", "demon"),
+  forClass(minion("demonist-pit-ritualist", "구덩이 의식술사", 3, 2, 4, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
+  forClass(minion("demonist-demon-houndmaster", "악마 사냥개 조련사", 4, 4, 3), "demonist"),
+  forClass(minion("demonist-infernal-guardian", "지옥불 수호자", 4, 3, 5), "demonist", "demon"),
+  forClass(minion("demonist-summoner", "심연의 소환사", 5, 4, 5, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
+  forClass(minion("demonist-abyssal-matriarch", "심연의 여군주", 6, 5, 6, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
+  forClass(spell("demonist-dark-rite", "어둠의 의식", 2, [{ kind: "summon", cardId: "demon-lesser-imp", count: 1 }]), "demonist"),
+  forClass(spell("demonist-hellfire", "지옥불 작렬", 4, [{ kind: "damage", amount: 3, target: "enemyMinion" }]), "demonist"),
+  forClass(spell("demonist-soul-bond", "영혼 결속", 2, [{ kind: "buff", attack: 1, health: 2, target: "playerMinion" }]), "demonist"),
+
+  demonToken(minion("demon-lesser-imp", "하급 임프", 0, 1, 1)),
+  demonToken(minion("demon-ashling", "잿불 악마", 0, 2, 2)),
+  demonToken(minion("demon-cinder-fiend", "숯불 마귀", 0, 3, 2)),
+];
+
+export const CARD_CATALOG: readonly CardDefinition[] = [...BASE_CARD_CATALOG, ...CLASS_CARD_CATALOG];
+
 export const STARTER_DECK_CARD_IDS: readonly string[] = [
   "ash-wolf", "ash-wolf", "crypt-guard", "crypt-guard", "cinder-imp", "cinder-imp",
   "bone-rat", "bone-rat", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
   "iron-hound", "iron-hound", "ember-priest", "ember-priest", "shade-stalker", "shade-stalker",
   "thorn-brute", "thorn-brute", "shadow-bolt", "shadow-bolt", "soul-lance", "soul-lance",
   "healing-mist", "mana-spring", "raise-bones", "raise-bones", "rune-surge", "rune-surge",
+];
+
+export const SHARED_STARTER_CARD_IDS: readonly string[] = [
+  "ash-wolf", "ash-wolf", "crypt-guard", "crypt-guard", "cinder-imp", "cinder-imp",
+  "bone-rat", "bone-rat", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
+  "iron-hound", "iron-hound", "ember-priest", "ember-priest", "shadow-bolt", "shadow-bolt",
+  "mana-spring", "healing-mist",
+];
+
+const classCards = (classId: PlayerClass): readonly string[] =>
+  CLASS_CARD_CATALOG.filter((card) => card.classId === classId && !card.tokenOnly).map((card) => card.id);
+
+export const PLAYER_CLASS_DEFINITIONS: readonly PlayerClassDefinition[] = [
+  { id: "warrior", name: "전사", archetype: "체력과 방어력이 높은 하수인", heroPowerName: "방패 다지기", heroPowerDescription: "영웅에게 방어도 2를 부여합니다.", starterCardIds: classCards("warrior") },
+  { id: "assassin", name: "암살자", archetype: "공격력과 특수 효과가 강한 하수인", heroPowerName: "그림자 습격", heroPowerDescription: "아직 공격하지 않은 아군 하수인 하나의 공격력을 이번 턴에만 1 올립니다.", starterCardIds: classCards("assassin") },
+  { id: "demonist", name: "악마술사", archetype: "악마 소환과 하수인 연계", heroPowerName: "하급 악마 소환", heroPowerDescription: "하급 임프 1마리를 소환합니다.", starterCardIds: classCards("demonist") },
 ];
 
 export const NORMAL_ENEMIES: readonly EnemyDefinition[] = [
@@ -147,13 +215,31 @@ export const NORMAL_ENEMIES: readonly EnemyDefinition[] = [
   { id: "night-stalker", name: "밤의 추적자", kind: "normal", maxHealth: 25, artKey: "night-stalker", tactics: { profile: "hunter" } },
 ];
 
+export const NORMAL_ENEMIES_BY_PHASE: Readonly<Record<1 | 2 | 3, readonly [EnemyDefinition, EnemyDefinition, EnemyDefinition]>> = {
+  1: [
+    { id: "fallen-elf-scout", name: "타락한 엘프 정찰자", kind: "normal", maxHealth: 19, artKey: "fallen-elf-scout", tactics: { profile: "hunter" } },
+    { id: "thorn-cursed-dryad", name: "가시에 저주받은 드리아드", kind: "normal", maxHealth: 21, artKey: "thorn-cursed-dryad", tactics: { profile: "controller" } },
+    { id: "forest-watcher", name: "저주숲 감시자", kind: "normal", maxHealth: 22, artKey: "forest-watcher", tactics: { profile: "summoner" } },
+  ],
+  2: [
+    { id: "imp-raider", name: "임프 약탈자", kind: "normal", maxHealth: 20, artKey: "imp-raider", tactics: { profile: "aggressor" } },
+    { id: "abyss-cultist", name: "심연의 숭배자", kind: "normal", maxHealth: 22, artKey: "abyss-cultist", tactics: { profile: "summoner" } },
+    { id: "demon-brute", name: "지옥의 투사", kind: "normal", maxHealth: 25, artKey: "demon-brute", tactics: { profile: "hunter" } },
+  ],
+  3: [
+    { id: "ember-legionnaire", name: "화염군단 보병", kind: "normal", maxHealth: 23, artKey: "ember-legionnaire", tactics: { profile: "aggressor" } },
+    { id: "drake-soldier", name: "용혈 전사", kind: "normal", maxHealth: 25, artKey: "drake-soldier", tactics: { profile: "hunter" } },
+    { id: "flame-wyrm", name: "불꽃 비룡", kind: "normal", maxHealth: 27, artKey: "flame-wyrm", tactics: { profile: "ravager" } },
+  ],
+};
+
 export const BOSSES: readonly EnemyDefinition[] = [
-  { id: "boss-blood-matron", name: "핏빛 여왕", kind: "boss", maxHealth: 34, artKey: "boss-blood-matron", tactics: { profile: "drain" } },
-  { id: "boss-grave-king", name: "무덤의 왕", kind: "boss", maxHealth: 40, artKey: "boss-grave-king", tactics: { profile: "board-clear" } },
-  { id: "boss-void-titan", name: "공허의 거신", kind: "boss", maxHealth: 48, artKey: "boss-void-titan", tactics: { profile: "ravager" } },
+  { id: "boss-blood-matron", name: "타락한 숲의 여왕", kind: "boss", maxHealth: 34, artKey: "boss-blood-matron", tactics: { profile: "drain" } },
+  { id: "boss-grave-king", name: "심연의 악마 군주", kind: "boss", maxHealth: 40, artKey: "boss-grave-king", tactics: { profile: "board-clear" } },
+  { id: "boss-void-titan", name: "고대 화염룡", kind: "boss", maxHealth: 48, artKey: "boss-void-titan", tactics: { profile: "ravager" } },
 ];
 
 export const CARD_BY_ID: ReadonlyMap<string, CardDefinition> = new Map(CARD_CATALOG.map((card) => [card.id, card]));
 export const ENEMY_BY_ID: ReadonlyMap<string, EnemyDefinition> = new Map(
-  [...NORMAL_ENEMIES, ...BOSSES].map((enemy) => [enemy.id, enemy]),
+  [...NORMAL_ENEMIES, ...Object.values(NORMAL_ENEMIES_BY_PHASE).flat(), ...BOSSES].map((enemy) => [enemy.id, enemy]),
 );

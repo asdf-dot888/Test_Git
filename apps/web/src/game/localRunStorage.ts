@@ -1,5 +1,7 @@
 import type { RunState } from "@board-game/game-core";
 
+const PLAYER_CLASSES = new Set(["warrior", "assassin", "demonist"]);
+
 const STORAGE_KEY_PREFIX = "board-card-roguelike:run:v1:";
 
 export type LocalRunLoadResult =
@@ -36,6 +38,7 @@ function isRunState(value: unknown): value is RunState {
     && (value.encounterInPhase === 0 || value.encounterInPhase === 1 || value.encounterInPhase === 2 || value.encounterInPhase === 3)
     && Number.isInteger(value.completedBattles)
     && (value.status === "active" || value.status === "victory" || value.status === "defeat")
+    && (value.playerClass === undefined || (typeof value.playerClass === "string" && PLAYER_CLASSES.has(value.playerClass)))
     && Array.isArray(value.deck)
     && Array.isArray(value.starterDeck)
     && (value.battle === null || isRecord(value.battle))

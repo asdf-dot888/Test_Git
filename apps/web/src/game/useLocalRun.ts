@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createRun as createGameRun, type RunState } from "@board-game/game-core";
+import { createRun as createGameRun, type PlayerClass, type RunState } from "@board-game/game-core";
 import { useAuth } from "../auth/useAuth.js";
 import { createLocalRunStorage, type LocalRunStorage } from "./localRunStorage.js";
 
@@ -13,8 +13,8 @@ export interface LocalRunController {
   loaded: boolean;
   loadVersion: number;
   saveRun(run: RunState): Promise<void>;
-  createRun(seed: number): Promise<RunState>;
-  replaceRun(reason: "completed" | "abandoned", seed: number): Promise<RunState>;
+  createRun(seed: number, playerClass?: PlayerClass): Promise<RunState>;
+  replaceRun(reason: "completed" | "abandoned", seed: number, playerClass?: PlayerClass): Promise<RunState>;
   deleteRun(reason: "completed" | "abandoned"): Promise<void>;
   reload(): Promise<void>;
   retrySave(run: RunState | null): Promise<void>;
@@ -81,13 +81,13 @@ export function useLocalRun(): LocalRunController {
     setState((current) => ({ ...current, userId, status: "ready", run, loaded: true, warning }));
   }, [userId]);
 
-  const createRun = useCallback(async (seed: number) => {
-    const run = createGameRun(seed);
+  const createRun = useCallback(async (seed: number, playerClass?: PlayerClass) => {
+    const run = createGameRun(seed, playerClass);
     await saveRun(run);
     return run;
   }, [saveRun]);
 
-  const replaceRun = useCallback(async (_reason: "completed" | "abandoned", seed: number) => createRun(seed), [createRun]);
+  const replaceRun = useCallback(async (_reason: "completed" | "abandoned", seed: number, playerClass?: PlayerClass) => createRun(seed, playerClass), [createRun]);
 
   const deleteRun = useCallback(async (_reason: "completed" | "abandoned") => {
     if (!userId) return;

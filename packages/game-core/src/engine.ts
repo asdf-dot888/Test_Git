@@ -1,4 +1,4 @@
-import { BOSSES, CARD_BY_ID, CARD_CATALOG, ENEMY_BY_ID, NORMAL_ENEMIES, STARTER_DECK_CARD_IDS } from "./catalog.js";
+import { BOSSES, CARD_BY_ID, CARD_CATALOG, ENEMY_BY_ID, NORMAL_ENEMIES_BY_PHASE, PLAYER_CLASS_DEFINITIONS, SHARED_STARTER_CARD_IDS } from "./catalog.js";
 import { GameRuleError } from "./errors.js";
 import { normalizeSeed, pickIndex, shuffle } from "./random.js";
 import type {
@@ -11,6 +11,7 @@ import type {
   EnemyTurnPlaybackStep,
   EnemyTurnResolution,
   MinionState,
+  PlayerClass,
   PlayerSide,
   RunState,
   SpellEffect,
@@ -90,7 +91,7 @@ function createEnemyDeck(enemy: EnemyDefinition, seed: number, idPrefix: string)
   let state = normalizeSeed(seed);
   while (starterDeck.length < 30) {
     const candidates = CARD_CATALOG
-      .filter((card) => !card.playerOnly && (counts.get(card.id) ?? 0) < 2)
+      .filter((card) => !card.playerOnly && !card.classId && !card.tokenOnly && (counts.get(card.id) ?? 0) < 2)
       .map((card) => ({ card, weight: enemyCardWeight(card, enemy) }));
     const totalWeight = candidates.reduce((total, candidate) => total + candidate.weight, 0);
     if (totalWeight <= 0) fail("INVALID_ACTION", `No valid cards are available for ${enemy.id}.`);
@@ -193,7 +194,10 @@ function finishDefeat(run: RunState): RunState {
 function rewardChoices(run: RunState, tier: "normal" | "boss", seed: number): { state: number; choices: string[] } {
   const counts = cardCounts(run.deck);
   const eligible = CARD_CATALOG
-    .filter((card) => card.rewardTier === tier && (counts.get(card.id) ?? 0) < 2)
+    .filter((card) => card.rewardTier === tier
+      && !card.tokenOnly
+      && (run.playerClass ? (!card.classId || card.classId === run.playerClass) : !card.classId)
+      && (counts.get(card.id) ?? 0) < 2)
     .map((card) => card.id);
   const result = shuffle(eligible, seed);
   return { state: result.state, choices: result.items.slice(0, 3) };
@@ -640,21 +644,25 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
   return nextRun;
 }
 
-export function createRun(seed: number): RunState {
+export function createRun(seed: number, playerClass: PlayerClass = "warrior"): RunState {
   const normalizedSeed = normalizeSeed(seed);
   let randomState = normalizedSeed;
   const encounters: EncounterState[] = [];
   for (let phase = 1 as 1 | 2 | 3; phase <= 3; phase = (phase + 1) as 1 | 2 | 3) {
     for (let normal = 0; normal < 3; normal += 1) {
-      const picked = pickIndex(NORMAL_ENEMIES.length, randomState);
+      const phaseEnemies = NORMAL_ENEMIES_BY_PHASE[phase];
+      const picked = pickIndex(phaseEnemies.length, randomState);
       randomState = picked.state;
-      encounters.push({ phase, kind: "normal", enemyId: NORMAL_ENEMIES[picked.value]!.id, status: "pending" });
+      encounters.push({ phase, kind: "normal", enemyId: phaseEnemies[picked.value]!.id, status: "pending" });
     }
     encounters.push({ phase, kind: "boss", enemyId: BOSSES[phase - 1]!.id, status: "pending" });
   }
 
-  const starterDeck = STARTER_DECK_CARD_IDS.map((cardId, index) => ({ instanceId: `starter-template-${index + 1}`, cardId }));
-  const deck = STARTER_DECK_CARD_IDS.map((cardId, index) => ({ instanceId: `card-${index + 1}`, cardId }));
+  const classDefinition = PLAYER_CLASS_DEFINITIONS.find((definition) => definition.id === playerClass);
+  if (!classDefinition) fail("INVALID_ACTION", `Unknown player class: ${playerClass}`);
+  const starterCardIds = [...SHARED_STARTER_CARD_IDS, ...classDefinition.starterCardIds];
+  const starterDeck = starterCardIds.map((cardId, index) => ({ instanceId: `starter-template-${index + 1}`, cardId }));
+  const deck = starterCardIds.map((cardId, index) => ({ instanceId: `card-${index + 1}`, cardId }));
   const run: RunState = {
     runId: `run-${normalizedSeed.toString(36)}`,
     seed: normalizedSeed,
@@ -663,6 +671,7 @@ export function createRun(seed: number): RunState {
     encounterInPhase: 0,
     completedBattles: 0,
     status: "active",
+    playerClass,
     deck,
     starterDeck,
     battle: null,

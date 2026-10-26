@@ -28,6 +28,25 @@ describe("account-scoped local run storage", () => {
     expect(Number.isNaN(Date.parse(envelope.savedAt))).toBe(false);
   });
 
+  it("keeps valid class metadata and accepts classless legacy saves without rebuilding them", () => {
+    const storage = createMemoryStorage();
+    const runs = createLocalRunStorage(storage);
+    const classRun = createRun(418, "assassin");
+    expect(runs.save("class-player", classRun)).toEqual({ status: "saved" });
+    expect(runs.load("class-player")).toEqual({ status: "loaded", run: classRun });
+
+    const legacyRun = createRun(419);
+    delete legacyRun.playerClass;
+    const expectedDeck = structuredClone(legacyRun.deck);
+    expect(runs.save("legacy-player", legacyRun)).toEqual({ status: "saved" });
+    const loaded = runs.load("legacy-player");
+    expect(loaded).toEqual({ status: "loaded", run: legacyRun });
+    if (loaded.status === "loaded") {
+      expect(loaded.run.playerClass).toBeUndefined();
+      expect(loaded.run.deck).toEqual(expectedDeck);
+    }
+  });
+
   it("isolates runs by account and can clear only the selected account", () => {
     const runs = createLocalRunStorage(createMemoryStorage());
     const firstRun = createRun(11);
@@ -53,6 +72,7 @@ describe("account-scoped local run storage", () => {
     JSON.stringify({ schemaVersion: 1, userId: "someone-else", savedAt: new Date().toISOString(), run: createRun(1) }),
     JSON.stringify({ schemaVersion: 1, userId: "employee-a", savedAt: "invalid", run: createRun(1) }),
     JSON.stringify({ schemaVersion: 1, userId: "employee-a", savedAt: new Date().toISOString(), run: { runId: "broken" } }),
+    JSON.stringify({ schemaVersion: 1, userId: "employee-a", savedAt: new Date().toISOString(), run: { ...createRun(2), playerClass: "mage" } }),
   ])("treats malformed, unsupported, or cross-account data as unavailable", (serialized) => {
     const storage = createMemoryStorage();
     storage.setItem("board-card-roguelike:run:v1:employee-a", serialized);
