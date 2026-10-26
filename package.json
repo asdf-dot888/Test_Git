@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @board-game/web",
+    "dev:swa": "npm run build && set \"PATH=%CD%\\node_modules\\node\\bin;%ProgramFiles%\\Microsoft\\Azure Functions Core Tools;%PATH%\" && concurrently --kill-others -n azurite,swa \"azurite --silent --location .azurite\" \"wait-on tcp:10000 tcp:10001 tcp:10002 && swa start apps/web/dist --api-location apps/leaderboard-api --host 127.0.0.1 --port 4280\"",
     "deploy:swa": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-static-web-app.ps1",
     "package:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1",
     "build": "npm run build --workspace @board-game/game-core && npm run build --workspace @board-game/api && npm run build --workspace @board-game/leaderboard-api && npm run build --workspace @board-game/web",
@@ -23,13 +24,16 @@
   "devDependencies": {
     "@azure/static-web-apps-cli": "^2.1.0",
     "@eslint/js": "^10.0.1",
+    "azurite": "^3.37.0",
     "concurrently": "^10.0.6",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
+    "node": "^22.23.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wait-on": "^9.5.1"
   },
   "allowScripts": {
     "esbuild@0.28.2": true
