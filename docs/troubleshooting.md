@@ -1,26 +1,31 @@
-# 문제 해결
+﻿# 문제 해결
 
-## Entra 로그인
+## Entra 로그인 및 랭킹 동의
 
 | 증상 | 확인할 항목 | 조치 |
 | --- | --- | --- |
-| 로그인 설정 화면이 표시됨 | `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID` 설정 여부 | 저장소 루트 `.env`에 SPA 앱 등록의 두 공개 식별자를 입력하고 Vite를 다시 시작합니다. |
-| Entra `redirect_uri_mismatch` | 브라우저 주소의 scheme, host, port와 SPA 앱 등록 URI | 현재 주소의 origin 전체를 앱 등록의 SPA redirect URI에 추가합니다. localhost의 port도 일치해야 합니다. |
-| 로그인이 끝난 뒤 앱으로 돌아오지 않음 | 계정 선택, Conditional Access 정책, redirect URI의 등록 유형 | 회사 로그인 정책을 확인하고, Entra 앱 등록에 현재 origin이 SPA 플랫폼 URI로 등록됐는지 확인합니다. |
+| 로그인 설정 화면이 표시됨 | `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID` | `.env`에 SPA 앱 등록 식별자를 입력하고 Vite 서버를 다시 시작합니다. |
+| `redirect_uri_mismatch` | 브라우저 origin과 SPA redirect URI | 현재 프로토콜·호스트·포트가 모두 일치하도록 앱 등록을 갱신합니다. |
+| 랭킹을 열 때 동의/로그인 오류가 남 | 동일 앱의 delegated `leaderboard.access` scope와 동의 | Entra 앱의 Expose an API, SPA API permissions, 조직의 consent 정책을 확인한 뒤 랭킹에서 다시 시도합니다. API scope는 초기 로그인 때 요청하지 않습니다. |
+| 랭킹 API가 401을 반환함 | Bearer token의 발급 테넌트·audience·scope | `ENTRA_TENANT_ID`, `ENTRA_API_AUDIENCE`가 앱 등록과 맞는지, 클라이언트가 `api://<client-id>/leaderboard.access`를 요청하는지 확인합니다. 토큰 문자열을 로그나 채팅에 남기지 마세요. |
 
 ## 진행 상황 저장
 
 | 증상 | 확인할 항목 | 조치 |
 | --- | --- | --- |
-| 브라우저 새로고침 뒤 원정이 사라짐 | 로그인 계정이 달라졌는지, 사이트의 localStorage가 삭제/차단되었는지 | 동일한 Entra 계정과 브라우저를 사용하고 사이트 저장소 사용을 허용합니다. 브라우저 데이터를 삭제하면 저장된 원정도 지워질 수 있습니다. |
-| 진행 저장 경고가 나타남 | 브라우저의 사이트 저장소/개인정보 보호 설정 | 현재 세션은 계속할 수 있지만 새로고침이나 브라우저 종료 시 진행이 사라질 수 있습니다. 브라우저가 사이트 저장을 허용하는지 확인하세요. |
-| 다른 기기에서 같은 진행이 보이지 않음 | 현재 저장이 브라우저별 localStorage인지 | 현재는 기기 간 동기화를 제공하지 않습니다. Cosmos 기반 랭킹은 후속 기능이며 개인 진행을 복원하는 용도가 아닙니다. |
+| 새로고침 뒤 원정이 사라짐 | 로그인 계정과 브라우저 `localStorage` | 동일한 Entra 계정과 브라우저를 사용하고 사이트 데이터가 삭제되지 않았는지 확인합니다. 현재 원정은 기기 간 동기화되지 않습니다. |
+| 다른 기기에서 같은 진행이 보이지 않음 | 저장 위치 | Cosmos에는 랭킹 최고점만 저장하며 전체 원정을 복원하지 않습니다. |
 
-## Azure 배포
+## 랭킹 API와 Cosmos DB
 
 | 증상 | 확인할 항목 | 조치 |
 | --- | --- | --- |
-| `/api/health`에 연결되지 않음 | App Service 상태, startup command, Node.js 24 LTS, `PORT` 사용 | startup command가 `npm start`인지 확인하고 App Service 로그에서 시작 오류를 살펴봅니다. |
-| Azure 사이트에서 Entra 로그인이 실패함 | 빌드 당시 `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID`, 운영 origin redirect URI | 운영 origin을 SPA 앱 등록에 추가하고, 올바른 값으로 프런트엔드를 다시 빌드해 ZIP을 재배포합니다. App Service 설정 변경만으로 기존 번들은 바뀌지 않습니다. |
+| API가 503 `API_NOT_CONFIGURED` 반환 | Static Web Apps Functions API app settings | `ENTRA_TENANT_ID`, `ENTRA_API_AUDIENCE`, `COSMOS_ENDPOINT`, `COSMOS_KEY`, `COSMOS_DATABASE`, `COSMOS_CONTAINER`를 서버 API 설정에 지정합니다. |
+| API가 503 `LEADERBOARD_UNAVAILABLE` 반환 | Cosmos endpoint/key, DB/container 이름, 네트워크 및 인덱스 | Cosmos endpoint와 key 권한을 확인하고 `card-roguelike/leaderboard-progress`, `/userId` 파티션, 정렬용 composite index를 확인합니다. key를 브라우저에 전달하지 마세요. |
+| 진행 POST가 400 반환 | 요청 본문과 완료 전투 수 | 본문이 `{ "completedBattles": 1 }`부터 12까지의 정수 하나만 포함하는지 확인합니다. ID, 이름, 전체 RunState를 보내지 않습니다. |
+| 상위 랭킹 정렬이 실패함 | Cosmos composite index | `completedBattles DESC`, `recordedAt ASC` 복합 인덱스가 컨테이너 정책에 있는지 확인합니다. |
+| `swa deploy`가 인증 실패 | Static Web Apps deployment token 또는 SWA CLI 로그인 | 현재 PowerShell에서 `SWA_CLI_DEPLOYMENT_TOKEN`을 지정하거나 `npx swa login`을 실행하고, 배포 권한이 있는 계정을 사용합니다. 토큰을 명령행에 직접 쓰지 마세요. |
+| API 함수가 배포됐지만 실행되지 않음 | `apps/leaderboard-api/dist/index.js`, `host.json`, API package dependencies | `npm run build`, `npm run deploy:swa -- -DryRun`으로 배포 산출물을 확인하고 Functions v4 및 `node:22` runtime 설정을 확인합니다. |
+| Static Web Apps CLI local preview에서 API가 시작되지 않음 | Azure Functions Core Tools v4와 Azurite | 두 로컬 도구를 설치·시작한 뒤 `npx swa start apps/web/dist --api-location apps/leaderboard-api`를 다시 실행합니다. |
 
-로그나 브라우저 네트워크 패널을 공유할 때는 요청 경로, 시각, HTTP 상태, 오류 코드처럼 필요한 최소 정보만 남기세요. `Authorization` 헤더, access token, ID token, 사용자 원정 payload 또는 비밀 값을 복사·저장·공유하지 마세요.
+로그나 브라우저 네트워크 패널을 공유할 때는 요청 경로, 시각, HTTP 상태와 오류 코드 등 필요한 최소 정보만 남기세요. `Authorization` 헤더, access/ID token, Cosmos key, 배포 token은 복사·저장·공유하지 마세요.

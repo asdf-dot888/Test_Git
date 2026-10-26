@@ -1,6 +1,6 @@
 # Task: T04 Static Web Apps API Deployment and Setup
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -54,11 +54,11 @@ Make the React site and managed Functions API deploy together to the existing St
 
 ## Acceptance Criteria
 
-- [ ] Static Web Apps deployment includes both the SPA and managed API with Node.js 22 runtime and same-origin `/api` routes.
-- [ ] Existing local game development and app builds do not require Cosmos or deployment credentials.
-- [ ] Documentation gives exact Entra scope, Cosmos database/container, Static Web Apps app-setting names, manual deployment, and smoke-test steps.
-- [ ] Cosmos and deployment secrets cannot appear in Vite output, Git-tracked files, logs, or deployment artifacts.
-- [ ] Conflicting older App Service/full-run Cosmos deployment notes are clearly marked superseded.
+- [x] Static Web Apps deployment includes both the SPA and managed API with Node.js 22 runtime and same-origin `/api` routes.
+- [x] Existing local game development and app builds do not require Cosmos or deployment credentials.
+- [x] Documentation gives exact Entra scope, Cosmos database/container, Static Web Apps app-setting names, manual deployment, and smoke-test steps.
+- [x] Cosmos and deployment secrets cannot appear in Vite output, Git-tracked files, logs, or deployment artifacts.
+- [x] Conflicting older App Service/full-run Cosmos deployment notes are clearly marked superseded.
 
 ## Validation
 
@@ -66,7 +66,7 @@ Make the React site and managed Functions API deploy together to the existing St
 - `npm run lint`
 - `npm run build`
 - `npx swa start apps/web/dist --api-location apps/leaderboard-api` (local integration smoke check; requires Azure Functions Core Tools)
-- `npm run deploy:swa -- --dry-run` (deployment packaging dry run; must not publish)
+- `npm run deploy:swa -- -DryRun` (deployment packaging dry run; must not publish)
 
 ## Commit Message
 
@@ -83,6 +83,8 @@ Task: T04-swa-deployment-and-setup
 
 ## Progress
 
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation completed: all 600 tests and production build passed; `npm run deploy:swa -- -DryRun` completed without upload; changed API and deployment helper files passed ESLint.
+- Full `npm run lint` remains blocked by three existing errors in `apps/web/src/game/useLocalRun.ts` (`useRef`, effect state update, `_reason`). The local Functions smoke check was not run because Azure Functions Core Tools (`func`) is not installed.
+- No Azure deployment was attempted; this task prepares the manual release command and setup instructions.
+- commit: `docs(deploy): configure free Static Web Apps leaderboard deployment`

@@ -1,7 +1,9 @@
 # Decisions: 정식 게임 Azure 배포
 
 - Date: 2026-10-23
-- Status: Confirmed
+- Status: Superseded by `.memory/decisions/2026-10-23-cosmos-leaderboard-api.md` and `.memory/decisions/2026-10-26-leaderboard-entry-points.md`
+
+> Historical decision: the App Service and full-run Cosmos architecture below was replaced by the later Static Web Apps Free managed API and browser-local expedition design. Keep this record for decision history; do not use it as the current deployment procedure.
 
 ## D01. 배포 목표
 - **Chosen**: 로컬 데모를 공개하는 것이 아니라 사내에서 사용할 정식 버전을 배포한다.

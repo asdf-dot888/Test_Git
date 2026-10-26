@@ -1,89 +1,105 @@
-# Azure 설정 및 운영 안내
+﻿# Azure 설정 및 운영 안내
 
-이 문서는 회사 Microsoft Entra 테넌트와 Azure App Service에 현재 게임을 연결하는 방법을 안내합니다. 저장소는 Azure 리소스나 앱 등록을 만들지 않습니다. 현재 게임 진행은 브라우저별 `localStorage`에 보관하며, 플레이 API나 Cosmos DB를 사용하지 않습니다. Cosmos DB는 후속 작업에서 사내 친목용 진행도 랭킹을 저장하는 용도로 추가할 계획입니다.
+이 문서는 기존 Static Web Apps Free 리소스에 React 게임과 Entra 보호 랭킹 API를 함께 배포하는 절차를 설명합니다. 별도 App Service나 Functions 리소스를 만들지 않습니다. 게임 원정 진행은 브라우저별 `localStorage`에 남고, Cosmos DB에는 직원별 최고 완료 전투 수만 기록합니다.
 
 ## 현재 구성
 
-- React SPA는 MSAL을 사용해 single-tenant Entra 계정으로 로그인합니다.
-- 로그인에는 SPA의 Tenant ID와 Client ID가 필요합니다. 사용자 계정으로 로그인한다고 앱 등록의 식별자가 자동으로 발견되는 것은 아닙니다.
-- API audience, delegated API scope, client secret, Cosmos 연결은 현재 게임 플레이에 필요하지 않습니다.
-- 활성 원정은 Entra `oid`별 브라우저 로컬 저장소에 저장됩니다. 다른 기기와 동기화되지 않습니다.
-- Azure Node.js 24 LTS App Service는 빌드된 SPA를 제공하고 `/api/health`를 응답합니다. 게임 데이터 API는 현재 마운트되지 않습니다.
+- React SPA: Static Web Apps의 정적 파일로 서비스하며 회사 Entra single-tenant 계정을 사용합니다.
+- API: Static Web Apps Free의 관리형 Functions API(Node.js 22, Functions v4)를 사용합니다. 경로는 `GET /api/leaderboard`, `POST /api/leaderboard/progress`입니다.
+- 랭킹: 전투 승리 확인 뒤 브라우저가 `{ "completedBattles": n }`만 제출합니다. API는 검증된 Entra token에서 직원 ID와 이름을 읽습니다. 클라이언트 점수 조작 방지는 포함하지 않습니다.
+- Cosmos DB: API 서버만 연결하며 계정 key를 Static Web Apps의 서버 API 설정으로 전달합니다. 브라우저에는 key가 노출되지 않습니다.
+- 배포: 로컬 빌드 후 Azure Static Web Apps CLI로 SPA와 Functions API를 수동 배포합니다. GitHub Actions 자동 배포는 사용하지 않습니다.
 
-## 로컬 개발
+## 필요한 Azure 설정
 
-저장소 루트에서 다음 명령을 실행합니다.
+Azure 리소스와 Entra 앱 등록이 준비되어 있어야 합니다. 프로젝트에서 리소스를 자동 생성하지 않습니다.
 
-```powershell
-npm install
-Copy-Item .env.example .env
-notepad .env
-npm run dev
-```
+### Entra 앱 등록
 
-현재 `.env.example`의 두 공개 SPA 설정을 회사 앱 등록 정보로 채웁니다.
+기존 SPA 앱 등록의 Application (client) ID를 사용합니다.
 
-| 변수 | 값 |
-| --- | --- |
-| `VITE_ENTRA_TENANT_ID` | 회사 Entra 디렉터리의 Tenant ID |
-| `VITE_ENTRA_CLIENT_ID` | 브라우저 SPA 앱 등록의 Application (client) ID |
+1. **Expose an API**에서 Application ID URI를 `api://<SPA-CLIENT-ID>`로 설정합니다.
+2. Delegated scope `leaderboard.access`를 추가하고 사용자/관리자 동의 정책에 맞게 설정합니다.
+3. **API permissions > Add a permission > My APIs**에서 같은 앱의 `leaderboard.access` 범위를 SPA 앱에 추가합니다.
+4. **Authentication > Single-page application** 아래에 로컬 개발 origin과 배포 주소를 redirect URI로 등록합니다. 로컬 기본 주소는 `http://localhost:5173`입니다.
+5. 앱 등록의 Tenant ID와 Client ID를 빌드 환경의 `.env`에 `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID`로 지정합니다.
 
-웹 앱은 두 값이 비어 있어도 시작하며 로그인 설정 화면에서 필요한 항목을 보여줍니다. 로그인을 마치려면 두 값을 설정하고 Vite를 다시 시작해야 합니다. 기본 로컬 origin은 `http://localhost:5173`입니다. 포트 5173이 이미 사용 중이면 Vite가 다른 포트를 선택할 수 있으므로, 터미널에 나온 실제 origin을 Entra 앱 등록에도 추가합니다.
+초기 로그인은 `openid profile`만 사용합니다. API scope는 플레이어가 랭킹을 열거나 기록 재시도를 할 때 요청됩니다. API audience는 v2 access token에서 앱 등록의 Client ID이며, 요청 scope는 `api://<SPA-CLIENT-ID>/leaderboard.access`입니다. Microsoft Graph 권한은 필요하지 않습니다.
 
-로컬 실행에는 API 서버, Cosmos endpoint, Azure CLI 로그인 또는 Cosmos 데이터 권한이 필요하지 않습니다. `.env`는 Git에서 제외됩니다. `VITE_` 변수는 브라우저 번들에서 공개되므로 tenant/client 식별자만 넣고 client secret, token, Cosmos key는 넣지 마세요.
+### Cosmos DB
 
-## Entra SPA 앱 등록
+1. 기존 Cosmos DB for NoSQL 계정에서 `card-roguelike` 데이터베이스와 `leaderboard-progress` 컨테이너를 준비합니다.
+2. 파티션 키는 `/userId`로 설정합니다. 한 직원당 하나의 `best-progress` 기록만 보관합니다.
+3. 랭킹 정렬 쿼리를 위해 컨테이너 indexing policy에 복합 인덱스 `(completedBattles DESC, recordedAt ASC)`를 포함합니다.
+4. 계정의 기본/읽기-쓰기 key를 API 설정으로 전달할 담당자를 정합니다. Static Web Apps Free 관리형 API는 managed identity를 지원하지 않으므로 서버 전용 Cosmos key를 사용합니다.
 
-회사에서 승인한 single-tenant 앱 등록을 사용하거나 Azure 운영자에게 SPA 등록을 요청합니다.
+Cosmos DB 사용량과 저장 용량은 요금이 발생할 수 있습니다. 무료 Static Web Apps가 Cosmos 비용까지 무료로 만들지는 않습니다.
 
-1. 앱 등록의 **Authentication > Add a platform > Single-page application**에 개발용 redirect URI를 등록합니다. 기본값은 `http://localhost:5173`이며, 현재 사용하는 다른 localhost 포트도 등록할 수 있습니다.
-2. Azure 배포 전 최종 사이트 origin을 redirect URI에 추가합니다. 기본 Azure 주소 예시는 `https://<app-name>.azurewebsites.net`입니다.
-3. 앱 등록의 Overview에서 Tenant ID와 Application (client) ID를 확인해 빌드 환경에 `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID`로 설정합니다.
-4. 현재 로그인은 OIDC `openid` 및 `profile` 범위만 사용합니다. 별도의 API 앱 등록, delegated API permission 또는 사용자 동의는 현재 플레이 경로에 필요하지 않습니다.
+## Static Web Apps API 설정
 
-Tenant ID와 Client ID는 앱 설정 값입니다. 직원의 로그인 절차로 이 값들을 조회하지 않습니다. 실제 회사 테넌트에서 앱 등록을 조회할 권한이 없으면 Azure 운영자에게 해당 두 식별자와 redirect URI 등록을 요청하세요.
+Static Web App 리소스의 **Environment variables / Configuration**에서 Functions API 서버 설정으로 다음 값을 지정합니다. 포털 UI 명칭은 변경될 수 있습니다.
 
-## App Service
+| 설정 이름 | 값 | 공개 여부 |
+| --- | --- | --- |
+| `ENTRA_TENANT_ID` | 회사 Entra Tenant ID | 서버 설정 |
+| `ENTRA_API_AUDIENCE` | Entra 앱 등록 Client ID | 서버 설정 |
+| `COSMOS_ENDPOINT` | Cosmos DB account endpoint | 서버 설정 |
+| `COSMOS_KEY` | Cosmos 계정 key | 비밀값; 서버 설정에만 저장 |
+| `COSMOS_DATABASE` | `card-roguelike` | 서버 설정 |
+| `COSMOS_CONTAINER` | `leaderboard-progress` | 서버 설정 |
 
-배포된 사이트에서 MSAL이 로그인을 시작하므로 App Service Authentication/Easy Auth의 전체 사이트 인증은 비활성 상태로 둡니다. Easy Auth가 먼저 리디렉션하면 React 앱의 MSAL 흐름이 시작되지 않을 수 있습니다.
+변경 뒤 API를 재시작하거나 새 deployment를 적용하세요. `COSMOS_KEY`를 Vite `VITE_*` 환경 변수, `.env`, 명령행 인자, 브라우저 저장소, Git 파일에 넣지 마세요.
 
-서버는 App Service가 제공하는 `PORT` 환경 변수를 사용합니다. 현재 정적 사이트 호스팅 및 health 응답은 Entra API 설정이나 Cosmos 설정을 요구하지 않습니다. 다음 endpoint는 프로세스 상태 확인용입니다.
+## 로컬 API 미리보기 (선택)
 
-```text
-GET https://<app-name>.azurewebsites.net/api/health
-200 { "status": "ok" }
-```
+일반 브라우저 게임 개발에는 API 설정이 필요하지 않습니다. Functions API 통합 확인이 필요할 때만 다음을 준비합니다.
 
-## 빌드와 수동 ZIP 배포
+1. Azure Functions Core Tools v4 및 Azurite를 설치·실행합니다.
+2. `apps/leaderboard-api/local.settings.example.json`을 `apps/leaderboard-api/local.settings.json`으로 복사하고 로컬용 Entra 및 Cosmos 값을 입력합니다. 파일은 `.gitignore` 대상입니다.
+3. 루트에서 API와 프런트엔드를 빌드하고 SWA 로컬 emulator를 시작합니다.
 
-`VITE_` 값은 Vite 빌드 시 브라우저 번들에 포함됩니다. App Service Application settings에서 값을 바꿔도 이미 만들어진 SPA 번들은 변경되지 않습니다. 운영용 Tenant ID와 SPA Client ID를 빌드 환경에 설정하고 ZIP을 생성하세요.
+   ```powershell
+   npm run build
+   npx swa start apps/web/dist --api-location apps/leaderboard-api
+   ```
 
-```powershell
-npm ci
-npm test
-npm run lint
-$env:VITE_ENTRA_TENANT_ID = "<tenant-id>"
-$env:VITE_ENTRA_CLIENT_ID = "<spa-client-id>"
-npm run package:release
+4. 브라우저에서 `http://localhost:4280`을 엽니다. 로컬 함수 요청은 Cosmos 계정에 접근할 수 있어야 합니다. 실제 서비스 설정이 없다면 랭킹 호출은 설정 오류를 반환하지만 브라우저 게임은 계속 사용할 수 있습니다.
 
-az login
-az account set --subscription "<subscription-id>"
-az webapp config set --resource-group "<resource-group>" --name "<app-name>" --linux-fx-version "NODE|24-lts"
-az webapp config appsettings set --resource-group "<resource-group>" --name "<app-name>" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
-az webapp deploy --resource-group "<resource-group>" --name "<app-name>" --src-path "artifacts/board-card-roguelike-release.zip" --type zip
-```
+## 수동 빌드 및 배포
 
-Linux Node.js 24 LTS App Service의 startup command는 `npm start`로 설정합니다. ZIP은 저장소 루트 구조를 유지하며 `.env`, `.git`, `node_modules`, `.memory`를 포함하지 않습니다. 배포 명령은 앱을 재시작합니다. 리소스 그룹, App Service, 앱 등록은 회사 Azure 운영자가 준비해야 합니다.
+1. `.env`에 공개 SPA 식별자 두 개를 입력하고 저장소 루트에서 dry run으로 빌드 결과를 확인합니다.
 
-### 배포 후 확인
+   ```powershell
+   npm run deploy:swa -- -DryRun
+   ```
 
-1. `/api/health`가 HTTP 200과 `{ "status": "ok" }`를 반환하는지 확인합니다.
-2. Azure 기본 URL에서 회사 계정 로그인을 마치고 게임 화면으로 돌아오는지 확인합니다.
-3. 새 원정을 시작하고 새로고침해 같은 브라우저에서 진행이 복구되는지 확인합니다. 다른 브라우저/기기에는 진행이 공유되지 않습니다.
-4. 브라우저 저장소 차단 시 표시되는 경고를 확인하고, 콘솔 및 App Service 로그에 token이나 게임 진행 전체를 남기지 않습니다.
+2. Static Web Apps 리소스의 Overview에서 deployment token을 복사해 현재 PowerShell 세션에만 설정하거나, `npx swa login`으로 Azure에 인증합니다. 토큰을 명령행에 직접 넣거나 채팅·Git에 기록하지 마세요.
 
-## 후속 기능: Cosmos 진행도 랭킹
+   ```powershell
+   $env:SWA_CLI_DEPLOYMENT_TOKEN = Read-Host "Static Web Apps deployment token"
+   npm run deploy:swa
+   Remove-Item Env:SWA_CLI_DEPLOYMENT_TOKEN
+   ```
 
-Cosmos DB는 현재 앱의 로그인, 플레이, active run 저장에 사용하지 않습니다. 후속 랭킹 기능에서는 전투 승리 뒤 브라우저가 제출한 최고 완료 진행도를 별도 Entra 보호 API로 보내고, Cosmos에 직원별 최고 점수만 저장할 예정입니다. 이 랭킹은 사내 친목용이며 클라이언트 점수 조작 방지는 범위에 포함하지 않습니다. 랭킹 API, Cosmos container와 필요한 API permission은 해당 기능의 구현 및 Azure 자원 준비 때 별도로 안내합니다.
+   앱 등록 식별자는 `.env`에서 읽고 배포 토큰은 CLI 환경변수에서 읽습니다. 스크립트는 설정값을 화면에 출력하지 않습니다.
 
-공식 명령 참고: [Azure CLI `az webapp`](https://learn.microsoft.com/en-us/cli/azure/webapp), [App Service ZIP 배포](https://learn.microsoft.com/en-us/azure/app-service/deploy-zip), [Linux Node.js 설정](https://learn.microsoft.com/en-us/azure/app-service/configure-language-nodejs).
+3. 실행은 `apps/web/dist`와 `apps/leaderboard-api`를 production 환경으로 전송합니다. Vite frontend에 Cosmos key를 포함하지 않습니다.
+4. 배포가 끝나면 Static Web Apps의 API Configuration에 서버 설정 6개가 들어 있는지 확인합니다.
+
+SWA CLI는 Azure 로그인 세션이나 `SWA_CLI_DEPLOYMENT_TOKEN`으로 배포할 수 있습니다. 리소스에 접근할 권한이 없다면 Azure 관리자에게 Static Web Apps 배포 권한 또는 배포 token을 요청하세요.
+
+## 배포 후 확인
+
+1. 배포된 사이트 주소에서 Entra 로그인 및 게임 시작을 확인합니다.
+2. 메인 메뉴의 랭킹과 원정 경로의 왕관 버튼에서 상위 10명 모달이 열리는지 확인합니다.
+3. 로그인하지 않은 요청은 `GET /api/leaderboard`에서 401, 잘못된 완료 수는 POST에서 400, 서버 설정 누락은 503을 반환해야 합니다. 브라우저 개발자 도구에서 access token을 복사하거나 공유하지 마세요.
+4. 테스트 전용 원정에서 승리한 뒤에만 진행도 POST가 발생하고, Cosmos에 verified employee별 최고 기록이 저장되는지 확인합니다. 실제 랭킹에 불필요한 테스트 점수는 남기지 마세요.
+
+## 보안 및 운영
+
+- 랭킹 API 요청 본문에는 완료한 전투 수만 포함합니다. 사용자 ID/이름은 API가 검증한 Entra token claims에서 가져옵니다.
+- Cosmos key와 배포 token은 공개 frontend 설정과 구분된 서버/세션 비밀값입니다.
+- 랭킹은 친목용이며 브라우저가 보고한 진행 수를 서버가 게임 시뮬레이션으로 증명하지 않습니다.
+- 사용자 원정 전체 상태는 Cosmos에 저장하지 않습니다.
+
+공식 안내: [Static Web Apps 구성 및 Node API runtime](https://learn.microsoft.com/azure/static-web-apps/configuration), [SWA CLI 배포](https://learn.microsoft.com/azure/static-web-apps/static-web-apps-cli-deploy), [Static Web Apps API 앱 설정](https://learn.microsoft.com/azure/static-web-apps/application-settings).

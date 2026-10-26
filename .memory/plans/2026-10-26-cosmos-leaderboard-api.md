@@ -18,7 +18,7 @@ Add an Entra-protected, informal top-10 leaderboard to the existing game without
 
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | Implement the managed Functions API, Cosmos repository, game integration, and manual SWA deployment configuration | [P01](../phases/2026-10-26-cosmos-leaderboard-api/P01-swa-leaderboard/phase.md) |
+| P01 | `done` | Implement the managed Functions API, Cosmos repository, game integration, and manual SWA deployment configuration | [P01](../phases/2026-10-26-cosmos-leaderboard-api/P01-swa-leaderboard/phase.md) |
 
 ## Execution rules
 

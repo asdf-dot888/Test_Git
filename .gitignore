@@ -5,3 +5,6 @@ artifacts/
 .env
 .env.*
 !.env.example
+apps/leaderboard-api/local.settings.json
+.swa/
+swa-cli.config.json
