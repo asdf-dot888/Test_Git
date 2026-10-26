@@ -7,7 +7,7 @@
     "ENTRA_API_AUDIENCE": "",
     "COSMOS_ENDPOINT": "",
     "COSMOS_KEY": "",
-    "COSMOS_DATABASE": "card-roguelike",
+    "COSMOS_DATABASE": "maze-rescue",
     "COSMOS_CONTAINER": "leaderboard-progress"
   }
 }

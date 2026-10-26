@@ -24,7 +24,7 @@ export function loadLeaderboardConfig(
     entraApiAudience,
     cosmosEndpoint,
     cosmosKey,
-    cosmosDatabase: environment.COSMOS_DATABASE?.trim() || "card-roguelike",
+    cosmosDatabase: environment.COSMOS_DATABASE?.trim() || "maze-rescue",
     cosmosContainer: environment.COSMOS_CONTAINER?.trim() || "leaderboard-progress",
   };
 }

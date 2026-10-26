@@ -27,7 +27,7 @@ describe("loadLeaderboardConfig", () => {
       entraApiAudience: "audience-id",
       cosmosEndpoint: "https://account.documents.azure.com",
       cosmosKey: "secret-key",
-      cosmosDatabase: "card-roguelike",
+      cosmosDatabase: "maze-rescue",
       cosmosContainer: "leaderboard-progress",
     });
   });
@@ -44,7 +44,7 @@ describe("loadLeaderboardConfig", () => {
     const client = createCosmosClient({
       cosmosEndpoint: "https://account.documents.azure.com",
       cosmosKey: "private-server-key",
-      cosmosDatabase: "card-roguelike",
+      cosmosDatabase: "maze-rescue",
       cosmosContainer: "leaderboard-progress",
     }, {
       createClient: (options) => {

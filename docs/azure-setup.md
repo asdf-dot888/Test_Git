@@ -21,16 +21,16 @@ Azure 리소스와 Entra 앱 등록이 준비되어 있어야 합니다. 프로�
 1. **Expose an API**에서 Application ID URI를 `api://<SPA-CLIENT-ID>`로 설정합니다.
 2. Delegated scope `leaderboard.access`를 추가하고 사용자/관리자 동의 정책에 맞게 설정합니다.
 3. **API permissions > Add a permission > My APIs**에서 같은 앱의 `leaderboard.access` 범위를 SPA 앱에 추가합니다.
-4. **Authentication > Single-page application** 아래에 로컬 개발 origin과 배포 주소를 redirect URI로 등록합니다. 로컬 기본 주소는 `http://localhost:5173`입니다.
+4. **Authentication > Single-page application** 아래에 로컬 개발 origin과 배포 주소를 redirect URI로 등록합니다. `npm run dev`용 `http://localhost:5173`과 통합 API 테스트용 `http://localhost:4280`을 모두 추가합니다.
 5. 앱 등록의 Tenant ID와 Client ID를 빌드 환경의 `.env`에 `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID`로 지정합니다.
 
 초기 로그인은 `openid profile`만 사용합니다. API scope는 플레이어가 랭킹을 열거나 기록 재시도를 할 때 요청됩니다. API audience는 v2 access token에서 앱 등록의 Client ID이며, 요청 scope는 `api://<SPA-CLIENT-ID>/leaderboard.access`입니다. Microsoft Graph 권한은 필요하지 않습니다.
 
 ### Cosmos DB
 
-1. 기존 Cosmos DB for NoSQL 계정에서 `card-roguelike` 데이터베이스와 `leaderboard-progress` 컨테이너를 준비합니다.
-2. 파티션 키는 `/userId`로 설정합니다. 한 직원당 하나의 `best-progress` 기록만 보관합니다.
-3. 랭킹 정렬 쿼리를 위해 컨테이너 indexing policy에 복합 인덱스 `(completedBattles DESC, recordedAt ASC)`를 포함합니다.
+1. Cosmos DB for NoSQL 계정 `maze-rescue-ms-b7af62a9`(리소스 그룹 `grill-me-edu`)의 `maze-rescue` 데이터베이스에서 `leaderboard-progress` 컨테이너를 사용합니다.
+2. 컨테이너의 파티션 키는 `/userId`입니다. 한 직원당 하나의 `best-progress` 기록만 보관합니다.
+3. 랭킹 정렬 쿼리를 위해 컨테이너 indexing policy에 복합 인덱스 `(completedBattles DESC, recordedAt ASC)`를 포함합니다. 이 컨테이너는 데이터베이스의 기존 공유 처리량을 사용합니다. 컨테이너 전용 처리량을 새로 설정하지 마세요.
 4. 계정의 기본/읽기-쓰기 key를 API 설정으로 전달할 담당자를 정합니다. Static Web Apps Free 관리형 API는 managed identity를 지원하지 않으므로 서버 전용 Cosmos key를 사용합니다.
 
 Cosmos DB 사용량과 저장 용량은 요금이 발생할 수 있습니다. 무료 Static Web Apps가 Cosmos 비용까지 무료로 만들지는 않습니다.
@@ -45,7 +45,7 @@ Static Web App 리소스의 **Environment variables / Configuration**에서 Func
 | `ENTRA_API_AUDIENCE` | Entra 앱 등록 Client ID | 서버 설정 |
 | `COSMOS_ENDPOINT` | Cosmos DB account endpoint | 서버 설정 |
 | `COSMOS_KEY` | Cosmos 계정 key | 비밀값; 서버 설정에만 저장 |
-| `COSMOS_DATABASE` | `card-roguelike` | 서버 설정 |
+| `COSMOS_DATABASE` | `maze-rescue` | 서버 설정 |
 | `COSMOS_CONTAINER` | `leaderboard-progress` | 서버 설정 |
 
 변경 뒤 API를 재시작하거나 새 deployment를 적용하세요. `COSMOS_KEY`를 Vite `VITE_*` 환경 변수, `.env`, 명령행 인자, 브라우저 저장소, Git 파일에 넣지 마세요.
@@ -54,16 +54,15 @@ Static Web App 리소스의 **Environment variables / Configuration**에서 Func
 
 일반 브라우저 게임 개발에는 API 설정이 필요하지 않습니다. Functions API 통합 확인이 필요할 때만 다음을 준비합니다.
 
-1. Azure Functions Core Tools v4 및 Azurite를 설치·실행합니다.
+1. Azure Functions Core Tools v4를 설치합니다. Azurite는 프로젝트 개발 의존성으로 포함되어 있으므로 별도로 설치하지 않아도 됩니다.
 2. `apps/leaderboard-api/local.settings.example.json`을 `apps/leaderboard-api/local.settings.json`으로 복사하고 로컬용 Entra 및 Cosmos 값을 입력합니다. 파일은 `.gitignore` 대상입니다.
-3. 루트에서 API와 프런트엔드를 빌드하고 SWA 로컬 emulator를 시작합니다.
+3. 루트에서 통합 로컬 실행 명령을 사용합니다. 이 명령은 빌드한 뒤 Azurite와 SWA 로컬 emulator를 함께 시작합니다. Functions의 `AzureWebJobsStorage`에는 `UseDevelopmentStorage=true`를 사용하고, 랭킹 데이터는 Azurite가 아니라 실제 Cosmos 계정에 저장됩니다.
 
    ```powershell
-   npm run build
-   npx swa start apps/web/dist --api-location apps/leaderboard-api
+   npm.cmd run dev:swa
    ```
 
-4. 브라우저에서 `http://localhost:4280`을 엽니다. 로컬 함수 요청은 Cosmos 계정에 접근할 수 있어야 합니다. 실제 서비스 설정이 없다면 랭킹 호출은 설정 오류를 반환하지만 브라우저 게임은 계속 사용할 수 있습니다.
+4. 브라우저에서 `http://localhost:4280`을 엽니다. Entra 앱 등록의 SPA redirect URI에도 이 origin이 있어야 합니다. PowerShell에서 `npm.ps1` 실행이 막혀 있으면 `npm` 대신 `npm.cmd`를 사용합니다. `npm.cmd run dev`의 `http://localhost:5173`은 프런트엔드만 실행하며 `/api`를 연결하지 않습니다.
 
 ## 수동 빌드 및 배포
 
