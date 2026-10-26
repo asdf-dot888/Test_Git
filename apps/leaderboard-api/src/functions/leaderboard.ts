@@ -1,5 +1,5 @@
 import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
-import { EntraTokenError, createEntraTokenVerifier } from "../auth/entraBearer.js";
+import { EntraTokenError } from "../auth/entraBearer.js";
 import type { LeaderboardRepository, LeaderboardTokenVerifier } from "../leaderboard/types.js";
 import { errorResponse, jsonResponse, progressSubmissionSchema } from "../leaderboard/validation.js";
 
@@ -71,28 +71,19 @@ export function createLeaderboardHandlers(dependencies: LeaderboardHandlerDepend
   return { get, post };
 }
 
-const tenantId = process.env.ENTRA_TENANT_ID?.trim() ?? "";
-const audience = process.env.ENTRA_API_AUDIENCE?.trim() ?? "";
-const notConfiguredRepository: LeaderboardRepository = {
-  async getTopTen() { throw new Error("Leaderboard repository is not configured."); },
-  async recordBestProgress() { throw new Error("Leaderboard repository is not configured."); },
-};
-const handlers = createLeaderboardHandlers({
-  verifyToken: createEntraTokenVerifier({ tenantId, audience }),
-  repository: notConfiguredRepository,
-  isConfigured: () => Boolean(tenantId && audience),
-});
-
-app.http("leaderboardGet", {
-  methods: ["GET"],
-  authLevel: "anonymous",
-  route: "leaderboard",
-  handler: handlers.get,
-});
-
-app.http("leaderboardProgressPost", {
-  methods: ["POST"],
-  authLevel: "anonymous",
-  route: "leaderboard/progress",
-  handler: handlers.post,
-});
+export function registerLeaderboardFunctions(dependencies: LeaderboardHandlerDependencies) {
+  const handlers = createLeaderboardHandlers(dependencies);
+  app.http("leaderboardGet", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "leaderboard",
+    handler: handlers.get,
+  });
+  app.http("leaderboardProgressPost", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    route: "leaderboard/progress",
+    handler: handlers.post,
+  });
+  return handlers;
+}

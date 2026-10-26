@@ -9,6 +9,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.10.1",
     "@azure/functions": "^4.7.2",
     "jose": "^6.2.13",
     "zod": "^4.6.7"

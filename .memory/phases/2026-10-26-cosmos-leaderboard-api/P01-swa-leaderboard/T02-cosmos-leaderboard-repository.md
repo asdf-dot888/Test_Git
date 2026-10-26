@@ -1,6 +1,6 @@
 # Task: T02 Cosmos Leaderboard Repository
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -65,11 +65,11 @@ Implement the leaderboard repository on the existing Cosmos DB account using the
 
 ## Acceptance Criteria
 
-- [ ] Cosmos client uses a server-only key and is initialized lazily.
-- [ ] Storage is partitioned by Entra object ID and contains one `best-progress` item per employee.
-- [ ] Concurrent and repeated requests cannot lower a stored score; equal/lower submissions preserve the original timestamp.
-- [ ] Top ten ordering is deterministic and the query reads no more than ten response items.
-- [ ] Cosmos credentials never enter the frontend bundle, tests, logs, or error bodies.
+- [x] Cosmos client uses a server-only key and is initialized lazily.
+- [x] Storage is partitioned by Entra object ID and contains one `best-progress` item per employee.
+- [x] Concurrent and repeated requests cannot lower a stored score; equal/lower submissions preserve the original timestamp.
+- [x] Top ten ordering is deterministic and the query reads no more than ten response items.
+- [x] Cosmos credentials never enter the frontend bundle, tests, logs, or error bodies.
 
 ## Validation
 
@@ -93,6 +93,6 @@ Task: T02-cosmos-leaderboard-repository
 
 ## Progress
 
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed
+- commit: recorded in git history
