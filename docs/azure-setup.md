@@ -82,7 +82,7 @@ Static Web App 리소스의 **Environment variables / Configuration**에서 Func
 
    앱 등록 식별자는 `.env`에서 읽고 배포 토큰은 CLI 환경변수에서 읽습니다. 스크립트는 설정값을 화면에 출력하지 않습니다.
 
-3. 실행은 `apps/web/dist`와 `apps/leaderboard-api`를 production 환경으로 전송합니다. Vite frontend에 Cosmos key를 포함하지 않습니다.
+3. 스크립트는 컴파일된 API를 `.swa/leaderboard-api`에 staging하고 production dependencies를 설치한 뒤, 그 독립 패키지와 `apps/web/dist`를 production 환경으로 전송합니다. 로컬 `local.settings.json`은 staging하지 않으며 Vite frontend에 Cosmos key를 포함하지 않습니다.
 4. 배포가 끝나면 Static Web Apps의 API Configuration에 서버 설정 6개가 들어 있는지 확인합니다.
 
 SWA CLI는 Azure 로그인 세션이나 `SWA_CLI_DEPLOYMENT_TOKEN`으로 배포할 수 있습니다. 리소스에 접근할 권한이 없다면 Azure 관리자에게 Static Web Apps 배포 권한 또는 배포 token을 요청하세요.

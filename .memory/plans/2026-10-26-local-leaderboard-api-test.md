@@ -13,3 +13,7 @@ Let the user run the React game, Static Web Apps local emulator, Functions v4 le
 ## Status
 
 Complete. The local Entra-authenticated leaderboard GET and progress POST both returned HTTP 200 against `mango-stone/leaderboard-progress`.
+
+## Follow-up
+
+The subsequent Static Web Apps deployment exposed that local workspace execution did not prove the cloud API package was self-contained. See [Static Web Apps API Package Fix](./2026-10-26-swa-api-package-fix.md).
