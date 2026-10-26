@@ -9,7 +9,7 @@ Implement the leaderboard repository on the existing Cosmos DB account using the
 ## Decision Summary
 
 - Use `COSMOS_ENDPOINT`, `COSMOS_KEY`, `COSMOS_DATABASE`, and `COSMOS_CONTAINER` from the Functions process environment. Do not use `DefaultAzureCredential` or system-assigned managed identity for the SWA managed API.
-- Use database `card-roguelike`, container `leaderboard-progress`, partition key `/userId`, one document per employee with `id: "best-progress"`.
+- Use database `mango-stone`, container `leaderboard-progress`, partition key `/userId`, one document per employee with `id: "best-progress"`. The database uses 400 RU/s shared throughput.
 - Preserve the existing best record for equal/lower progress; only a strictly higher `completedBattles` replaces it and receives a new `recordedAt`.
 
 ## Implementation
@@ -38,7 +38,7 @@ Implement the leaderboard repository on the existing Cosmos DB account using the
     environment?: Record<string, string | undefined>,
   ): LeaderboardConfig;
   ```
-- Require non-empty `ENTRA_TENANT_ID`, `ENTRA_API_AUDIENCE`, `COSMOS_ENDPOINT`, and `COSMOS_KEY`. Default `COSMOS_DATABASE` to `card-roguelike` and `COSMOS_CONTAINER` to `leaderboard-progress`.
+- Require non-empty `ENTRA_TENANT_ID`, `ENTRA_API_AUDIENCE`, `COSMOS_ENDPOINT`, and `COSMOS_KEY`. Default `COSMOS_DATABASE` to `mango-stone` and `COSMOS_CONTAINER` to `leaderboard-progress`.
 - Build `new CosmosClient({ endpoint: cosmosEndpoint, key: cosmosKey })`. Do not log the key or include it in thrown error messages.
 - Instantiate the client/container lazily on first API invocation so missing configuration does not prevent the static site or existing browser-local play from loading. A misconfigured API returns the safe 503 behavior defined in T01.
 - Export injectable factories for tests; tests must never connect to the live account.

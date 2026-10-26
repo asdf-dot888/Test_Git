@@ -9,7 +9,7 @@ Add an Entra-protected, informal top-10 leaderboard to the existing game without
 - Existing Azure Static Web App: `board-card-roguelike-demo` in resource group `grill-me-edu`.
 - Existing Entra tenant ID: `69c1e470-4528-435a-a1ae-de98e0aac738`; existing SPA/API app registration client ID: `86862438-ff66-4df4-8302-802115dfed70`.
 - Add delegated scope `leaderboard.access` to that same app registration. The v2 API token audience is the API app's client ID; the scope requested by MSAL is `api://86862438-ff66-4df4-8302-802115dfed70/leaderboard.access`.
-- Use the existing Cosmos account in `grill-me-edu`, with a dedicated `card-roguelike` database and `leaderboard-progress` container partitioned by `/userId`.
+- Use Cosmos account `maze-rescue-ms-b7af62a9` in `grill-me-edu`, with database `mango-stone` at 400 RU/s shared throughput and `leaderboard-progress` partitioned by `/userId`.
 - Store the Cosmos account key as a server-side Static Web Apps API application setting. Never expose it through Vite `VITE_*` variables or browser code.
 - The API returns the top ten scores ordered by `completedBattles` descending, then `recordedAt` ascending. It derives employee ID and display name from validated Entra claims and never trusts those values in a request body.
 - The managed API avoids a separate API hosting charge; Cosmos DB usage and storage may still incur charges.

@@ -18,13 +18,22 @@ export function createLeaderboardHandlers(dependencies: LeaderboardHandlerDepend
     if (!isConfigured()) return { response: errorResponse("API_NOT_CONFIGURED", "The leaderboard API is not configured.", 503) };
     const authorization = request.headers.get("authorization");
     const match = authorization?.match(/^Bearer ([A-Za-z0-9._~-]+)$/i);
-    if (!match) return { response: errorResponse("UNAUTHENTICATED", "A valid company access token is required.", 401) };
+    if (!match) {
+      console.warn(`[leaderboard-auth] rejected: ${authorization ? "malformed_bearer_header" : "missing_bearer_header"}`);
+      return { response: errorResponse("UNAUTHENTICATED", "A valid company access token is required.", 401) };
+    }
     try {
       return { principal: await dependencies.verifyToken(match[1]!) };
     } catch (error) {
       if (error instanceof EntraTokenError) {
+        console.warn(`[leaderboard-auth] rejected: ${error.code}`);
         return { response: errorResponse(error.code, error.message, error.status) };
       }
+      const verifierCode = error && typeof error === "object" && "code" in error
+        && typeof error.code === "string" && /^[A-Z0-9_]{1,80}$/.test(error.code)
+        ? error.code
+        : "UNKNOWN_VERIFIER_ERROR";
+      console.warn(`[leaderboard-auth] token verification failed: ${verifierCode}`);
       return { response: errorResponse("UNAUTHENTICATED", "A valid company access token is required.", 401) };
     }
   };

@@ -9,7 +9,7 @@ Create an independently deployable Azure Functions Node.js v4 API project for th
 ## Decision Summary
 
 - Use Static Web Apps Free managed Functions, Node.js v4 programming model, Node API runtime `node:22`, and the same Entra app registration as the SPA.
-- API scope is `api://86862438-ff66-4df4-8302-802115dfed70/leaderboard.access`; v2 token `aud` is the API registration client ID. Validate issuer, audience, tenant, signature, expiry, `oid`, `name`, and `scp`.
+- API scope is `api://86862438-ff66-4df4-8302-802115dfed70/leaderboard.access`; validate tenant-matching v1/v2 token issuers with their version-specific signing keys, and accept only this API's client ID or Application ID URI as audience. Validate tenant, signature, expiry, `oid`, `name`, and `scp`.
 - API contracts: `GET /api/leaderboard` returns `{ items: LeaderboardRecord[] }`; `POST /api/leaderboard/progress` accepts only `{ completedBattles }` and returns `{ record, updated }`.
 
 ## Implementation
@@ -61,7 +61,7 @@ Create an independently deployable Azure Functions Node.js v4 API project for th
 - Set the route paths to `leaderboard` and `leaderboard/progress`; Azure Static Web Apps supplies the `/api` prefix. Do not add CORS headers: the managed API shares the Static Web App origin.
 - Keep handlers as exported functions accepting an injected token verifier, repository, and clock so unit tests can run without Azure or Cosmos. Production registration composes these dependencies from environment configuration.
 - Require `Authorization: Bearer <access-token>`. Missing or invalid token returns `401 { error: { code: "UNAUTHENTICATED", message: "A valid company access token is required." } }`.
-- Verify RS256 signature with tenant OpenID Connect JWKS at `https://login.microsoftonline.com/{ENTRA_TENANT_ID}/discovery/v2.0/keys`; require issuer `https://login.microsoftonline.com/{ENTRA_TENANT_ID}/v2.0` and audience `ENTRA_API_AUDIENCE` (the SPA/API registration client ID).
+- Verify RS256 signatures with the tenant OpenID Connect JWKS matching the token version (`/discovery/keys` for v1; `/discovery/v2.0/keys` for v2). Require the exact tenant issuer matching the token version and audience `ENTRA_API_AUDIENCE` or its corresponding `api://` Application ID URI.
 - Reject tokens whose `tid` differs from `ENTRA_TENANT_ID`, whose `oid` or `name` claim is missing/empty, or whose whitespace-delimited `scp` claim lacks `leaderboard.access`. Valid signature with wrong tenant, audience, or scope returns 403; malformed, expired, or bad-signature tokens return 401.
 - POST body must be a JSON object containing exactly one property, `completedBattles`, as integer 1 through 12. Reject extra fields, missing fields, decimals, strings, and out-of-range values with `400 INVALID_PROGRESS`.
 - Never accept `userId`, `displayName`, `recordedAt`, or a run/deck payload from the client. Obtain identity only from verified claims and time from the injected server clock.

@@ -24,7 +24,7 @@ export function loadLeaderboardConfig(
     entraApiAudience,
     cosmosEndpoint,
     cosmosKey,
-    cosmosDatabase: environment.COSMOS_DATABASE?.trim() || "maze-rescue",
+    cosmosDatabase: environment.COSMOS_DATABASE?.trim() || "mango-stone",
     cosmosContainer: environment.COSMOS_CONTAINER?.trim() || "leaderboard-progress",
   };
 }

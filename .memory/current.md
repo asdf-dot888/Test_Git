@@ -1,22 +1,22 @@
 # Current Context
 
 ## Active Plan
-[Cosmos Leaderboard API on Static Web Apps Free](./plans/2026-10-26-cosmos-leaderboard-api.md)
+[Local Leaderboard API Test](./plans/2026-10-26-local-leaderboard-api-test.md)
 
 ## Active Phase
-Complete — [P01 Static Web Apps Leaderboard](./phases/2026-10-26-cosmos-leaderboard-api/P01-swa-leaderboard/phase.md)
+Complete — [P01 Local Integration](./phases/2026-10-26-local-leaderboard-api-test/P01-local-integration/phase.md)
 
 ## Active Task
-None — all planned tasks are complete.
+None — all tasks in the active plan are complete.
 
 ## Status
-- The 2026-10-26 Cosmos leaderboard API plan is complete. Manual Static Web Apps deployment is prepared but has not been published.
-- The 2026-10-23 Entra/browser-local P01 is complete.
-- The former 2026-10-23 P02 Express/App Service/Managed Identity blueprint is superseded by `.memory/decisions/2026-10-23-cosmos-leaderboard-api.md`.
-- The active implementation plan uses Static Web Apps Free managed Functions and server-side Cosmos account-key configuration.
-- T01 Entra-protected Functions API contract and token validation are implemented and committed.
-- T02 Cosmos best-progress storage and top-ten query are implemented and committed.
-- T03 Entra token acquisition, victory submission, and leaderboard UI are implemented and committed.
+- T01 is done and committed as `c9a15f6` (`feat(dev): add integrated local leaderboard runner`).
+- T02 is done and committed as `8b03ba4` (`fix(leaderboard): align local Cosmos configuration`).
+- T03 is complete. The API now accepts the tenant's Entra v1/v2 issuer formats and the local runner overrides the root game API's Cosmos DB names for the leaderboard Functions host.
+- Authenticated leaderboard GET and progress POST both returned HTTP 200 from `mango-stone/leaderboard-progress`; 10 API test files (68 tests) and the full build passed.
+- Cosmos account `maze-rescue-ms-b7af62a9` now uses leaderboard database `mango-stone` with 400 RU/s shared throughput and `leaderboard-progress` partitioned by `/userId`; ignored local settings point to it.
+- The integrated local runner is available at `http://localhost:4280`; frontend-only Vite remains at `http://localhost:5173`.
+- In Windows PowerShell, use `npm.cmd`/`npx.cmd` because `npm.ps1` is blocked by the current execution policy.
 
 ## Next Step
-Create a new decision and plan for any additional work. To publish the current build, follow `docs/azure-setup.md` and run `npm run deploy:swa` after supplying deployment access and Static Web Apps API settings.
+Create a new decision and plan for the next requested feature or change.

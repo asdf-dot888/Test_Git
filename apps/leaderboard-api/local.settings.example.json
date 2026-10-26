@@ -7,7 +7,7 @@
     "ENTRA_API_AUDIENCE": "",
     "COSMOS_ENDPOINT": "",
     "COSMOS_KEY": "",
-    "COSMOS_DATABASE": "maze-rescue",
+    "COSMOS_DATABASE": "mango-stone",
     "COSMOS_CONTAINER": "leaderboard-progress"
   }
 }

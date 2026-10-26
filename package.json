@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @board-game/web",
-    "dev:swa": "npm run build && set \"PATH=%CD%\\node_modules\\node\\bin;%ProgramFiles%\\Microsoft\\Azure Functions Core Tools;%PATH%\" && concurrently --kill-others -n azurite,swa \"azurite --silent --location .azurite\" \"wait-on tcp:10000 tcp:10001 tcp:10002 && swa start apps/web/dist --api-location apps/leaderboard-api --host 127.0.0.1 --port 4280\"",
+    "dev:swa": "npm run build && set \"PATH=%CD%\\node_modules\\node\\bin;%ProgramFiles%\\Microsoft\\Azure Functions Core Tools;%PATH%\" && set \"COSMOS_DATABASE=mango-stone\" && set \"COSMOS_CONTAINER=leaderboard-progress\" && concurrently --kill-others -n azurite,swa \"azurite --silent --location .azurite\" \"wait-on tcp:10000 tcp:10001 tcp:10002 && swa start apps/web/dist --api-location apps/leaderboard-api --host 127.0.0.1 --port 4280\"",
     "deploy:swa": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-static-web-app.ps1",
     "package:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1",
     "build": "npm run build --workspace @board-game/game-core && npm run build --workspace @board-game/api && npm run build --workspace @board-game/leaderboard-api && npm run build --workspace @board-game/web",

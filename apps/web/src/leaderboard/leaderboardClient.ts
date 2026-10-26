@@ -57,11 +57,25 @@ async function requestJson(
     throw new LeaderboardApiError("랭킹 서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.");
   }
 
-  if (!response.ok) throw new LeaderboardApiError("랭킹 요청에 실패했습니다. 잠시 후 다시 시도하세요.", response.status);
+  if (!response.ok) {
+    const code = await readApiErrorCode(response);
+    const diagnostic = code ? `HTTP ${response.status}, ${code}` : `HTTP ${response.status}`;
+    throw new LeaderboardApiError(`랭킹 요청에 실패했습니다. (${diagnostic})`, response.status);
+  }
   try {
     return await response.json() as unknown;
   } catch {
     throw new LeaderboardApiError("랭킹 서버 응답을 읽을 수 없습니다.", response.status);
+  }
+}
+
+async function readApiErrorCode(response: Response): Promise<string | undefined> {
+  try {
+    const body: unknown = await response.clone().json();
+    if (!isObject(body) || !isObject(body.error) || typeof body.error.code !== "string") return undefined;
+    return /^[A-Z][A-Z0-9_]{0,63}$/.test(body.error.code) ? body.error.code : undefined;
+  } catch {
+    return undefined;
   }
 }
 
