@@ -1,8 +1,44 @@
-import { CARD_BY_ID, type EnemyCombatRecord, type PlayerSide, type RunState, type SpellEffect } from "@board-game/game-core";
+import { CARD_BY_ID, CARD_CATALOG, type CardDefinition, type EnemyCombatRecord, type PlayerSide, type RunState, type SpellEffect } from "@board-game/game-core";
 import type { GameAction } from "./gameActions.js";
 import type { SoundEffectKind } from "./audio.js";
 
-export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "mana" | "summon" | "draw" | "impact";
+export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "mana" | "summon" | "draw" | "cleave" | "theft" | "fusion" | "hero-power" | "impact";
+
+export interface CardCombatVisualProfile {
+  accent: string;
+  particles: "ember" | "rune" | "shadow" | "steel" | "bone";
+  motionClass: "slash" | "arcane" | "guard" | "summon";
+  durationMs: number;
+}
+
+function stableHash(value: string): number {
+  let hash = 2166136261;
+  for (const character of value) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
+  return hash >>> 0;
+}
+
+function cardProfile(card: CardDefinition): CardCombatVisualProfile {
+  const hash = stableHash(card.id);
+  const particles = card.race === "demon" || card.classId === "demonist"
+    ? "ember"
+    : card.classId === "assassin" ? "shadow"
+      : card.classId === "warrior" ? "steel"
+        : card.kind === "spell" ? "rune" : "bone";
+  const motionClass = card.kind === "spell"
+    ? "arcane"
+    : card.classId === "warrior" ? "guard"
+      : card.classId === "assassin" ? "slash" : "summon";
+  return {
+    accent: `hsl(${((hash / 0xffffffff) * 360).toFixed(4)} 82% 68%)`,
+    particles,
+    motionClass,
+    durationMs: 930 + (hash % 5) * 70,
+  };
+}
+
+export const CARD_COMBAT_VISUAL_PROFILES: Readonly<Record<string, CardCombatVisualProfile>> = Object.fromEntries(
+  CARD_CATALOG.map((card) => [card.id, cardProfile(card)]),
+);
 
 export type CombatAnchor =
   | { kind: "hand"; side: PlayerSide; slot: number; instanceId?: string }
@@ -17,14 +53,26 @@ export interface CombatEffectEvent {
   source: CombatAnchor;
   target: CombatAnchor;
   areaImpact?: boolean;
+  bossArea?: boolean;
+  deathAnchors?: CombatAnchor[];
 }
 
 function slotOf<T extends { instanceId: string }>(items: readonly T[], instanceId: string): number {
   return items.findIndex((item) => item.instanceId === instanceId);
 }
 
-function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false): void {
-  events.push({ id: firstEventId + events.length, assetCardId, effectKind, soundCues: [...new Set(soundCues)], source, target, ...(areaImpact ? { areaImpact: true } : {}) });
+function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false, deathAnchors?: CombatAnchor[], bossArea = false): void {
+  events.push({
+    id: firstEventId + events.length,
+    assetCardId,
+    effectKind,
+    soundCues: [...new Set(soundCues)],
+    source,
+    target,
+    ...(areaImpact ? { areaImpact: true } : {}),
+    ...(bossArea ? { bossArea: true } : {}),
+    ...(deathAnchors?.length ? { deathAnchors } : {}),
+  });
 }
 
 function playerSpellTarget(battle: NonNullable<RunState["battle"]>, effect: SpellEffect, targetId?: string): CombatAnchor {
@@ -89,18 +137,24 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
       for (const [index, logged] of record.effects.entries()) {
         const effect = definition?.spellEffects?.[index];
         if (!effect) continue;
-        const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave"
+        const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage"
           ? "damage"
+          : effect.kind === "cleave" ? "cleave"
           : effect.kind === "gainMana" ? "mana"
-            : effect.kind === "stealFromOpponentDeck" ? "draw" : effect.kind;
+            : effect.kind === "stealFromOpponentDeck" ? "theft" : effect.kind;
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
           cues.push("damage");
           if (logged.targetId && !next.playerBoard.some((minion) => minion.instanceId === logged.targetId)) cues.push("death");
         } else if (effect.kind === "heal") cues.push("heal");
+        const target = enemySpellTarget(previous, effect, logged.targetId ?? undefined);
+        const deathAnchors = previous.playerBoard
+          .filter((minion) => !next.playerBoard.some((current) => current.instanceId === minion.instanceId))
+          .map((minion) => ({ kind: "minion", side: "player", slot: slotOf(previous.playerBoard, minion.instanceId) }) as CombatAnchor);
+        if (deathAnchors.length && !cues.includes("death")) cues.push("death");
         pushEvent(events, firstEventId, record.cardId, kind,
           { kind: "hand", side: "enemy", slot: record.handSlot, instanceId: record.instanceId },
-          enemySpellTarget(previous, effect, logged.targetId ?? undefined), cues, effect.kind === "cleave");
+          target, cues, effect.kind === "cleave", deathAnchors);
       }
       continue;
     }
@@ -111,20 +165,26 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
         ? { kind: "minion", side: "player", slot: targetSlot }
         : { kind: "hero", side: "player" };
       const targetDied = targetSlot >= 0 && !next.playerBoard.some((minion) => minion.instanceId === record.targetId);
+      const attackerDied = !next.enemyBoard.some((minion) => minion.instanceId === record.attackerId);
       pushEvent(events, firstEventId, record.cardId, "attack",
         { kind: "minion", side: "enemy", slot: Math.max(0, attackerSlot) }, target,
-        targetDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
+        targetDied || attackerDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"], false,
+        targetDied ? [target] : undefined);
       if (targetSlot >= 0) {
         const attackerDied = !next.enemyBoard.some((minion) => minion.instanceId === record.attackerId);
         const defender = previous.playerBoard[targetSlot];
         pushEvent(events, firstEventId, defender?.cardId ?? null, "attack",
           { kind: "minion", side: "player", slot: targetSlot },
           { kind: "minion", side: "enemy", slot: Math.max(0, attackerSlot) },
-          attackerDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
+          attackerDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"], false,
+          attackerDied ? [{ kind: "minion", side: "enemy", slot: Math.max(0, attackerSlot) }] : undefined);
       }
       continue;
     }
-    pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" }, ["damage"], true);
+    const fallenMinions = previous.playerBoard
+      .filter((minion) => !next.playerBoard.some((current) => current.instanceId === minion.instanceId))
+      .map((minion) => ({ kind: "minion", side: "player", slot: slotOf(previous.playerBoard, minion.instanceId) }) as CombatAnchor);
+    pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" }, ["damage", ...(fallenMinions.length ? ["death" as const] : [])], true, fallenMinions, true);
   }
 }
 
@@ -177,17 +237,23 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
     if (card && definition?.kind === "spell") {
       for (const effect of definition.spellEffects ?? []) {
-        const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave"
+        const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage"
           ? "damage"
+          : effect.kind === "cleave" ? "cleave"
           : effect.kind === "gainMana" ? "mana"
-            : effect.kind === "stealFromOpponentDeck" ? "draw" : effect.kind;
+            : effect.kind === "stealFromOpponentDeck" ? "theft" : effect.kind;
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
           cues.push("damage");
           if (effect.kind === "damage" && effect.target === "enemyMinion" && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId)) cues.push("death");
           if (effect.kind === "randomDamage" && action.targetId !== "enemy-hero" && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId)) cues.push("death");
         } else if (effect.kind === "heal") cues.push("heal");
-        pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", side: "player", slot: handSlot, instanceId: card.instanceId }, playerSpellTarget(previous, effect, action.targetId), cues, effect.kind === "cleave");
+        const target = playerSpellTarget(previous, effect, action.targetId);
+        const deathAnchors = previous.enemyBoard
+          .filter((minion) => !next.enemyBoard.some((current) => current.instanceId === minion.instanceId))
+          .map((minion) => ({ kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, minion.instanceId) }) as CombatAnchor);
+        if (deathAnchors.length && !cues.includes("death")) cues.push("death");
+        pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", side: "player", slot: handSlot, instanceId: card.instanceId }, target, cues, effect.kind === "cleave", deathAnchors);
       }
     }
   } else if (action.type === "attack") {
@@ -197,7 +263,10 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
       const targetSlot = slotOf(previous.enemyBoard, action.targetId);
       const target: CombatAnchor = targetSlot >= 0 ? { kind: "minion", side: "enemy", slot: targetSlot } : { kind: "hero", side: "enemy" };
       const targetDied = targetSlot >= 0 && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId);
-      pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "player", slot: attackerSlot }, target, targetDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
+      const attackerDied = !next.playerBoard.some((minion) => minion.instanceId === action.attackerId);
+      pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "player", slot: attackerSlot }, target,
+        targetDied || attackerDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"], false,
+        [targetDied ? target : null, attackerDied ? { kind: "minion", side: "player", slot: attackerSlot } as CombatAnchor : null].filter((anchor): anchor is CombatAnchor => anchor !== null));
     }
   } else if (action.type === "all-attack") {
     let remainingHealth = previous.enemyHero.health - (nextRun.battle?.enemyHero.health ?? 0);
@@ -212,12 +281,12 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     const fused = next.playerBoard.find((minion) => !previous.playerBoard.some((old) => old.instanceId === minion.instanceId));
     const sourceSlot = slotOf(previous.playerBoard, action.firstMinionId);
     if (fused && sourceSlot >= 0) {
-      pushEvent(events, firstEventId, fused.cardId, "summon", { kind: "minion", side: "player", slot: sourceSlot }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, fused.instanceId) }, ["summon"]);
+      pushEvent(events, firstEventId, fused.cardId, "fusion", { kind: "minion", side: "player", slot: sourceSlot }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, fused.instanceId) }, ["summon"]);
     }
   } else if (action.type === "use-hero-power") {
     const playerClass = previousRun.playerClass;
     if (playerClass === "warrior") {
-      pushEvent(events, firstEventId, null, "buff", { kind: "hero", side: "player" }, { kind: "hero", side: "player" }, ["spell"]);
+      pushEvent(events, firstEventId, null, "hero-power", { kind: "hero", side: "player" }, { kind: "hero", side: "player" }, ["spell"]);
     } else if (playerClass === "assassin") {
       const targetId = action.targetId;
       const targetSlot = targetId && targetId !== "enemy-hero" ? slotOf(previous.enemyBoard, targetId) : -1;
@@ -225,10 +294,10 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
         ? { kind: "hero", side: "enemy" }
         : { kind: "minion", side: "enemy", slot: targetSlot };
       const targetDied = targetSlot >= 0 && !next.enemyBoard.some((minion) => minion.instanceId === targetId);
-      pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "player" }, target, targetDied ? ["spell", "damage", "death"] : ["spell", "damage"]);
+      pushEvent(events, firstEventId, null, "hero-power", { kind: "hero", side: "player" }, target, targetDied ? ["spell", "damage", "death"] : ["spell", "damage"], false, targetDied ? [target] : undefined);
     } else if (playerClass === "demonist") {
       const summoned = next.playerBoard.find((minion) => !previous.playerBoard.some((old) => old.instanceId === minion.instanceId));
-      if (summoned) pushEvent(events, firstEventId, summoned.cardId, "summon", { kind: "hero", side: "player" }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, summoned.instanceId) }, ["summon"]);
+      if (summoned) pushEvent(events, firstEventId, summoned.cardId, "hero-power", { kind: "hero", side: "player" }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, summoned.instanceId) }, ["summon"]);
     }
   } else if (action.type === "end-turn" && nextRun.battle) {
     if (next.playerHero.health < previous.playerHero.health) {

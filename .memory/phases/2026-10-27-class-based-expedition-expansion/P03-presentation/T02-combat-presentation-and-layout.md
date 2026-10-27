@@ -1,6 +1,6 @@
 # Task: T02 Combat Presentation and Layout
 
-## Status: pending
+## Status: done
 
 ## Goal
 Make every card's combat effect visually distinct, add bloody minion-death and dangerous boss-AOE effects, and use nearly the full viewport width.
@@ -60,6 +60,6 @@ Task: T02-combat-presentation-and-layout
 - Expand board width
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed
+- commit: feat(web): expand combat effects and board layout

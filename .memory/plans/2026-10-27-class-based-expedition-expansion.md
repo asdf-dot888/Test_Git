@@ -8,7 +8,7 @@ Add three selectable classes, class powers and decks, new card interactions and 
 | :--- | :--- | :--- | :--- |
 | P01 | `done` | Add class, phase encounter, hero-power, spell, and fusion rules to game-core. | [P01](../phases/2026-10-27-class-based-expedition-expansion/P01-game-core/phase.md) |
 | P02 | `done` | Add class selection, power UI, reward/deck flow, mouse interactions, and enemy intent preview. | [P02](../phases/2026-10-27-class-based-expedition-expansion/P02-game-ui/phase.md) |
-| P03 | `in_progress` | Apply phase art and distinct combat/death effects, then widen the board layout. | [P03](../phases/2026-10-27-class-based-expedition-expansion/P03-presentation/phase.md) |
+| P03 | `done` | Apply phase art and distinct combat/death effects, then widen the board layout. | [P03](../phases/2026-10-27-class-based-expedition-expansion/P03-presentation/phase.md) |
 
 ## Dependencies
 - P02 uses the game-core types and APIs from P01.

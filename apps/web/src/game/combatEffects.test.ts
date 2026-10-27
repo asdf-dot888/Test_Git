@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createRun, type RunState } from "@board-game/game-core";
-import { collectCombatEffectEvents, collectEnemyActionEffects } from "./combatEffects.js";
+import { CARD_CATALOG, createRun, type RunState } from "@board-game/game-core";
+import { CARD_COMBAT_VISUAL_PROFILES, collectCombatEffectEvents, collectEnemyActionEffects } from "./combatEffects.js";
 
 function withBattle(run: RunState, update: (run: RunState) => void): RunState {
   const next = structuredClone(run);
@@ -9,6 +9,17 @@ function withBattle(run: RunState, update: (run: RunState) => void): RunState {
 }
 
 describe("collectCombatEffectEvents", () => {
+  it("assigns a stable distinct visual profile to every catalog card", () => {
+    expect(Object.keys(CARD_COMBAT_VISUAL_PROFILES).sort()).toEqual(CARD_CATALOG.map((card) => card.id).sort());
+    expect(new Set(Object.values(CARD_COMBAT_VISUAL_PROFILES).map((profile) => profile.accent)).size).toBe(CARD_CATALOG.length);
+    for (const profile of Object.values(CARD_COMBAT_VISUAL_PROFILES)) {
+      expect(profile.particles).toMatch(/^(ember|rune|shadow|steel|bone)$/);
+      expect(profile.motionClass).toMatch(/^(slash|arcane|guard|summon)$/);
+      expect(profile.durationMs).toBeGreaterThanOrEqual(930);
+      expect(profile.durationMs).toBeLessThan(1280);
+    }
+  });
+
   it("renders both sides of reciprocal minion combat as separate impacts", () => {
     const run = createRun(39);
     const before = withBattle(run, (state) => {
@@ -34,6 +45,7 @@ describe("collectCombatEffectEvents", () => {
       ["minion-attack", "damage", "death"],
       ["minion-attack", "damage", "death"],
     ]);
+    expect(lethalEvents.map((event) => event.deathAnchors?.length ?? 0)).toEqual([1, 1]);
   });
 
   it("plays a summon cue for played minions and their battlecry summons", () => {
@@ -178,7 +190,7 @@ describe("collectCombatEffectEvents", () => {
     expect(events.map((event) => event.effectKind)).toEqual(["summon", "damage", "impact", "attack", "attack"]);
     expect(events[0]).toMatchObject({ assetCardId: "cinder-imp", source: { kind: "hand", side: "enemy", slot: 1, instanceId: "secret-card" }, target: { kind: "minion", side: "enemy", slot: 0 } });
     expect(events[1]).toMatchObject({ assetCardId: "soul-lance", source: { kind: "hand", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 }, soundCues: ["spell", "damage"] });
-    expect(events[2]).toMatchObject({ areaImpact: true, effectKind: "impact", soundCues: ["damage"] });
+    expect(events[2]).toMatchObject({ areaImpact: true, bossArea: true, effectKind: "impact", soundCues: ["damage"] });
     expect(events[3]).toMatchObject({ assetCardId: "bone-rat", source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 } });
     expect(events[4]).toMatchObject({ assetCardId: "crypt-guard", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } });
   });
@@ -188,4 +200,24 @@ describe("collectCombatEffectEvents", () => {
     const before = withBattle(run, (state) => { state.battle!.enemyId = "boss-grave-king"; });
     const after = withBattle(before, (state) => { state.battle!.turnNumber += 1; });
     expect(collectCombatEffectEvents(before, after, { type: "end-turn" }, 1)).toEqual([]);
-  });});
+  });
+
+  it("marks every player minion killed by the boss area strike for the death effect", () => {
+    const run = createRun(46);
+    const before = withBattle(run, (state) => {
+      state.battle!.enemyId = "boss-grave-king";
+      state.battle!.playerBoard = [0, 1].map((index) => ({ instanceId: `fragile-${index}`, cardId: "bone-rat", owner: "player" as const, attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }));
+    });
+    const after = withBattle(before, (state) => {
+      state.battle!.playerBoard = [];
+      state.battle!.enemyTurnEvents = [{ type: "boss-area", damage: 1, targetMinionIds: ["fragile-0", "fragile-1"], targetHeroId: "player" }];
+    });
+
+    expect(collectCombatEffectEvents(before, after, { type: "end-turn" }, 100)[0]).toMatchObject({
+      bossArea: true,
+      areaImpact: true,
+      soundCues: ["damage", "death"],
+      deathAnchors: [{ kind: "minion", side: "player", slot: 0 }, { kind: "minion", side: "player", slot: 1 }],
+    });
+  });
+});

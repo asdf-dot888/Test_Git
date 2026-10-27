@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import type { CombatAnchor, CombatEffectEvent } from "../game/combatEffects.js";
+import { CARD_COMBAT_VISUAL_PROFILES, type CombatAnchor, type CombatEffectEvent } from "../game/combatEffects.js";
 
 interface CombatEffectLayerProps {
   events: CombatEffectEvent[];
@@ -58,6 +58,7 @@ function anchorPoint(anchor: CombatAnchor, event: CombatEffectEvent, isSource: b
 }
 
 function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffectEvent; index: number; paused: boolean; onComplete(id: number): void }) {
+  const profile = event.assetCardId ? CARD_COMBAT_VISUAL_PROFILES[event.assetCardId] : undefined;
   const [geometry, setGeometry] = useState<EffectGeometry | null>(null);
   const completeRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
@@ -88,7 +89,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   useEffect(() => {
     if (completeRef.current) return;
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    if (remainingMs.current === null) remainingMs.current = (reducedMotion ? 220 : 1_400) + Math.min(index, 8) * 120;
+    if (remainingMs.current === null) remainingMs.current = (reducedMotion ? 220 : Math.max(1_400, 1_010 + (profile?.durationMs ?? 390))) + Math.min(index, 8) * 120;
     if (paused) {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -115,7 +116,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         deadline.current = null;
       }
     };
-  }, [event.id, index, paused]);
+  }, [event.id, index, paused, profile?.durationMs]);
 
   useEffect(() => {
     if (!event.areaImpact || (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)) return;
@@ -160,6 +161,18 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     };
   }, [event.areaImpact, event.id, paused]);
 
+  useEffect(() => {
+    if (!event.bossArea) return;
+    const board = document.querySelector<HTMLElement>(".battle-board");
+    if (!board) return;
+    board.classList.add("is-boss-area-warning");
+    board.style.setProperty("--boss-warning-play-state", paused ? "paused" : "running");
+    return () => {
+      board.classList.remove("is-boss-area-warning");
+      board.style.removeProperty("--boss-warning-play-state");
+    };
+  }, [event.bossArea, event.id, paused]);
+
   if (!geometry) return null;
   const delay = Math.min(index, 8) * 120;
   const style = {
@@ -179,6 +192,11 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   const isCardSource = event.source.kind === "hand" || event.source.kind === "minion";
   const cardArt = isCardSource && event.assetCardId ? `/art/cards/${event.assetCardId}.png` : null;
   const isMinionAttack = event.effectKind === "attack" && event.source.kind === "minion" && cardArt !== null;
+  const profileStyle = {
+    "--card-accent": profile?.accent ?? "#f4c66e",
+    "--profile-duration": `${profile?.durationMs ?? 930}ms`,
+  } as CSSProperties;
+  const visualClass = profile ? ` motion-${profile.motionClass} profile-${event.assetCardId}` : "";
   const finish = () => {
     if (completeRef.current) return;
     completeRef.current = true;
@@ -187,26 +205,26 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
 
   return <>
     <span
-      className={`combat-effect-impact effect-${event.effectKind}${event.areaImpact ? " is-area-impact" : ""}`}
-      style={{ ...impactStyle, animationPlayState: paused ? "paused" : "running" }}
+      className={`combat-effect-impact effect-${event.effectKind}${event.areaImpact ? " is-area-impact" : ""}${event.bossArea ? " is-boss-area" : ""}${visualClass}`}
+      style={{ ...profileStyle, ...impactStyle, animationPlayState: paused ? "paused" : "running" }}
       onAnimationEnd={finish}
       aria-hidden="true"
     />
     {cardArt ? <>
       <span
-        className={`combat-effect-sprite combat-effect-card-frame${isMinionAttack ? " is-minion-attack" : ""}`}
+        className={`combat-effect-sprite combat-effect-card-frame effect-${event.effectKind}${isMinionAttack ? " is-minion-attack" : ""}${visualClass}`}
         data-effect-card={event.assetCardId}
         data-effect-kind={event.effectKind}
-        style={style}
+        style={{ ...profileStyle, ...style }}
         aria-hidden="true"
-      ><img src={cardArt} alt="" /></span>
+      ><img src={cardArt} alt="" />{profile && <span className="combat-effect-particles" data-particles={profile.particles} />}</span>
       {isMinionAttack && <img
         className="combat-effect-sprite combat-effect-minion-portrait"
         data-effect-card={event.assetCardId}
         data-effect-kind={event.effectKind}
         src={cardArt}
         alt=""
-        style={{ ...style, left: geometry.source.x + 34, top: geometry.source.y + 42 }}
+        style={{ ...profileStyle, ...style, left: geometry.source.x + 34, top: geometry.source.y + 42 }}
       />}
     </> : <img
       className="combat-effect-sprite combat-effect-impact-art"
@@ -214,8 +232,17 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
       data-effect-kind={event.effectKind}
       src="/art/effects/impact.png"
       alt=""
-      style={style}
+      style={{ ...profileStyle, ...style }}
     />}
+    {event.deathAnchors?.map((anchor, deathIndex) => {
+      const point = anchorPoint(anchor, event, false);
+      return <span
+        key={`${event.id}-death-${deathIndex}`}
+        className="combat-effect-death"
+        style={{ left: point.x, top: point.y, animationPlayState: paused ? "paused" : "running" }}
+        aria-hidden="true"
+      ><i /><i /><i /><i /><b /></span>;
+    })}
   </>;
 }
 

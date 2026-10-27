@@ -27,7 +27,7 @@ describe("CombatEffectLayer", () => {
     expect(impact?.style.animationDelay).toBe("930ms");
     await act(async () => { await vi.advanceTimersByTimeAsync(950); });
     expect(onComplete).not.toHaveBeenCalled();
-    await act(async () => { await vi.advanceTimersByTimeAsync(450); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_400); });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -88,6 +88,17 @@ describe("CombatEffectLayer", () => {
     expect(document.body.querySelector(".combat-effect-impact")?.classList.contains("is-area-impact")).toBe(true);
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(false);
+  });
+
+  it("shows the boss warning edge and death tear at the fallen unit anchor", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    render(<div className="battle-board"><div data-effect-anchor="minion:enemy:0" /><CombatEffectLayer events={[{ id: 23, assetCardId: "bone-rat", effectKind: "attack", bossArea: true, areaImpact: true, deathAnchors: [{ kind: "minion", side: "enemy", slot: 0 }], soundCues: ["damage", "death"], source: { kind: "minion", side: "enemy", slot: 1 }, target: { kind: "minion", side: "player", slot: 0 } }]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.querySelector(".battle-board")?.classList.contains("is-boss-area-warning")).toBe(true);
+    expect(document.body.querySelector(".combat-effect-death")?.querySelectorAll("i")).toHaveLength(4);
+    expect(document.body.querySelector(".combat-effect-card-frame")?.getAttribute("style")).toContain("--card-accent");
   });
 
   it("skips the board shake for reduced motion while still completing the area event", async () => {
