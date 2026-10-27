@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { createRun } from "@board-game/game-core";
+import { BOSSES, CARD_CATALOG, NORMAL_ENEMIES_BY_PHASE, createRun } from "@board-game/game-core";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExpeditionRoadmap } from "./ExpeditionRoadmap.js";
 
@@ -16,6 +18,19 @@ function makeRun(statuses: Array<"pending" | "active" | "complete"> = ["active",
 }
 
 describe("ExpeditionRoadmap", () => {
+  it("has a public image for every phase encounter and class card", () => {
+    const enemyArtDirectory = resolve(process.cwd(), "public/art/enemies");
+    const cardArtDirectory = resolve(process.cwd(), "public/art/cards");
+    const phaseEnemies = Object.values(NORMAL_ENEMIES_BY_PHASE).flat();
+
+    for (const enemy of [...phaseEnemies, ...BOSSES]) {
+      expect(existsSync(resolve(enemyArtDirectory, `${enemy.artKey}.png`)), enemy.artKey).toBe(true);
+    }
+    for (const card of CARD_CATALOG.filter((entry) => entry.classId)) {
+      expect(existsSync(resolve(cardArtDirectory, `${card.artKey}.png`)), card.artKey).toBe(true);
+    }
+  });
+
   it("shows only four encounters from the target phase with matching enemy portraits", () => {
     const run = makeRun();
     const { container } = render(<ExpeditionRoadmap run={run} onSelectEncounter={vi.fn()} onMainMenu={vi.fn()} onLeaderboard={vi.fn()} />);

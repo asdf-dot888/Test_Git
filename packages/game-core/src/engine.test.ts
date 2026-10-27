@@ -80,6 +80,18 @@ function winCurrentBattle(run: RunState): RunState {
 }
 
 describe("card and enemy catalog", () => {
+  it("provides unique themed art keys for every phase encounter", () => {
+    for (const [phase, enemies] of Object.entries(NORMAL_ENEMIES_BY_PHASE)) {
+      expect(enemies).toHaveLength(3);
+      expect(new Set(enemies.map((enemy) => enemy.artKey)).size).toBe(3);
+      expect(enemies.every((enemy) => enemy.artKey.length > 0)).toBe(true);
+      const boss = BOSSES[Number(phase) - 1];
+      expect(boss?.kind).toBe("boss");
+      expect(boss?.artKey.length).toBeGreaterThan(0);
+      expect(enemies.some((enemy) => enemy.artKey === boss?.artKey)).toBe(false);
+    }
+  });
+
   it("contains unique base, class, and token cards with complete effect descriptions", () => {
     expect(CARD_CATALOG).toHaveLength(76);
     expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(76);
