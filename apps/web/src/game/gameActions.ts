@@ -116,6 +116,7 @@ function ruleMessage(error: GameRuleError): string {
     INSUFFICIENT_MANA: "마나가 부족합니다.",
     INVALID_TARGET: "현재 선택할 수 없는 대상입니다.",
     MAX_BOARD: "전장에는 하수인을 5명까지만 둘 수 있습니다.",
+    MAX_HAND: "손패가 가득 차 카드를 가져올 수 없습니다.",
     MAX_COPIES: "같은 카드는 덱에 2장까지만 넣을 수 있습니다.",
     WRONG_TURN: "지금은 플레이어의 행동 차례가 아닙니다.",
     TERMINAL_RUN: "진행 중인 전투가 없습니다.",

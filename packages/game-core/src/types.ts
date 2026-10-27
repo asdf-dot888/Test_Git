@@ -9,7 +9,10 @@ export type SpellEffect =
   | { kind: "summon"; cardId: string; count: number }
   | { kind: "buff"; attack: number; health: number; target: "playerMinion" }
   | { kind: "draw"; count: number }
-  | { kind: "gainMana"; amount: number };
+  | { kind: "gainMana"; amount: number }
+  | { kind: "randomDamage"; min: 0; max: 5 }
+  | { kind: "cleave"; amount: number; target: "enemyMinion" }
+  | { kind: "stealFromOpponentDeck"; count: 1 };
 
 export type MinionEffect =
   | { kind: "battlecrySummon"; cardId: string; count: number }
@@ -99,7 +102,7 @@ export interface EnemyChargeState {
 
 export type EnemyCombatRecord =
   | { type: "play-minion"; cardId: string; instanceId: string; handSlot: number; summonedIds: string[] }
-  | { type: "cast-spell"; cardId: string; instanceId: string; handSlot: number; effects: Array<{ kind: "damage" | "heal" | "summon" | "buff" | "draw" | "gainMana"; targetId: string | null }> }
+  | { type: "cast-spell"; cardId: string; instanceId: string; handSlot: number; effects: Array<{ kind: SpellEffect["kind"]; targetId: string | null; amount?: number; transferredCardInstanceId?: string }> }
   | { type: "attack"; cardId: string; attackerId: string; targetId: string }
   | { type: "boss-area"; damage: 1; targetMinionIds: string[]; targetHeroId: "player" };
 

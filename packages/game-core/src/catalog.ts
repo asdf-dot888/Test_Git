@@ -52,6 +52,9 @@ function describeSpellEffects(effects: readonly SpellEffect[]): string {
     if (effect.kind === "summon") {
       return `${summonedCardName(effect.cardId)} ${effect.count}마리를 소환합니다.`;
     }
+    if (effect.kind === "randomDamage") return `선택한 적 하수인 또는 적 영웅에게 0~5의 무작위 피해를 줍니다.`;
+    if (effect.kind === "cleave") return `선택한 적 하수인에게 ${effect.amount}의 피해를 주고 양옆 하수인에게 ${Math.max(1, Math.floor(effect.amount / 2))}의 피해를 줍니다.`;
+    if (effect.kind === "stealFromOpponentDeck") return `상대 덱에서 무작위 카드 1장을 가져와 손패에 추가합니다.`;
     if (effect.kind === "gainMana") return `마나 ${effect.amount}을 얻습니다.`;
     if (effect.kind === "buff") {
       return `아군 하수인에게 ${describeStatChanges(effect.attack, effect.health)}${statChangesParticle(effect.attack, effect.health)} 부여합니다.`;
@@ -131,6 +134,9 @@ const BASE_CARD_CATALOG: readonly CardDefinition[] = [
   spell("life-thread", "생명의 실", 4, [{ kind: "heal", amount: 5, target: "playerMinion" }]),
   spell("soul-storm", "영혼 폭풍", 6, [{ kind: "damage", amount: 4, target: "enemyHero" }, { kind: "draw", count: 1 }], "boss"),
   spell("eclipse", "일식", 8, [{ kind: "damage", amount: 8, target: "enemyHero" }], "boss"),
+  spell("fate-shard", "운명의 파편", 2, [{ kind: "randomDamage", min: 0, max: 5 }]),
+  spell("reaper-cleave", "수확자의 칼날", 4, [{ kind: "cleave", amount: 4, target: "enemyMinion" }]),
+  spell("stolen-fate", "빼앗은 운명", 3, [{ kind: "stealFromOpponentDeck", count: 1 }]),
 ];
 
 function forClass(card: CardDefinition, classId: PlayerClass, race?: "demon"): CardDefinition {

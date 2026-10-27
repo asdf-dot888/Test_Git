@@ -77,10 +77,10 @@ function winCurrentBattle(run: RunState): RunState {
 
 describe("card and enemy catalog", () => {
   it("contains unique base, class, and token cards with complete effect descriptions", () => {
-    expect(CARD_CATALOG).toHaveLength(64);
-    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(64);
+    expect(CARD_CATALOG).toHaveLength(67);
+    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(67);
     expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(44);
-    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(20);
+    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(23);
     for (const card of CARD_CATALOG) {
       expect(card.cost).toBeGreaterThanOrEqual(0);
       expect(card.cost).toBeLessThanOrEqual(10);
@@ -128,6 +128,9 @@ describe("card and enemy catalog", () => {
       if (expectedDescriptions[card.id]) expect(card.description).toBe(expectedDescriptions[card.id]);
       expect(card.description).not.toMatch(/전투 능력을 가진 하수인|필드에 소환해 공격하는 하수인|마나를 소모해 효과를 발휘하는 주문/);
     }
+    expect(CARD_BY_ID.get("fate-shard")).toMatchObject({ rewardTier: "normal", description: "선택한 적 하수인 또는 적 영웅에게 0~5의 무작위 피해를 줍니다." });
+    expect(CARD_BY_ID.get("reaper-cleave")).toMatchObject({ rewardTier: "normal", description: "선택한 적 하수인에게 4의 피해를 주고 양옆 하수인에게 2의 피해를 줍니다." });
+    expect(CARD_BY_ID.get("stolen-fate")).toMatchObject({ rewardTier: "normal", description: "상대 덱에서 무작위 카드 1장을 가져와 손패에 추가합니다." });
   });
 
   it("has a 30-card, 20-minion/10-spell starter deck with two copies per ID", () => {
@@ -395,6 +398,107 @@ describe("class hero powers and battle resources", () => {
     const hydrated = hydrateRunForCurrentBattle(oldRun);
     expect(hydrated.battle).toMatchObject({ playerArmor: 0, soulShards: 0, heroPowerUsed: false });
     expect(oldBattle).not.toEqual(hydrated.battle);
+  });
+});
+
+describe("random, cleave, and deck-theft spells", () => {
+  it("rolls deterministic random damage from zero through five and accepts hero targeting through a board", () => {
+    const dealt = new Set<number>();
+    let zeroRun: RunState | undefined;
+    for (let seed = 1; seed <= 120; seed += 1) {
+      const run = createRun(seed, "warrior");
+      const battle = activeBattle(run);
+      battle.enemyHero.health = 30;
+      battle.enemyBoard.push({ instanceId: `random-target-${seed}`, cardId: "ash-wolf", owner: "enemy", attack: 1, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false });
+      battle.hand = [instance("random-spell", "fate-shard")];
+      battle.rngState = seed;
+      const cast = castSpell(run, "random-spell", "enemy-hero");
+      const amount = 30 - cast.battle!.enemyHero.health;
+      dealt.add(amount);
+      expect(cast.battle?.enemyBoard).toHaveLength(1);
+      expect(cast.battle?.playerMana.current).toBe(3);
+      expect(cast.battle?.discardPile.some(({ instanceId }) => instanceId === "random-spell")).toBe(true);
+      if (amount === 0) zeroRun = cast;
+    }
+    expect([...dealt].sort()).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(zeroRun?.battle?.playerMana.current).toBe(3);
+    expect(zeroRun?.battle?.discardPile.some(({ instanceId }) => instanceId === "random-spell")).toBe(true);
+
+    const repeatA = createRun(1251, "warrior");
+    const repeatB = createRun(1251, "warrior");
+    for (const repeat of [repeatA, repeatB]) {
+      activeBattle(repeat).hand = [instance("random-spell", "fate-shard")];
+      activeBattle(repeat).rngState = 250;
+    }
+    expect(castSpell(repeatA, "random-spell", "enemy-hero")).toEqual(castSpell(repeatB, "random-spell", "enemy-hero"));
+  });
+
+  it("cleaves edge and center targets, removing simultaneous deaths before resolving death effects", () => {
+    const edge = createRun(1260, "warrior");
+    const edgeBattle = activeBattle(edge);
+    edgeBattle.hand = [instance("cleave-edge", "reaper-cleave")];
+    edgeBattle.enemyBoard = [
+      { instanceId: "edge-center", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
+      { instanceId: "edge-right", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false },
+      { instanceId: "edge-far", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
+    ];
+    const edgeResult = castSpell(edge, "cleave-edge", "edge-center");
+    expect(edgeResult.battle?.enemyBoard.map(({ instanceId }) => instanceId)).toEqual(["edge-far"]);
+
+    const center = createRun(1261, "warrior");
+    const centerBattle = activeBattle(center);
+    centerBattle.hand = [instance("cleave-center", "reaper-cleave")];
+    centerBattle.enemyBoard = [
+      { instanceId: "left-death", cardId: "thorn-brute", owner: "enemy", attack: 1, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false },
+      { instanceId: "center-death", cardId: "plague-bearer", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
+      { instanceId: "right-death", cardId: "frost-wraith", owner: "enemy", attack: 1, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false },
+    ];
+    const centerResult = castSpell(center, "cleave-center", "center-death");
+    expect(centerResult.battle?.enemyBoard.map(({ cardId }) => cardId).sort()).toEqual(["bone-rat", "bone-rat", "bone-rat", "cinder-imp"].sort());
+    expect(centerResult.battle?.enemyDiscardPile.map(({ instanceId }) => instanceId)).toEqual(["left-death", "center-death", "right-death"]);
+  });
+
+  it("moves one exact card from the opposing draw pile and safely handles empty piles and full hands", () => {
+    const run = createRun(1270, "warrior");
+    const battle = activeBattle(run);
+    const stolen = [instance("opp-draw-1", "eclipse"), instance("opp-draw-2", "shadow-bolt"), instance("opp-draw-3", "mana-spring")];
+    battle.enemyDrawPile = structuredClone(stolen);
+    battle.rngState = 9876;
+    battle.hand = [instance("theft-spell", "stolen-fate")];
+    const result = castSpell(run, "theft-spell");
+    const received = result.battle!.hand.find(({ instanceId }) => stolen.some((card) => card.instanceId === instanceId));
+    expect(received).toBeDefined();
+    expect(result.battle?.enemyDrawPile).toHaveLength(2);
+    expect(result.battle?.enemyDrawPile).not.toContainEqual(received);
+    expect(result.battle?.playerMana.current).toBe(2);
+
+    const empty = createRun(1271, "warrior");
+    activeBattle(empty).hand = [instance("empty-theft", "stolen-fate")];
+    activeBattle(empty).enemyDrawPile = [];
+    const emptyResult = castSpell(empty, "empty-theft");
+    expect(emptyResult.battle?.hand).toHaveLength(0);
+    expect(emptyResult.battle?.discardPile).toContainEqual(instance("empty-theft", "stolen-fate"));
+
+    const full = createRun(1272, "warrior");
+    activeBattle(full).hand = [instance("full-theft", "stolen-fate"), ...Array.from({ length: 9 }, (_, index) => instance(`full-${index}`, "ash-wolf"))];
+    activeBattle(full).enemyDrawPile = structuredClone(stolen);
+    const fullBefore = copyRun(full);
+    expect(() => castSpell(full, "full-theft")).toThrowError(expect.objectContaining({ code: "MAX_HAND" }));
+    expect(full).toEqual(fullBefore);
+  });
+
+  it("lets enemy theft move from the player draw pile and records the transferred identity", () => {
+    const run = copyRun(createRun(1280, "warrior"));
+    const battle = activeBattle(run);
+    battle.activeSide = "enemy";
+    battle.enemyMana.current = 5;
+    battle.enemyHand = [instance("enemy-theft", "stolen-fate")];
+    battle.drawPile = [instance("player-draw-identity", "eclipse")];
+    const resolution = resolveEnemyTurnWithPlayback(run);
+    expect(resolution.run.battle?.enemyHand).toContainEqual(instance("player-draw-identity", "eclipse"));
+    expect(resolution.run.battle?.drawPile.some(({ instanceId }) => instanceId === "player-draw-identity")).toBe(false);
+    const record = resolution.steps.find(({ action }) => action.type === "cast-spell")?.action;
+    expect(record).toMatchObject({ type: "cast-spell", effects: [{ kind: "stealFromOpponentDeck", transferredCardInstanceId: "player-draw-identity" }] });
   });
 });
 

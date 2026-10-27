@@ -3,6 +3,7 @@ export type GameRuleErrorCode =
   | "INSUFFICIENT_MANA"
   | "INVALID_TARGET"
   | "MAX_BOARD"
+  | "MAX_HAND"
   | "MAX_COPIES"
   | "WRONG_TURN"
   | "TERMINAL_RUN"

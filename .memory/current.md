@@ -7,10 +7,10 @@
 [P01 Game Core](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/phase.md)
 
 ## Active Task
-[T03 Special Spell Effects](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/T03-special-spell-effects.md)
+[T04 Minion Fusion](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/T04-minion-fusion.md)
 
 ## Status
-- T01 class and encounter model, and T02 class hero powers completed and committed; validations passed.
+- T01 class and encounter model, T02 class hero powers, and T03 special spell effects completed and committed; validations passed.
 
 ## Next Step
-Read the T03 blueprint and implement random damage, cleave, and opponent-deck theft spell rules.
+Read the T04 blueprint and implement the nine class-specific minion fusion recipes.
