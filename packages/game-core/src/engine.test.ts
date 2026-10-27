@@ -27,6 +27,7 @@ import {
   resolveEnemyTurnWithPlayback,
   skipReward,
   startBattle,
+  useHeroPower,
 } from "./engine.js";
 import { GameRuleError } from "./errors.js";
 import { pickIndex, shuffle } from "./random.js";
@@ -271,6 +272,129 @@ describe("seeded run setup and random helpers", () => {
     expect(pickIndex(5, 9)).toEqual(firstPick);
     expect(firstPick.value).toBeGreaterThanOrEqual(0);
     expect(firstPick.value).toBeLessThan(5);
+  });
+});
+
+describe("class hero powers and battle resources", () => {
+  it("rejects unavailable powers without mutating the original run", () => {
+    const warrior = createRun(1201, "warrior");
+    const before = copyRun(warrior);
+    activeBattle(warrior).playerMana.current = 1;
+    const insufficient = copyRun(warrior);
+    expect(() => useHeroPower(warrior)).toThrowError(expect.objectContaining({ code: "INSUFFICIENT_MANA" }));
+    expect(warrior).toEqual(insufficient);
+
+    const used = useHeroPower(createRun(1202, "warrior"));
+    const usedBefore = copyRun(used);
+    expect(() => useHeroPower(used)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+    expect(used).toEqual(usedBefore);
+
+    const wrongTurn = copyRun(createRun(1203, "warrior"));
+    activeBattle(wrongTurn).activeSide = "enemy";
+    const wrongTurnBefore = copyRun(wrongTurn);
+    expect(() => useHeroPower(wrongTurn)).toThrowError(expect.objectContaining({ code: "WRONG_TURN" }));
+    expect(wrongTurn).toEqual(wrongTurnBefore);
+
+    const legacy = copyRun(createRun(1204));
+    delete legacy.playerClass;
+    expect(() => useHeroPower(legacy)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+    expect(before.playerClass).toBe("warrior");
+  });
+
+  it("grants warrior armor and absorbs full and partial hero damage before health", () => {
+    let run = useHeroPower(createRun(1210, "warrior"));
+    expect(run.battle?.playerArmor).toBe(2);
+    expect(run.battle?.playerMana.current).toBe(3);
+
+    for (const [index, attack] of [2, 5].entries()) {
+      const battle = activeBattle(run);
+      battle.enemyHand = [];
+      battle.enemyBoard = [{ instanceId: `armor-test-${index}`, cardId: "ash-wolf", owner: "enemy", attack, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false }];
+      if (index === 1) battle.playerArmor = 3;
+      run = endPlayerTurn(run);
+      if (index === 0) {
+        expect(run.battle?.playerArmor).toBe(0);
+        expect(run.battle?.playerHero.health).toBe(30);
+      } else {
+        expect(run.battle?.playerArmor).toBe(0);
+        expect(run.battle?.playerHero.health).toBe(28);
+      }
+    }
+  });
+
+  it("lets Assassin hit enemy heroes through a board or kill an enemy minion", () => {
+    const heroTarget = copyRun(createRun(1220, "assassin"));
+    const heroBattle = activeBattle(heroTarget);
+    heroBattle.enemyBoard.push({ instanceId: "blocker", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false });
+    heroBattle.enemyHero.health = 10;
+    const hitHero = useHeroPower(heroTarget, "enemy-hero");
+    expect(hitHero.battle?.enemyHero.health).toBe(8);
+    expect(hitHero.battle?.enemyBoard).toHaveLength(1);
+
+    const minionTarget = copyRun(createRun(1221, "assassin"));
+    activeBattle(minionTarget).enemyBoard.push({ instanceId: "victim", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false });
+    const killed = useHeroPower(minionTarget, "victim");
+    expect(killed.battle?.enemyBoard).toHaveLength(0);
+    expect(killed.battle?.enemyDiscardPile.some(({ instanceId }) => instanceId === "victim")).toBe(true);
+
+    const invalid = createRun(1222, "assassin");
+    const invalidBefore = copyRun(invalid);
+    expect(() => useHeroPower(invalid, "missing-target")).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+    expect(invalid).toEqual(invalidBefore);
+  });
+
+  it.each([[2, 2], [3, 3], [6, 6], [7, 6]])("caps Demonist shards at 6 when %i enemy minions die", (deaths, expectedShards) => {
+    const run = createRun(1230 + deaths, "demonist");
+    activeBattle(run).playerBoard.push(minion({ cardId: "demonist-imp-caller" }));
+    activeBattle(run).enemyBoard = Array.from({ length: deaths }, (_, index) => ({
+      instanceId: `dead-${index}`, cardId: "ash-wolf", owner: "enemy" as const, attack: 1, health: 0, maxHealth: 1, summonedTurn: 0, hasAttacked: false,
+    })).concat({ instanceId: "cleanup-target", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false });
+    activeBattle(run).hand = [instance("cleanup-spell", "soul-lance")];
+    const cleaned = castSpell(run, "cleanup-spell", "cleanup-target");
+    expect(cleaned.battle?.soulShards).toBe(expectedShards);
+    expect(cleaned.battle?.enemyBoard).toHaveLength(1);
+  });
+
+  it("spends three shards for a deterministic demon, preserves state on failure, and resets resources between battles", () => {
+    const base = createRun(1240, "demonist");
+    activeBattle(base).soulShards = 4;
+    const first = useHeroPower(base);
+    const secondRun = createRun(1240, "demonist");
+    activeBattle(secondRun).soulShards = 4;
+    const second = useHeroPower(secondRun);
+    expect(first.battle?.playerBoard[0]?.cardId).toBe(second.battle?.playerBoard[0]?.cardId);
+    expect(first.battle?.playerBoard[0]?.cardId).toMatch(/^demon-/);
+    expect(first.battle?.soulShards).toBe(1);
+    expect(first.battle?.playerMana.current).toBe(3);
+
+    const tooFew = copyRun(base);
+    activeBattle(tooFew).soulShards = 2;
+    const tooFewBefore = copyRun(tooFew);
+    expect(() => useHeroPower(tooFew)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+    expect(tooFew).toEqual(tooFewBefore);
+
+    const fullBoard = copyRun(base);
+    activeBattle(fullBoard).playerBoard = Array.from({ length: 5 }, (_, index) => minion({ instanceId: `full-${index}` }));
+    const fullBefore = copyRun(fullBoard);
+    expect(() => useHeroPower(fullBoard)).toThrowError(expect.objectContaining({ code: "MAX_BOARD" }));
+    expect(fullBoard).toEqual(fullBefore);
+
+    const transitioned = skipReward(winCurrentBattle(useHeroPower(createRun(1241, "warrior"))));
+    const nextBattle = advanceRun(transitioned, 1242);
+    expect(nextBattle.battle?.playerArmor).toBe(0);
+    expect(nextBattle.battle?.soulShards).toBe(0);
+    expect(nextBattle.battle?.heroPowerUsed).toBe(false);
+  });
+
+  it("hydrates class resources for an older active schema-v1 battle", () => {
+    const oldRun = copyRun(createRun(1249));
+    const oldBattle = activeBattle(oldRun) as unknown as Record<string, unknown>;
+    delete oldBattle.playerArmor;
+    delete oldBattle.soulShards;
+    delete oldBattle.heroPowerUsed;
+    const hydrated = hydrateRunForCurrentBattle(oldRun);
+    expect(hydrated.battle).toMatchObject({ playerArmor: 0, soulShards: 0, heroPowerUsed: false });
+    expect(oldBattle).not.toEqual(hydrated.battle);
   });
 });
 

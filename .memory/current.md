@@ -7,10 +7,10 @@
 [P01 Game Core](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/phase.md)
 
 ## Active Task
-[T02 Class Hero Powers](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/T02-class-hero-powers.md)
+[T03 Special Spell Effects](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/T03-special-spell-effects.md)
 
 ## Status
-- T01 class and encounter model completed and committed; validation passed.
+- T01 class and encounter model, and T02 class hero powers completed and committed; validations passed.
 
 ## Next Step
-Read the T02 blueprint and implement class hero powers, armor, soul shards, and battle-scoped combat state.
+Read the T03 blueprint and implement random damage, cleave, and opponent-deck theft spell rules.

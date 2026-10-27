@@ -71,6 +71,9 @@ export interface BattleState {
   enemyHero: HeroState;
   playerMana: { current: number; max: number };
   enemyMana: { current: number; max: number };
+  playerArmor: number;
+  soulShards: number;
+  heroPowerUsed: boolean;
   hand: CardInstance[];
   drawPile: CardInstance[];
   discardPile: CardInstance[];

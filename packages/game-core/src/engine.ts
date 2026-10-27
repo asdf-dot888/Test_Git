@@ -115,8 +115,9 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   const battle = run.battle;
   if (!battle || run.status !== "active" || battle.status !== "active") return run;
   const hasEnemyZones = Boolean(battle.enemyMana && battle.enemyStarterDeck && battle.enemyHand && battle.enemyDrawPile && battle.enemyDiscardPile);
+  const hasClassResources = Number.isInteger(battle.playerArmor) && Number.isInteger(battle.soulShards) && typeof battle.heroPowerUsed === "boolean";
   const hasObsoleteCharge = Object.prototype.hasOwnProperty.call(battle, "pendingEnemyCharge");
-  if (hasEnemyZones && !hasObsoleteCharge) return run;
+  if (hasEnemyZones && hasClassResources && !hasObsoleteCharge) return run;
 
   const next = cloneRun(run);
   const current = next.battle!;
@@ -131,6 +132,9 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
     current.enemyDiscardPile = [];
     current.rngState = generated.state;
   }
+  current.playerArmor ??= 0;
+  current.soulShards ??= 0;
+  current.heroPowerUsed ??= false;
   delete (current as BattleState & { pendingEnemyCharge?: unknown }).pendingEnemyCharge;
   return next;
 }
@@ -169,7 +173,9 @@ function createMinion(
 function dealDamageToPlayerHero(run: RunState, amount: number, deferDefeat = false): RunState {
   const battle = run.battle;
   if (!battle) return run;
-  battle.playerHero.health = Math.max(0, battle.playerHero.health - amount);
+  const absorbed = Math.min(battle.playerArmor, amount);
+  battle.playerArmor -= absorbed;
+  battle.playerHero.health = Math.max(0, battle.playerHero.health - (amount - absorbed));
   if (battle.playerHero.health === 0 && !deferDefeat) return finishDefeat(run);
   return run;
 }
@@ -344,6 +350,9 @@ function removeDeadMinions(run: RunState, side: PlayerSide): RunState {
   for (const minion of fallen) {
     const discard = minion.owner === "player" ? battle.discardPile : battle.enemyDiscardPile;
     discard.push({ instanceId: minion.instanceId, cardId: minion.cardId });
+    if (minion.owner === "enemy" && run.playerClass === "demonist") {
+      battle.soulShards = Math.min(6, battle.soulShards + 1);
+    }
     const effect = getCard(minion.cardId).minion?.effect;
     if (effect?.kind === "deathSummon") {
       run = summonOnBoard(run, battle, minion.owner, effect.cardId, effect.count);
@@ -429,6 +438,7 @@ function startPlayerTurn(run: RunState): RunState {
   const manaRecovery = battle.turnNumber <= 3 ? 1 : battle.turnNumber <= 6 ? 2 : 3;
   battle.playerMana.current = Math.min(MAX_MANA, battle.playerMana.current + manaRecovery);
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
+  battle.heroPowerUsed = false;
   drawForPlayerTurn(run, battle);
   return run;
 }
@@ -627,6 +637,9 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     enemyHero: { id: "enemy", health: enemy.maxHealth, maxHealth: enemy.maxHealth },
     playerMana: { current: INITIAL_MANA, max: MAX_MANA },
     enemyMana: { current: INITIAL_MANA, max: MAX_MANA },
+    playerArmor: 0,
+    soulShards: 0,
+    heroPowerUsed: false,
     hand: shuffled.items.slice(0, 3),
     drawPile: shuffled.items.slice(3),
     discardPile: [],
@@ -679,6 +692,49 @@ export function createRun(seed: number, playerClass: PlayerClass = "warrior"): R
     encounters,
   };
   return beginEncounter(run, 0, randomState);
+}
+
+export function useHeroPower(run: RunState, targetId?: string): RunState {
+  const next = cloneRun(run);
+  const battle = assertPlayerTurn(next);
+  if (!next.playerClass) fail("INVALID_ACTION", "Legacy runs do not have a hero power.");
+  if (battle.heroPowerUsed) fail("INVALID_ACTION", "The hero power was already used this turn.");
+  if (battle.playerMana.current < 2) fail("INSUFFICIENT_MANA", "A hero power costs 2 mana.");
+
+  if (next.playerClass === "assassin") {
+    validateTargetId(targetId);
+    if (targetId !== "enemy-hero" && !battle.enemyBoard.some((minion) => minion.instanceId === targetId)) {
+      fail("INVALID_TARGET", "Select a living enemy minion or the enemy hero.");
+    }
+  }
+  if (next.playerClass === "demonist") {
+    if (battle.soulShards < 3) fail("INVALID_ACTION", "Demonist needs 3 soul shards to use this power.");
+    if (battle.playerBoard.length >= MAX_BOARD) fail("MAX_BOARD", "The player board is full.");
+  }
+
+  battle.playerMana.current -= 2;
+  battle.heroPowerUsed = true;
+  if (next.playerClass === "assassin") {
+    if (targetId === "enemy-hero") return dealDamageToEnemyHero(next, 2);
+    const target = battle.enemyBoard.find((minion) => minion.instanceId === targetId)!;
+    target.health -= 2;
+    return removeDeadMinions(next, "enemy");
+  }
+  if (next.playerClass === "warrior") {
+    battle.playerArmor += 2;
+    return next;
+  }
+
+  {
+    const demonIds = ["demon-lesser-imp", "demon-ashling", "demon-cinder-fiend"];
+    const picked = pickIndex(demonIds.length, battle.rngState);
+    battle.rngState = picked.state;
+    const cardId = demonIds[picked.value]!;
+    battle.soulShards -= 3;
+    const summoned = createMinion(next, cardId, "player", battle.turnNumber);
+    summoned.run.battle!.playerBoard.push(summoned.minion);
+    return summoned.run;
+  }
 }
 
 export function startBattle(run: RunState, enemyId: string): RunState {
