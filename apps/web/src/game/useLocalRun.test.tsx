@@ -34,7 +34,7 @@ describe("useLocalRun", () => {
     expect(result.current.run).toBeNull();
 
     const run = createRun(412);
-    await act(async () => { await result.current.createRun(run.seed); });
+    await act(async () => { await result.current.createRun(run.seed, "warrior"); });
     expect(result.current.run?.seed).toBe(412);
     expect(JSON.parse(window.localStorage.getItem("board-card-roguelike:run:v1:employee-a") ?? "null").run.seed).toBe(412);
 

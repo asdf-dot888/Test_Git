@@ -199,6 +199,22 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
       const targetDied = targetSlot >= 0 && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId);
       pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "player", slot: attackerSlot }, target, targetDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
     }
+  } else if (action.type === "use-hero-power") {
+    const playerClass = previousRun.playerClass;
+    if (playerClass === "warrior") {
+      pushEvent(events, firstEventId, null, "buff", { kind: "hero", side: "player" }, { kind: "hero", side: "player" }, ["spell"]);
+    } else if (playerClass === "assassin") {
+      const targetId = action.targetId;
+      const targetSlot = targetId && targetId !== "enemy-hero" ? slotOf(previous.enemyBoard, targetId) : -1;
+      const target: CombatAnchor = targetId === "enemy-hero" || targetSlot < 0
+        ? { kind: "hero", side: "enemy" }
+        : { kind: "minion", side: "enemy", slot: targetSlot };
+      const targetDied = targetSlot >= 0 && !next.enemyBoard.some((minion) => minion.instanceId === targetId);
+      pushEvent(events, firstEventId, null, "damage", { kind: "hero", side: "player" }, target, targetDied ? ["spell", "damage", "death"] : ["spell", "damage"]);
+    } else if (playerClass === "demonist") {
+      const summoned = next.playerBoard.find((minion) => !previous.playerBoard.some((old) => old.instanceId === minion.instanceId));
+      if (summoned) pushEvent(events, firstEventId, summoned.cardId, "summon", { kind: "hero", side: "player" }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, summoned.instanceId) }, ["summon"]);
+    }
   } else if (action.type === "end-turn" && nextRun.battle) {
     if (next.playerHero.health < previous.playerHero.health) {
       pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" }, ["damage"]);

@@ -11,6 +11,8 @@ import {
   hydrateRunForCurrentBattle,
   playMinion,
   skipReward,
+  useHeroPower,
+  type PlayerClass,
   type RunState,
   type EnemyTurnPlaybackStep,
   type TurnTimerState,
@@ -18,12 +20,14 @@ import {
 import { collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
 export type GameAction =
-  | { type: "start-run"; seed: number }
+  | { type: "start-run"; seed: number; playerClass: PlayerClass }
   | { type: "restore-run"; run: RunState }
   | { type: "set-turn-timer"; timer: TurnTimerState | undefined }
   | { type: "clear-run" }
   | { type: "select-card"; instanceId: string }
   | { type: "select-attacker"; instanceId: string }
+  | { type: "select-hero-power" }
+  | { type: "use-hero-power"; targetId?: string }
   | { type: "cancel-selection" }
   | { type: "play-minion"; instanceId: string }
   | { type: "cast-spell"; instanceId: string; targetId?: string }
@@ -43,7 +47,7 @@ export interface GameSession {
   error: string | null;
   selectedCardInstanceId: string | null;
   selectedAttackerId: string | null;
-  targetMode: "none" | "spell" | "attack";
+  targetMode: "none" | "spell" | "attack" | "hero-power";
   pendingDiscard: boolean;
   resolving: boolean;
   combatEffects: CombatEffectEvent[];
@@ -157,7 +161,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     };
   }
   if (session.enemyTurnPlayback) return session;
-  if (action.type === "start-run") return sessionForRun(createRun(action.seed), session);
+  if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass), session);
   if (action.type === "restore-run") return sessionForRun(hydrateRunForCurrentBattle(action.run), session);
   if (action.type === "cancel-selection") {
     return { ...session, selectedCardInstanceId: null, selectedAttackerId: null, targetMode: "none", error: null };
@@ -174,12 +178,17 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     }
     return { ...session, selectedCardInstanceId: null, selectedAttackerId: attacker.instanceId, targetMode: "attack", error: null };
   }
+  if (action.type === "select-hero-power") {
+    if (!session.run?.battle || session.pendingDiscard || session.resolving || session.run.playerClass !== "assassin") return session;
+    return { ...session, selectedCardInstanceId: null, selectedAttackerId: null, targetMode: "hero-power", error: null };
+  }
 
   if (!session.run) return { ...session, error: "먼저 새 원정을 시작하세요." };
   try {
     if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId), session, action);
     if (action.type === "cast-spell") return sessionForAction(castSpell(session.run, action.instanceId, action.targetId), session, action);
     if (action.type === "attack") return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
+    if (action.type === "use-hero-power") return sessionForAction(useHeroPower(session.run, action.targetId), session, action);
     if (action.type === "end-turn") return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run), session);
     if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);
     if (action.type === "choose-reward") return sessionForRun(chooseReward(session.run, action.cardId), session);

@@ -13,8 +13,8 @@ export interface LocalRunController {
   loaded: boolean;
   loadVersion: number;
   saveRun(run: RunState): Promise<void>;
-  createRun(seed: number, playerClass?: PlayerClass): Promise<RunState>;
-  replaceRun(reason: "completed" | "abandoned", seed: number, playerClass?: PlayerClass): Promise<RunState>;
+  createRun(seed: number, playerClass: PlayerClass): Promise<RunState>;
+  replaceRun(reason: "completed" | "abandoned", seed: number, playerClass: PlayerClass): Promise<RunState>;
   deleteRun(reason: "completed" | "abandoned"): Promise<void>;
   reload(): Promise<void>;
   retrySave(run: RunState | null): Promise<void>;
@@ -81,13 +81,13 @@ export function useLocalRun(): LocalRunController {
     setState((current) => ({ ...current, userId, status: "ready", run, loaded: true, warning }));
   }, [userId]);
 
-  const createRun = useCallback(async (seed: number, playerClass?: PlayerClass) => {
+  const createRun = useCallback(async (seed: number, playerClass: PlayerClass) => {
     const run = createGameRun(seed, playerClass);
     await saveRun(run);
     return run;
   }, [saveRun]);
 
-  const replaceRun = useCallback(async (_reason: "completed" | "abandoned", seed: number, playerClass?: PlayerClass) => createRun(seed, playerClass), [createRun]);
+  const replaceRun = useCallback(async (_reason: "completed" | "abandoned", seed: number, playerClass: PlayerClass) => createRun(seed, playerClass), [createRun]);
 
   const deleteRun = useCallback(async (_reason: "completed" | "abandoned") => {
     if (!userId) return;

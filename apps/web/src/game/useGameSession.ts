@@ -1,5 +1,6 @@
 import { useReducer } from "react";
 import { initialGameSession, reduceGameAction, type GameAction, type GameSession } from "./gameActions.js";
+import type { PlayerClass } from "@board-game/game-core";
 
 function secureSeed(): number {
   const seed = new Uint32Array(1);
@@ -9,7 +10,7 @@ function secureSeed(): number {
 
 type InternalAction = GameAction | { type: "resolution-start" };
 
-export function useGameSession(): { session: GameSession; dispatch(action: GameAction): void; startNewRun(seed?: number): void } {
+export function useGameSession(): { session: GameSession; dispatch(action: GameAction): void; startNewRun(playerClass?: PlayerClass, seed?: number): void } {
   const [session, reducerDispatch] = useReducer(reduceGameAction, initialGameSession);
 
   const dispatch = (action: GameAction) => {
@@ -26,6 +27,6 @@ export function useGameSession(): { session: GameSession; dispatch(action: GameA
     reducerDispatch(action);
   };
 
-  const startNewRun = (seed = secureSeed()) => dispatch({ type: "start-run", seed });
+  const startNewRun = (playerClass: PlayerClass = "warrior", seed = secureSeed()) => dispatch({ type: "start-run", seed, playerClass });
   return { session, dispatch, startNewRun };
 }

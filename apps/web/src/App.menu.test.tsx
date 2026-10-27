@@ -17,18 +17,18 @@ class FakeAudio {
   pause(): void { this.paused = true; }
 }
 
-function makeSync(deleteRun = vi.fn(async () => undefined)): LocalRunController {
+function makeSync(deleteRun = vi.fn(async () => undefined), savedRun: ReturnType<typeof createRun> | null = null): LocalRunController {
   return {
     status: "ready",
     etag: null,
     expiresAt: null,
     message: null,
-    run: null,
+    run: savedRun,
     loaded: true,
-    loadVersion: 0,
+    loadVersion: savedRun ? 1 : 0,
     saveRun: vi.fn(async () => undefined),
-    createRun: vi.fn(async (seed: number) => createRun(seed)),
-    replaceRun: vi.fn(async (_reason: "completed" | "abandoned", seed: number) => createRun(seed)),
+    createRun: vi.fn(async (seed: number, playerClass: "warrior" | "assassin" | "demonist") => createRun(seed, playerClass)),
+    replaceRun: vi.fn(async (_reason: "completed" | "abandoned", seed: number, playerClass: "warrior" | "assassin" | "demonist") => createRun(seed, playerClass)),
     deleteRun,
     reload: vi.fn(async () => undefined),
     retrySave: vi.fn(async () => undefined),
@@ -39,6 +39,7 @@ function makeSync(deleteRun = vi.fn(async () => undefined)): LocalRunController 
 async function startGame(sync: LocalRunController) {
   renderWithTestAuth(<GameSessionView sync={sync} />);
   fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+  fireEvent.click(await screen.findByRole("button", { name: "이 직업으로 원정 시작" }));
   expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
   fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
   await screen.findByRole("button", { name: "메뉴" });
@@ -51,6 +52,27 @@ afterEach(() => {
 });
 
 describe("in-game menu flow", () => {
+  it("keeps the saved run when class selection is cancelled and passes the chosen class only on confirmation", async () => {
+    vi.stubGlobal("Audio", FakeAudio);
+    const savedRun = createRun(703);
+    const sync = makeSync(vi.fn(async () => undefined), savedRun);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    fireEvent.click(await screen.findByRole("button", { name: "새 원정 시작" }));
+    fireEvent.click(screen.getByRole("button", { name: "포기하고 새 판 시작" }));
+
+    expect(screen.getByRole("heading", { name: "원정 직업 선택" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "취소" }));
+    expect(await screen.findByRole("button", { name: "원정 계속하기" })).toBeTruthy();
+    expect(sync.replaceRun).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    fireEvent.click(screen.getByRole("button", { name: "포기하고 새 판 시작" }));
+    fireEvent.click(screen.getByRole("radio", { name: /악마술사/ }));
+    fireEvent.click(screen.getByRole("button", { name: "이 직업으로 원정 시작" }));
+    await screen.findByRole("heading", { name: "원정 경로" });
+    expect(sync.replaceRun).toHaveBeenCalledWith("abandoned", expect.any(Number), "demonist");
+  });
+
   it("keeps the run until abandonment is confirmed, then returns to the main menu", async () => {
     vi.stubGlobal("Audio", FakeAudio);
     const sync = makeSync();
@@ -71,10 +93,12 @@ describe("in-game menu flow", () => {
     expect(await screen.findByRole("button", { name: "새 원정 시작" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "메뉴" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    fireEvent.click(await screen.findByRole("button", { name: "이 직업으로 원정 시작" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
     await screen.findByRole("button", { name: "메뉴" });
     expect(sync.createRun).toHaveBeenCalledTimes(2);
+    expect(sync.createRun).toHaveBeenLastCalledWith(expect.any(Number), "warrior");
   });
 
   it("retains the battle and dialog if run deletion fails", async () => {
@@ -96,6 +120,7 @@ describe("in-game menu flow", () => {
     const sync = makeSync();
     const first = renderWithTestAuth(<GameSessionView sync={sync} />);
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    fireEvent.click(await screen.findByRole("button", { name: "이 직업으로 원정 시작" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
     await screen.findByRole("button", { name: "메뉴" });
@@ -113,6 +138,7 @@ describe("in-game menu flow", () => {
 
     renderWithTestAuth(<GameSessionView sync={sync} />);
     fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    fireEvent.click(await screen.findByRole("button", { name: "이 직업으로 원정 시작" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
     await screen.findByRole("button", { name: "메뉴" });

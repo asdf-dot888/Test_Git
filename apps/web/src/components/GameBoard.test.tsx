@@ -120,4 +120,27 @@ describe("GameBoard", () => {
     expect(renderBoard(5, false)).toContain('class="battle-board"');
     expect(renderBoard(1, true)).toContain('class="battle-board is-timer-critical"');
   });
+
+  it("shows the selected class power and Demonist shards while keeping legacy runs compatible", () => {
+    const legacyRun = createRun(416);
+    delete legacyRun.playerClass;
+    const legacy = renderToStaticMarkup(<GameBoard run={legacyRun} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    expect(legacy).not.toContain("hero-power-button");
+
+    const demonist = createRun(417, "demonist");
+    demonist.battle!.playerArmor = 3;
+    demonist.battle!.soulShards = 4;
+    const markup = renderToStaticMarkup(<GameBoard run={demonist} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    expect(markup).toContain("영혼 조각 4/6");
+    expect(markup).toContain("hero-power-button");
+    expect(markup).toContain("방어도 3");
+  });
+
+  it("allows Assassin power to target enemy minions and hero", () => {
+    const assassin = createRun(418, "assassin");
+    const markup = renderToStaticMarkup(<GameBoard run={assassin} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="hero-power" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    expect(markup).toContain("그림자 습격");
+    expect(markup).toContain("영웅 능력 대상을 선택하세요");
+    expect(markup).toContain("타락한 엘프 정찰자을(를) 대상으로 선택");
+  });
 });

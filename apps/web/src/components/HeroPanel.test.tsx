@@ -26,4 +26,10 @@ describe("HeroPanel", () => {
     expect(markup).toContain('aria-label="무덤의 왕을(를) 대상으로 선택"');
     expect(markup).toContain(`aria-label="체력 ${hero.health}/${hero.maxHealth}"`);
   });
+
+  it("shows player armor alongside health", () => {
+    const hero = createRun(3).battle!.playerHero;
+    const markup = renderToStaticMarkup(<HeroPanel hero={hero} side="player" artKey="player" name="잿빛 방랑자" armor={4} targetable={false} onSelectTarget={vi.fn()} />);
+    expect(markup).toContain('aria-label="방어도 4"');
+  });
 });

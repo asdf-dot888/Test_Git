@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CARD_BY_ID, ENEMY_BY_ID } from "@board-game/game-core";
+import { CARD_BY_ID, ENEMY_BY_ID, type PlayerClass } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
 import { GameBoard } from "./components/GameBoard.js";
 import { ExpeditionRoadmap } from "./components/ExpeditionRoadmap.js";
 import { MainMenu } from "./components/MainMenu.js";
+import { ClassSelectionScreen } from "./components/ClassSelectionScreen.js";
 import { RewardScreen } from "./components/RewardScreen.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { TurnStartGlow } from "./components/TurnStartGlow.js";
@@ -41,7 +42,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const auth = useAuth();
   const { session, dispatch: dispatchGameAction } = useGameSession();
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
-  const [screen, setScreen] = useState<"menu" | "map" | "game">("menu");
+  const [screen, setScreen] = useState<"menu" | "class-selection" | "map" | "game">("menu");
+  const [classSelectionReason, setClassSelectionReason] = useState<"completed" | "abandoned" | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [leaderboardState, setLeaderboardState] = useState<LeaderboardLoadState>("loading");
   const [leaderboardRecords, setLeaderboardRecords] = useState<LeaderboardRecord[]>([]);
@@ -218,15 +220,16 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     void saveRun(session.run).catch(() => undefined);
   }, [saveRun, session.run, syncLoaded, syncStatus, syncedRun]);
 
-  const startNewLocalRun = async (reason: "completed" | "abandoned") => {
+  const startNewLocalRun = async (playerClass: PlayerClass) => {
     pendingReplacement.current = true;
     try {
       const seed = secureSeed();
-      const created = sync.run
-        ? await sync.replaceRun(reason, seed)
-        : await sync.createRun(seed);
+      const created = classSelectionReason
+        ? await sync.replaceRun(classSelectionReason, seed, playerClass)
+        : await sync.createRun(seed, playerClass);
       dispatch({ type: "restore-run", run: created });
       setAbandonOpen(false);
+      setClassSelectionReason(null);
       setScreen("map");
     } finally {
       pendingReplacement.current = false;
@@ -238,7 +241,14 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       setAbandonOpen(true);
       return;
     }
-    void startNewLocalRun(run ? "completed" : "abandoned").catch(() => undefined);
+    setClassSelectionReason(run ? "completed" : null);
+    setScreen("class-selection");
+  };
+
+  const abandonIntoClassSelection = () => {
+    setAbandonOpen(false);
+    setClassSelectionReason("abandoned");
+    setScreen("class-selection");
   };
 
   const returnToBattle = () => {
@@ -338,6 +348,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     }
     const targetEffect = card.spellEffects?.find((effect) =>
       (effect.kind === "damage" && effect.target === "enemyMinion")
+      || effect.kind === "randomDamage"
+      || effect.kind === "cleave"
       || (effect.kind === "heal" && effect.target === "playerMinion")
       || effect.kind === "buff",
     );
@@ -350,8 +362,17 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
   const selectTarget = (targetId: string) => {
     if (!run || !battle) return;
+    if (session.targetMode === "hero-power") {
+      dispatch({ type: "use-hero-power", targetId: targetId === battle.enemyHero.id ? "enemy-hero" : targetId });
+      return;
+    }
     if (session.targetMode === "spell" && session.selectedCardInstanceId) {
-      dispatch({ type: "cast-spell", instanceId: session.selectedCardInstanceId, targetId });
+      const selected = battle.hand.find(({ instanceId }) => instanceId === session.selectedCardInstanceId);
+      const definition = selected ? CARD_BY_ID.get(selected.cardId) : undefined;
+      const normalizedTargetId = definition?.spellEffects?.some((effect) => effect.kind === "randomDamage") && targetId === battle.enemyHero.id
+        ? "enemy-hero"
+        : targetId;
+      dispatch({ type: "cast-spell", instanceId: session.selectedCardInstanceId, targetId: normalizedTargetId });
       return;
     }
     const friendlyMinion = battle.playerBoard.find((minion) => minion.instanceId === targetId);
@@ -360,6 +381,16 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       return;
     }
     if (session.selectedAttackerId) dispatch({ type: "attack", attackerId: session.selectedAttackerId, targetId });
+  };
+
+  const activateHeroPower = () => {
+    if (!run?.playerClass) return;
+    if (session.targetMode === "hero-power") {
+      dispatch({ type: "cancel-selection" });
+      return;
+    }
+    if (run.playerClass === "assassin") dispatch({ type: "select-hero-power" });
+    else dispatch({ type: "use-hero-power" });
   };
 
   const leaderboardModal = (
@@ -379,6 +410,14 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </aside>
   ) : null;
 
+  if (screen === "class-selection") {
+    return <ClassSelectionScreen
+      disabled={sync.status !== "ready"}
+      onConfirm={(playerClass) => { void startNewLocalRun(playerClass).catch(() => undefined); }}
+      onCancel={() => { setClassSelectionReason(null); setScreen("menu"); }}
+    />;
+  }
+
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
@@ -386,7 +425,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       {leaderboardModal}
       {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
-      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewLocalRun("abandoned").catch(() => undefined); }} />
+      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={abandonIntoClassSelection} />
     </>;
   }
 
@@ -414,7 +453,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         <h1>{victory ? "어둠의 군주를 물리쳤습니다" : "원정이 끝났습니다"}</h1>
         <p>{victory ? "세 페이즈를 모두 돌파했습니다." : "영웅의 체력이 다했습니다. 고정된 시작 덱으로 다시 도전하세요."}</p>
         <div className="outcome-stats"><span>완료한 전투 <b>{run.completedBattles} / 12</b></span><span>덱 카드 <b>{run.deck.length}장</b></span></div>
-        <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => { void startNewLocalRun("completed").catch(() => undefined); }}>새 원정 시작</button>
+        <button className="menu-primary" type="button" disabled={sync.status !== "ready"} onClick={() => { setClassSelectionReason("completed"); setScreen("class-selection"); }}>새 원정 시작</button>
       </section>
       {leaderboardSubmitNotice}
     </main>;
@@ -461,11 +500,12 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onCancelTarget={() => dispatch({ type: session.error ? "clear-error" : "cancel-selection" })}
           onEndTurn={() => dispatch({ type: "end-turn" })}
           onMenu={() => setMenuView("choices")}
+          onUseHeroPower={activateHeroPower}
         />
       {leaderboardSubmitNotice}
       <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
-      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={() => { void startNewLocalRun("abandoned").catch(() => undefined); }} />
+      <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={abandonIntoClassSelection} />
       <AbandonRunDialog intent="main-menu" open={abandonToMenuOpen} busy={abandonToMenuBusy} onCancel={() => setAbandonToMenuOpen(false)} onConfirm={() => { void confirmReturnToMenu(); }} />
       {menuView !== "closed" && <GameMenu
         view={menuView}

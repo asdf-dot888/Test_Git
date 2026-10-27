@@ -1,5 +1,23 @@
 #root { min-height: 100vh; }
 .game-shell { min-height: 100vh; display: grid; grid-template-rows: auto minmax(390px, 1fr) auto; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, #29241d 0, #17171a 60%, #111214 100%); }
+.class-selection-screen { min-height: 100vh; padding: 32px 20px; display: grid; place-items: center; color: var(--ink); background: radial-gradient(ellipse at 50% 35%, #352a25, #171719 62%, #101113); }
+.class-selection-panel { width: min(100%, 920px); padding: clamp(24px, 5vw, 48px); border: 1px solid var(--line); border-radius: 18px; background: rgb(30 28 28 / 94%); box-shadow: 0 24px 80px #0009; }
+.class-selection-panel h1 { margin: 10px 0 8px; color: #fff1d5; font-size: clamp(28px, 5vw, 42px); }
+.class-selection-panel > p { color: var(--muted); }
+.class-choice-grid { margin: 24px 0 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.class-choice { min-width: 0; min-height: 180px; padding: 18px 14px; display: grid; justify-items: center; align-content: center; gap: 9px; color: #e9dfce; border: 1px solid var(--line); border-radius: 12px; background: linear-gradient(150deg, #292528, #1c1b1e); cursor: pointer; }
+.class-choice:hover:not(:disabled), .class-choice.is-selected { border-color: var(--gold-bright); box-shadow: inset 0 0 24px rgb(204 159 86 / 12%), 0 0 18px rgb(204 159 86 / 14%); }
+.class-choice.is-selected { outline: 2px solid rgb(221 177 103 / 40%); }
+.class-choice:disabled { opacity: .55; cursor: not-allowed; }
+.class-choice-icon { color: var(--gold-bright); font-size: 30px; }
+.class-choice strong { color: #fff1d5; font-size: 20px; }
+.class-choice > span:not(.class-choice-icon) { color: var(--muted); font-size: 12px; text-align: center; }
+.class-choice small { color: #cbb98e; font-size: 11px; text-align: center; }
+.class-power-preview { padding: 16px 18px; border-left: 3px solid var(--gold); background: rgb(0 0 0 / 17%); }
+.class-power-preview > span { color: var(--gold-bright); font-size: 11px; letter-spacing: .08em; }
+.class-power-preview strong { display: block; margin-top: 6px; color: #fff1d5; }
+.class-power-preview p { margin-bottom: 0; color: var(--muted); }
+.class-selection-actions { margin-top: 22px; display: flex; justify-content: flex-end; gap: 10px; }
 .game-topbar { height: 68px; padding: 0 clamp(18px, 4vw, 64px); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-bottom: 1px solid rgb(255 255 255 / 7%); background: rgb(16 16 18 / 80%); }
 .brand-mark { color: var(--gold-bright); text-decoration: none; font-size: 15px; font-weight: 800; letter-spacing: .04em; }
 .brand-mark span { margin-right: 8px; }
@@ -52,6 +70,7 @@
 .hero-name { overflow: hidden; color: #fff7e8; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .health-value { color: #ffc8a6; font-size: 12px; font-weight: 800; }
 .hero-player .health-value { color: #a3eee3; }
+.armor-value { color: #b8d7ff; font-size: 12px; font-weight: 800; }
 .health-value > span { color: var(--danger); }
 .health-value small { color: #c0b7a6; font-weight: 500; }
 .health-track { height: 4px; margin-top: 2px; overflow: hidden; background: rgb(255 255 255 / 12%); border-radius: 5px; }
@@ -79,7 +98,7 @@
 .board-divider { position: relative; height: 1px; margin: 8px 0; background: linear-gradient(90deg, transparent, rgb(79 57 33 / 38%), transparent); }
 .board-divider span { position: absolute; left: 50%; top: 50%; padding: 0 12px; color: #6c4d2a; background: #b9a27e; font-size: 14px; transform: translate(-50%, -50%); }
 .player-controls { width: min(100% - 48px, 1160px); margin: 0 auto; padding-bottom: 16px; }
-.player-toolbar { min-height: 52px; display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; gap: 12px; }
+.player-toolbar { min-height: 52px; display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(230px, 1.5fr) auto; align-items: center; gap: 12px; }
 .deck-counts { display: flex; gap: 18px; color: var(--muted); font-size: 11px; }
 .deck-counts span { display: flex; gap: 6px; align-items: center; }
 .deck-counts i { color: var(--gold); font-style: normal; }
@@ -91,6 +110,17 @@
 .mana-orbs { grid-column: 1 / -1; display: flex; gap: 3px; }
 .mana-orb { width: 11px; height: 11px; border: 1px solid #7d7772; border-radius: 50%; background: #302e31; }
 .mana-orb.is-full { border-color: #b9f2eb; background: radial-gradient(circle at 35% 30%, #e7ffff, #64d7cd 45%, #287f8c); box-shadow: 0 0 7px rgb(99 221 216 / 70%); }
+.hero-power-control { justify-self: center; min-width: 0; display: grid; justify-items: center; gap: 4px; }
+.hero-power-button { width: min(100%, 270px); min-height: 42px; padding: 5px 9px; display: grid; grid-template-columns: 25px minmax(0, 1fr) auto; align-items: center; gap: 8px; color: #e9dfce; text-align: left; border: 1px solid #6a5a43; border-radius: 9px; background: linear-gradient(145deg, #302a24, #211f20); }
+.hero-power-button:not(:disabled) { cursor: pointer; }
+.hero-power-control.is-ready .hero-power-button { border-color: #d4aa62; box-shadow: 0 0 14px rgb(212 170 98 / 24%); }
+.hero-power-button:disabled { opacity: .55; }
+.hero-power-cost { width: 23px; height: 23px; display: grid; place-items: center; color: #182735; border-radius: 50%; background: #71c9e3; font-weight: 900; }
+.hero-power-button strong, .hero-power-button small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hero-power-button strong { color: #fff0d3; font-size: 11px; }
+.hero-power-button small { max-width: 190px; color: var(--muted); font-size: 9px; }
+.hero-power-status { color: var(--gold-bright); font-size: 9px; white-space: nowrap; }
+.soul-shard-count { color: #d59aff; font-size: 10px; }
 .turn-controls-spacer { justify-self: end; }
 .turn-controls-spacer .turn-status { display: none; }
 .hand-panel { padding: 10px 15px 12px; border: 1px solid rgb(231 194 135 / 17%); border-radius: 12px; background: linear-gradient(180deg, #242225, #19191b); }
@@ -236,7 +266,13 @@
   .minion-stats small { font-size: 7px; }
   .board-divider { margin: 2px 0; }
   .player-controls { width: calc(100% - 20px); padding-bottom: 8px; }
-  .player-toolbar { min-height: 42px; }
+  .player-toolbar { min-height: 42px; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; }
+  .hero-power-control { grid-column: 1 / 3; grid-row: 2; justify-self: stretch; }
+  .hero-power-button { width: 100%; min-height: 36px; }
+  .hero-power-button small { max-width: 160px; }
+  .turn-controls-spacer { grid-column: 3; grid-row: 2; }
+  .class-choice-grid { grid-template-columns: 1fr; }
+  .class-choice { min-height: 118px; }
   .deck-counts { gap: 8px; font-size: 9px; }
   .mana-display { padding: 5px 8px; gap: 2px 5px; }
   .mana-display strong { font-size: 13px; }

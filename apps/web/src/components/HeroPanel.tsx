@@ -6,10 +6,11 @@ interface HeroPanelProps {
   artKey: string;
   name: string;
   targetable: boolean;
+  armor?: number;
   onSelectTarget(targetId: string): void;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetable, onSelectTarget }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, onSelectTarget }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
     <section className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}`} data-effect-anchor={`hero:${side}`} aria-label={`${name} 영웅`}>
@@ -24,6 +25,7 @@ export function HeroPanel({ hero, side, artKey, name, targetable, onSelectTarget
         <span className="health-value" aria-label={`체력 ${hero.health}/${hero.maxHealth}`}>
           <span aria-hidden="true">♥</span> {hero.health}<small> / {hero.maxHealth}</small>
         </span>
+        {isPlayer && armor > 0 && <span className="armor-value" aria-label={`방어도 ${armor}`}>⬟ {armor}</span>}
         <div className="health-track" aria-hidden="true">
           <span style={{ width: `${Math.max(0, Math.min(100, (hero.health / hero.maxHealth) * 100))}%` }} />
         </div>

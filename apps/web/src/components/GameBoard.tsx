@@ -12,6 +12,7 @@ import { ManaDisplay } from "./ManaDisplay.js";
 import { MinionLane } from "./MinionLane.js";
 import { TargetPicker } from "./TargetPicker.js";
 import { TurnControls } from "./TurnControls.js";
+import { HeroPowerControl } from "./HeroPowerControl.js";
 
 export interface GameBoardProps {
   run: RunState;
@@ -21,7 +22,7 @@ export interface GameBoardProps {
   onCombatEffectComplete?(eventId: number): void;
   selectedCardInstanceId: string | null;
   selectedAttackerId: string | null;
-  targetMode: "none" | "spell" | "attack";
+  targetMode: "none" | "spell" | "attack" | "hero-power";
   isResolving: boolean;
   actionsDisabled?: boolean;
   error: string | null;
@@ -31,6 +32,7 @@ export interface GameBoardProps {
   onCancelTarget(): void;
   onEndTurn(): void;
   onMenu(): void;
+  onUseHeroPower?(): void;
 }
 
 function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide | null {
@@ -38,6 +40,8 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
   const targetEffect = definition?.spellEffects?.find((effect) =>
     (effect.kind === "damage" && effect.target === "enemyMinion")
+    || effect.kind === "randomDamage"
+    || effect.kind === "cleave"
     || (effect.kind === "heal" && effect.target === "playerMinion")
     || effect.kind === "buff",
   );
@@ -46,7 +50,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu, onUseHeroPower = () => undefined }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
@@ -54,14 +58,25 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
   const targetSide = targetMode === "spell"
     ? spellTargetSide(selectedCardInstanceId, run)
-    : targetMode === "attack"
+    : targetMode === "hero-power"
+      ? "enemy"
+      : targetMode === "attack"
       ? selectedAttackerId ? "enemy" : "player"
       : null;
-  const enemyHeroTargetable = targetMode === "attack" && Boolean(selectedAttackerId) && battle.enemyBoard.length === 0 && !actionsDisabled;
+  const selectedSpell = battle.hand.find((item) => item.instanceId === selectedCardInstanceId);
+  const selectedDefinition = selectedSpell ? CARD_BY_ID.get(selectedSpell.cardId) : undefined;
+  const canTargetEnemyHeroWithSpell = selectedDefinition?.spellEffects?.some((effect) => effect.kind === "randomDamage");
+  const enemyHeroTargetable = !actionsDisabled && (
+    (targetMode === "attack" && Boolean(selectedAttackerId) && battle.enemyBoard.length === 0)
+    || (targetMode === "hero-power" && run.playerClass === "assassin")
+    || (targetMode === "spell" && Boolean(canTargetEnemyHeroWithSpell))
+  );
   const canSelectCard = (instance: import("@board-game/game-core").CardInstance) => {
     const definition = CARD_BY_ID.get(instance.cardId);
     const targetSideForCard = spellTargetSide(instance.instanceId, run);
     if (definition?.kind !== "spell" || !targetSideForCard) return true;
+    if (definition?.spellEffects?.some((effect) => effect.kind === "randomDamage")) return true;
+    if (definition?.spellEffects?.some((effect) => effect.kind === "cleave")) return battle.enemyBoard.length > 0;
     return targetSideForCard === "enemy" ? battle.enemyBoard.length > 0 : battle.playerBoard.length > 0;
   };
 
@@ -90,7 +105,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
           <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} />
-          <HeroPanel hero={battle.playerHero} side="player" artKey="player" name="잿빛 방랑자" targetable={false} onSelectTarget={onSelectTarget} />
+          <HeroPanel hero={battle.playerHero} side="player" artKey="player" name="잿빛 방랑자" armor={battle.playerArmor} targetable={false} onSelectTarget={onSelectTarget} />
         </div>
         {targetMode !== "none" && <TargetPicker mode={targetMode} onCancel={onCancelTarget} />}
       </section>
@@ -102,6 +117,17 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             <span><i aria-hidden="true">▧</i> 버림 <b>{battle.discardPile.length}</b></span>
           </div>
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} />
+          <HeroPowerControl
+            {...(run.playerClass ? { playerClass: run.playerClass } : {})}
+            currentMana={battle.playerMana.current}
+            used={battle.heroPowerUsed}
+            active={battle.activeSide === "player" && battle.status === "active"}
+            resolving={isResolving || syncDisabled}
+            shardCount={battle.soulShards}
+            boardSize={battle.playerBoard.length}
+            targetMode={targetMode === "hero-power"}
+            onActivate={onUseHeroPower}
+          />
           <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled} /></div>
         </div>
         <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />

@@ -5,7 +5,7 @@ interface MinionLaneProps {
   side: PlayerSide;
   minions: MinionState[];
   selectedAttackerId: string | null;
-  targetMode: "none" | "spell" | "attack";
+  targetMode: "none" | "spell" | "attack" | "hero-power";
   targetSide: PlayerSide | null;
   disabled: boolean;
   turnNumber: number;
@@ -25,7 +25,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
                 minion={minion}
                 selected={selectedAttackerId === minion.instanceId}
                 targetable={targetMode !== "none" && targetSide === side}
-                disabled={disabled || (side === "enemy" && targetMode === "none") || (targetMode === "spell" && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side) || (side === "player" && targetMode !== "spell" && (minion.summonedTurn >= turnNumber || minion.hasAttacked))}
+                disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side) || (side === "player" && targetMode !== "spell" && (minion.summonedTurn >= turnNumber || minion.hasAttacked))}
                 onSelect={() => onSelectTarget(minion.instanceId)}
               />
             ) : <span className="empty-slot" aria-hidden="true" />}
