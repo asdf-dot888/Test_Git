@@ -5,12 +5,14 @@ interface RewardScreenProps {
   disabled?: boolean;
   onChoose(cardId: string): void;
   onSkip(): void;
+  selectedCardId?: string | null;
 }
 
-export function RewardScreen({ reward, disabled = false, onChoose, onSkip }: RewardScreenProps) {
+export function RewardScreen({ reward, disabled = false, onChoose, onSkip, selectedCardId = null }: RewardScreenProps) {
   return (
     <main className="run-screen">
       <section className="run-card reward-screen">
+        <button className="dialog-close" type="button" aria-label="닫기" disabled={disabled} onClick={onSkip}>×</button>
         <span className="eyebrow">{reward.tier === "boss" ? "BOSS REWARD" : "BATTLE REWARD"}</span>
         <h1>전리품을 선택하세요</h1>
         <p>덱에 추가할 카드 한 장을 고르거나 보상을 건너뛸 수 있습니다.</p>
@@ -18,7 +20,7 @@ export function RewardScreen({ reward, disabled = false, onChoose, onSkip }: Rew
           {reward.choices.map((cardId) => {
             const card = CARD_BY_ID.get(cardId);
             if (!card) return null;
-            return <button className={`reward-card card-${card.kind}`} type="button" key={cardId} disabled={disabled} onClick={() => onChoose(cardId)}>
+            return <button className={`reward-card card-${card.kind}${selectedCardId === cardId ? " is-selected" : ""}`} type="button" key={cardId} disabled={disabled || Boolean(selectedCardId)} aria-pressed={selectedCardId === cardId} onClick={() => onChoose(cardId)}>
               <span className="card-cost">{card.cost}</span>
               <span className="reward-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
               <strong className="reward-name">{card.name}</strong>

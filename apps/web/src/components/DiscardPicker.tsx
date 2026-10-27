@@ -5,15 +5,22 @@ interface DiscardPickerProps {
   cards: CardInstance[];
   disabled: boolean;
   onDiscard(instanceId: string): void;
+  title?: string;
+  description?: string;
+  rewardCardId?: string;
+  onCancel?(): void;
 }
 
-export function DiscardPicker({ cards, disabled, onDiscard }: DiscardPickerProps) {
+export function DiscardPicker({ cards, disabled, onDiscard, title = "새 카드를 뽑기 전에 한 장을 버리세요", description = "손패가 10장입니다. 버릴 카드를 직접 선택하면 새 카드 한 장을 뽑습니다.", rewardCardId, onCancel }: DiscardPickerProps) {
+  const reward = rewardCardId ? CARD_BY_ID.get(rewardCardId) : undefined;
   return (
     <section className="discard-picker" aria-labelledby="discard-title" aria-modal="true" role="dialog">
       <div className="discard-dialog">
         <span className="eyebrow">손패 정리</span>
-        <h2 id="discard-title">새 카드를 뽑기 전에 한 장을 버리세요</h2>
-        <p>손패가 10장입니다. 버릴 카드를 직접 선택하면 새 카드 한 장을 뽑습니다.</p>
+        {onCancel && <button className="dialog-close" type="button" aria-label="닫기" disabled={disabled} onClick={onCancel}>×</button>}
+        <h2 id="discard-title">{title}</h2>
+        <p>{description}</p>
+        {reward && <p className="reward-being-added">추가할 카드: <strong>{reward.name}</strong></p>}
         <div className="discard-options">
           {cards.map((card) => {
             const definition = CARD_BY_ID.get(card.cardId);

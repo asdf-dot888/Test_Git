@@ -1006,12 +1006,35 @@ export function chooseReward(run: RunState, cardId: string): RunState {
   if (run.pendingVictoryAcknowledgement) fail("ENCOUNTER_NOT_READY", "Acknowledge the battle victory before choosing a reward.");
   if (!run.pendingReward) fail("REWARD_NOT_PENDING", "There is no card reward to choose.");
   if (!run.pendingReward.choices.includes(cardId)) fail("INVALID_TARGET", "Choose one of the offered cards.");
+  if (run.deck.length >= 35) fail("MAX_DECK", "The deck is full; discard one card to take this reward.");
   const next = cloneRun(run);
   const counts = cardCounts(next.deck);
   if ((counts.get(cardId) ?? 0) >= 2) fail("MAX_COPIES", "The run deck already has two copies of this card.");
   next.deck.push(makeInstance(next, cardId, "reward"));
   next.nextInstanceNumber += 1;
   next.pendingReward = null;
+  return next;
+}
+
+export function chooseRewardAndDiscard(run: RunState, cardId: string, discardInstanceId: string): RunState {
+  if (run.deck.length < 35) fail("INVALID_ACTION", "A discard is only required when the deck already has 35 cards.");
+  if (run.pendingVictoryAcknowledgement) fail("ENCOUNTER_NOT_READY", "Acknowledge the battle victory before choosing a reward.");
+  if (!run.pendingReward) fail("REWARD_NOT_PENDING", "There is no card reward to choose.");
+  if (!run.pendingReward.choices.includes(cardId)) fail("INVALID_TARGET", "Choose one of the offered cards.");
+  if (!run.deck.some(({ instanceId }) => instanceId === discardInstanceId)) {
+    fail("INVALID_TARGET", "Choose a card from the current deck to discard.");
+  }
+  const discardedCard = run.deck.find(({ instanceId }) => instanceId === discardInstanceId)!;
+  const counts = cardCounts(run.deck);
+  const remainingCopies = (counts.get(cardId) ?? 0) - (discardedCard.cardId === cardId ? 1 : 0);
+  if (remainingCopies >= 2) fail("MAX_COPIES", "The run deck already has two copies of this card.");
+  const next = cloneRun(run);
+  next.deck.push(makeInstance(next, cardId, "reward"));
+  next.nextInstanceNumber += 1;
+  next.pendingReward = null;
+  const discardIndex = next.deck.findIndex(({ instanceId }) => instanceId === discardInstanceId);
+  if (discardIndex < 0) fail("INVALID_TARGET", "The selected deck card cannot be discarded.");
+  next.deck.splice(discardIndex, 1);
   return next;
 }
 

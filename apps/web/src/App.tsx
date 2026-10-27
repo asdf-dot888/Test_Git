@@ -7,6 +7,8 @@ import { ExpeditionRoadmap } from "./components/ExpeditionRoadmap.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { ClassSelectionScreen } from "./components/ClassSelectionScreen.js";
 import { RewardScreen } from "./components/RewardScreen.js";
+import { DeckLimitDialog } from "./components/DeckLimitDialog.js";
+import { DiscardPicker } from "./components/DiscardPicker.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { TurnStartGlow } from "./components/TurnStartGlow.js";
 import { LeaderboardModal, type LeaderboardLoadState } from "./components/LeaderboardModal.js";
@@ -44,6 +46,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const { loaded: syncLoaded, status: syncStatus, run: syncedRun, saveRun } = sync;
   const [screen, setScreen] = useState<"menu" | "class-selection" | "map" | "game">("menu");
   const [classSelectionReason, setClassSelectionReason] = useState<"completed" | "abandoned" | null>(null);
+  const [deckLimitPromptedKey, setDeckLimitPromptedKey] = useState<string | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [leaderboardState, setLeaderboardState] = useState<LeaderboardLoadState>("loading");
   const [leaderboardRecords, setLeaderboardRecords] = useState<LeaderboardRecord[]>([]);
@@ -74,6 +77,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const playbackStep = playback?.steps[playback.currentIndex];
   const displayRun = playbackStep?.presentationRun ?? run;
   const battle = displayRun?.battle;
+  const rewardLimitKey = run?.pendingReward && run.deck.length >= 35
+    ? `${run.runId}:${run.pendingReward.encounterIndex}`
+    : null;
   const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
   const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active"
     ? `${run.battle.battleId}:${run.battle.turnNumber}`
@@ -437,9 +443,34 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </>;
   }
 
+  if (run.pendingReward && rewardLimitKey && deckLimitPromptedKey !== rewardLimitKey) {
+    return <DeckLimitDialog
+      disabled={sync.status !== "ready" && sync.status !== "saving"}
+      onConfirm={() => setDeckLimitPromptedKey(rewardLimitKey)}
+      onClose={() => dispatch({ type: "skip-reward" })}
+    />;
+  }
+
   if (run.pendingReward) {
+    if (session.selectedRewardCardId) {
+      return <>
+        <DiscardPicker
+          cards={run.deck}
+          disabled={sync.status !== "ready" && sync.status !== "saving"}
+          title="덱에서 버릴 카드 한 장을 고르세요"
+          description="선택을 마치면 보상 카드를 추가하고 고른 카드를 덱에서 제거합니다."
+          rewardCardId={session.selectedRewardCardId}
+          onDiscard={(discardInstanceId) => dispatch({ type: "choose-reward-and-discard", cardId: session.selectedRewardCardId!, discardInstanceId })}
+          onCancel={() => dispatch({ type: "skip-reward" })}
+        />
+        {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
+      </>;
+    }
     return <>
-      <RewardScreen reward={run.pendingReward} disabled={sync.status !== "ready" && sync.status !== "saving"} onChoose={(cardId) => dispatch({ type: "choose-reward", cardId })} onSkip={() => dispatch({ type: "skip-reward" })} />
+      <RewardScreen reward={run.pendingReward} disabled={sync.status !== "ready" && sync.status !== "saving"} onChoose={(cardId) => {
+        if (run.deck.length >= 35) dispatch({ type: "select-reward-for-discard", cardId });
+        else dispatch({ type: "choose-reward", cardId });
+      }} onSkip={() => dispatch({ type: "skip-reward" })} />
       {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
     </>;

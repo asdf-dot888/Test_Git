@@ -5,6 +5,7 @@ import {
   attackWithMinion,
   castSpell,
   chooseReward,
+  chooseRewardAndDiscard,
   createRun,
   discardBeforeDraw,
   endPlayerTurnWithPlayback,
@@ -35,6 +36,8 @@ export type GameAction =
   | { type: "end-turn" }
   | { type: "discard-before-draw"; instanceId: string }
   | { type: "choose-reward"; cardId: string }
+  | { type: "select-reward-for-discard"; cardId: string }
+  | { type: "choose-reward-and-discard"; cardId: string; discardInstanceId: string }
   | { type: "acknowledge-victory" }
   | { type: "skip-reward" }
   | { type: "continue-run"; nextSeed?: number }
@@ -46,6 +49,7 @@ export interface GameSession {
   run: RunState | null;
   error: string | null;
   selectedCardInstanceId: string | null;
+  selectedRewardCardId: string | null;
   selectedAttackerId: string | null;
   targetMode: "none" | "spell" | "attack" | "hero-power";
   pendingDiscard: boolean;
@@ -59,6 +63,7 @@ export const initialGameSession: GameSession = {
   run: null,
   error: null,
   selectedCardInstanceId: null,
+  selectedRewardCardId: null,
   selectedAttackerId: null,
   targetMode: "none",
   pendingDiscard: false,
@@ -76,6 +81,7 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
     run,
     error: null,
     selectedCardInstanceId: null,
+    selectedRewardCardId: null,
     selectedAttackerId: null,
     targetMode: "none",
     pendingDiscard: run.battle?.pendingDiscardBeforeDraw ?? false,
@@ -122,6 +128,7 @@ function ruleMessage(error: GameRuleError): string {
     MAX_BOARD: "전장에는 하수인을 5명까지만 둘 수 있습니다.",
     MAX_HAND: "손패가 가득 차 카드를 가져올 수 없습니다.",
     MAX_COPIES: "같은 카드는 덱에 2장까지만 넣을 수 있습니다.",
+    MAX_DECK: "덱이 가득 찼습니다. 보상을 받으려면 카드 한 장을 버려야 합니다.",
     WRONG_TURN: "지금은 플레이어의 행동 차례가 아닙니다.",
     TERMINAL_RUN: "진행 중인 전투가 없습니다.",
     CARD_NOT_FOUND: "선택한 카드를 찾을 수 없습니다.",
@@ -170,6 +177,11 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     if (!session.run?.battle || session.pendingDiscard || session.resolving) return session;
     return { ...session, selectedCardInstanceId: action.instanceId, selectedAttackerId: null, targetMode: "spell", error: null };
   }
+  if (action.type === "select-reward-for-discard") {
+    const run = session.run;
+    if (!run?.pendingReward || run.pendingVictoryAcknowledgement || run.deck.length < 35 || !run.pendingReward.choices.includes(action.cardId)) return session;
+    return { ...session, selectedRewardCardId: action.cardId, error: null };
+  }
   if (action.type === "select-attacker") {
     const battle = session.run?.battle;
     const attacker = battle?.playerBoard.find((minion) => minion.instanceId === action.instanceId);
@@ -192,6 +204,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     if (action.type === "end-turn") return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run), session);
     if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);
     if (action.type === "choose-reward") return sessionForRun(chooseReward(session.run, action.cardId), session);
+    if (action.type === "choose-reward-and-discard") return sessionForRun(chooseRewardAndDiscard(session.run, action.cardId, action.discardInstanceId), session);
     if (action.type === "acknowledge-victory") return sessionForRun(acknowledgeVictory(session.run), session);
     if (action.type === "skip-reward") return sessionForRun(skipReward(session.run), session);
     if (action.type === "continue-run") {

@@ -25,6 +25,15 @@ function syncWith(run: ReturnType<typeof createRun>): LocalRunController {
   };
 }
 
+function fullDeckRewardRun(seed: number) {
+  const run = createRun(seed);
+  for (let index = 0; index < 5; index += 1) run.deck.push({ instanceId: `overflow-${index}`, cardId: "bone-rat" });
+  run.pendingVictoryAcknowledgement = true;
+  run.pendingReward = { tier: "boss", choices: ["dread-colossus"], encounterIndex: 3 };
+  run.battle!.status = "playerWon";
+  return run;
+}
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -70,5 +79,45 @@ describe("victory acknowledgement and rewards", () => {
     expect(await screen.findByRole("heading", { name: "전리품을 선택하세요" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "보상 건너뛰기" }));
     expect(await screen.findByRole("heading", { name: "어둠의 군주를 물리쳤습니다" })).toBeTruthy();
+  });
+
+  it("warns at 35 cards, then rewards and discards atomically to stay at 35", async () => {
+    vi.stubGlobal("Audio", FakeAudio);
+    const run = fullDeckRewardRun(604);
+    const sync = syncWith(run);
+    const savedRuns: ReturnType<typeof createRun>[] = [];
+    sync.saveRun = vi.fn(async (updated) => { savedRuns.push(structuredClone(updated)); });
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "확인" }));
+    expect(await screen.findByRole("alertdialog", { name: "덱이 35장으로 가득 찼습니다" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "보상 카드 선택" }));
+    fireEvent.click(await screen.findByRole("button", { name: /공포의 거신/ }));
+    expect(await screen.findByRole("dialog", { name: "덱에서 버릴 카드 한 장을 고르세요" })).toBeTruthy();
+    expect(document.querySelector(".reward-being-added")?.textContent).toContain("공포의 거신");
+    fireEvent.click(screen.getAllByRole("button", { name: /뼈 쥐/ })[0]!);
+    expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
+    expect(savedRuns.at(-1)?.deck).toHaveLength(35);
+    expect(savedRuns.at(-1)?.deck.some(({ cardId }) => cardId === "dread-colossus")).toBe(true);
+  });
+
+  it.each(["warning", "reward", "discard"] as const)("cancelling at the %s step leaves the 35-card deck untouched", async (step) => {
+    vi.stubGlobal("Audio", FakeAudio);
+    const run = fullDeckRewardRun(step === "warning" ? 605 : step === "reward" ? 606 : 607);
+    const originalDeck = structuredClone(run.deck);
+    const sync = syncWith(run);
+    const savedRuns: ReturnType<typeof createRun>[] = [];
+    sync.saveRun = vi.fn(async (updated) => { savedRuns.push(structuredClone(updated)); });
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    fireEvent.click(await screen.findByRole("button", { name: "원정 계속하기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "확인" }));
+    if (step !== "warning") fireEvent.click(await screen.findByRole("button", { name: "보상 카드 선택" }));
+    if (step === "discard") {
+      fireEvent.click(await screen.findByRole("button", { name: /공포의 거신/ }));
+      await screen.findByRole("dialog", { name: "덱에서 버릴 카드 한 장을 고르세요" });
+    }
+    fireEvent.click(await screen.findByRole("button", { name: "닫기" }));
+    expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
+    expect(savedRuns.at(-1)?.deck).toEqual(originalDeck);
   });
 });

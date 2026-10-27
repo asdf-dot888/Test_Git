@@ -168,6 +168,14 @@
 .discard-picker, .run-screen, .menu-screen { position: fixed; z-index: 20; inset: 0; min-height: 100dvh; padding: 24px; display: grid; place-items: center; overflow: auto; background: rgb(12 12 14 / 84%); backdrop-filter: blur(9px); }
 .discard-picker { z-index: 15; }
 .discard-dialog, .run-card, .menu-card { width: min(100%, 760px); padding: clamp(24px, 5vw, 54px); border: 1px solid rgb(219 173 101 / 42%); border-radius: 20px; background: radial-gradient(ellipse at 50% 0, #38302a, #1d1b1d 70%); box-shadow: 0 28px 90px rgb(0 0 0 / 55%); text-align: center; }
+.reward-screen, .discard-dialog, .deck-limit-dialog { position: relative; }
+.dialog-close { position: absolute; top: 12px; right: 12px; z-index: 2; width: 34px; height: 34px; display: grid; place-items: center; color: #e4d4b8; border: 1px solid var(--line); border-radius: 8px; background: #242225; font-size: 22px; line-height: 1; cursor: pointer; }
+.dialog-close:hover:not(:disabled) { color: #fff2d9; border-color: var(--gold-bright); }
+.dialog-close:disabled { opacity: .5; cursor: not-allowed; }
+.deck-limit-dialog h2 { margin: 10px 0; color: #fff2d9; font-size: clamp(23px, 4vw, 34px); }
+.deck-limit-dialog p { color: #c5baaa; line-height: 1.6; }
+.reward-being-added { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: rgb(0 0 0 / 14%); }
+.reward-being-added strong { color: var(--gold-bright); }
 .eyebrow { color: var(--gold); font-size: 10px; font-weight: 700; letter-spacing: .2em; }
 .discard-dialog h2, .run-card h1, .menu-card h1 { margin: 9px 0; color: #fff2d9; font-size: clamp(24px, 4vw, 36px); }
 .discard-dialog p, .run-card p, .menu-card p { margin: 0 auto 22px; max-width: 520px; color: #c5baaa; font-size: 14px; line-height: 1.6; }

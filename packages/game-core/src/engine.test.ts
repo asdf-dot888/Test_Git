@@ -17,6 +17,7 @@ import {
   attackWithMinion,
   castSpell,
   chooseReward,
+  chooseRewardAndDiscard,
   createRun,
   discardBeforeDraw,
   endPlayerTurn,
@@ -1152,6 +1153,31 @@ describe("enemy turns, rewards, and run progression", () => {
     const skipped = skipReward(winCurrentBattle(createRun(72)));
     expect(skipped.deck).toHaveLength(30);
     expect(skipped.pendingReward).toBeNull();
+  });
+
+  it("caps ordinary reward selection at 35 and atomically replaces one card at capacity", () => {
+    const rewardReady = (seed: number, extraCards: number) => {
+      const run = createRun(seed);
+      for (let index = 0; index < extraCards; index += 1) run.deck.push({ instanceId: `extra-${index}`, cardId: "bone-rat" });
+      run.pendingReward = { tier: "boss", choices: ["dread-colossus"], encounterIndex: 3 };
+      run.pendingVictoryAcknowledgement = false;
+      return run;
+    };
+
+    const thirtyFour = rewardReady(73, 4);
+    expect(chooseReward(thirtyFour, "dread-colossus").deck).toHaveLength(35);
+
+    const thirtyFive = rewardReady(74, 5);
+    const originalDeck = structuredClone(thirtyFive.deck);
+    expect(() => chooseReward(thirtyFive, "dread-colossus")).toThrowError(expect.objectContaining({ code: "MAX_DECK" }));
+    expect(() => chooseRewardAndDiscard(thirtyFive, "dread-colossus", "missing-card")).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+    expect(thirtyFive.deck).toEqual(originalDeck);
+
+    const replaced = chooseRewardAndDiscard(thirtyFive, "dread-colossus", "extra-0");
+    expect(replaced.deck).toHaveLength(35);
+    expect(replaced.deck.some(({ instanceId }) => instanceId === "extra-0")).toBe(false);
+    expect(replaced.deck.some(({ cardId }) => cardId === "dread-colossus")).toBe(true);
+    expect(replaced.pendingReward).toBeNull();
   });
 
   it("limits new-run rewards to neutral and selected-class cards, and legacy rewards to neutral cards", () => {

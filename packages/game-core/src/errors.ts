@@ -5,6 +5,7 @@ export type GameRuleErrorCode =
   | "MAX_BOARD"
   | "MAX_HAND"
   | "MAX_COPIES"
+  | "MAX_DECK"
   | "WRONG_TURN"
   | "TERMINAL_RUN"
   | "CARD_NOT_FOUND"
