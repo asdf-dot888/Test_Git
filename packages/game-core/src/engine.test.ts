@@ -4,6 +4,7 @@ import {
   CARD_CATALOG,
   CARD_BY_ID,
   ENEMY_BY_ID,
+  FUSION_RECIPES,
   NORMAL_ENEMIES_BY_PHASE,
   PLAYER_CLASS_DEFINITIONS,
   SHARED_STARTER_CARD_IDS,
@@ -20,6 +21,7 @@ import {
   discardBeforeDraw,
   endPlayerTurn,
   endPlayerTurnWithPlayback,
+  fuseMinions,
   gameConstants,
   hydrateRunForCurrentBattle,
   playMinion,
@@ -77,9 +79,9 @@ function winCurrentBattle(run: RunState): RunState {
 
 describe("card and enemy catalog", () => {
   it("contains unique base, class, and token cards with complete effect descriptions", () => {
-    expect(CARD_CATALOG).toHaveLength(67);
-    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(67);
-    expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(44);
+    expect(CARD_CATALOG).toHaveLength(76);
+    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(76);
+    expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(53);
     expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(23);
     for (const card of CARD_CATALOG) {
       expect(card.cost).toBeGreaterThanOrEqual(0);
@@ -157,6 +159,22 @@ describe("card and enemy catalog", () => {
     for (const phase of [1, 2, 3] as const) {
       expect(NORMAL_ENEMIES_BY_PHASE[phase]).toHaveLength(3);
       for (const enemy of NORMAL_ENEMIES_BY_PHASE[phase]) expect(ENEMY_BY_ID.get(enemy.id)).toEqual(enemy);
+    }
+  });
+
+  it("defines three unique, class-tagged fusion recipes per class", () => {
+    expect(FUSION_RECIPES).toHaveLength(9);
+    for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
+      const recipes = FUSION_RECIPES.filter((recipe) => recipe.classId === playerClass);
+      expect(recipes).toHaveLength(3);
+      for (const recipe of recipes) {
+        const [firstId, secondId] = recipe.sourceCardIds;
+        expect(CARD_BY_ID.get(firstId)?.classId).toBe(playerClass);
+        expect(CARD_BY_ID.get(firstId)?.kind).toBe("minion");
+        expect(CARD_BY_ID.get(secondId)?.classId).toBe(playerClass);
+        expect(CARD_BY_ID.get(secondId)?.kind).toBe("minion");
+        expect(CARD_BY_ID.get(recipe.resultCardId)).toMatchObject({ classId: playerClass, kind: "minion", rewardTier: "normal" });
+      }
     }
   });
 });
@@ -499,6 +517,101 @@ describe("random, cleave, and deck-theft spells", () => {
     expect(resolution.run.battle?.drawPile.some(({ instanceId }) => instanceId === "player-draw-identity")).toBe(false);
     const record = resolution.steps.find(({ action }) => action.type === "cast-spell")?.action;
     expect(record).toMatchObject({ type: "cast-spell", effects: [{ kind: "stealFromOpponentDeck", transferredCardInstanceId: "player-draw-identity" }] });
+  });
+});
+
+describe("class minion fusion", () => {
+  it("fuses either source order into the recipe result and consumes one mana", () => {
+    for (const recipe of FUSION_RECIPES) {
+      const run = createRun(1300 + FUSION_RECIPES.indexOf(recipe), recipe.classId);
+      activeBattle(run).playerMana.current = 1;
+      activeBattle(run).playerBoard = recipe.sourceCardIds.map((cardId, index) => ({
+        instanceId: `material-${index}`, cardId, owner: "player", attack: CARD_BY_ID.get(cardId)!.minion!.attack,
+        health: CARD_BY_ID.get(cardId)!.minion!.maxHealth, maxHealth: CARD_BY_ID.get(cardId)!.minion!.maxHealth,
+        summonedTurn: 0, hasAttacked: false,
+      }));
+      const first = fuseMinions(run, "material-0", "material-1");
+      const reversed = fuseMinions(run, "material-1", "material-0");
+      expect(first.battle?.playerBoard[0]?.cardId).toBe(recipe.resultCardId);
+      expect(reversed.battle?.playerBoard[0]?.cardId).toBe(recipe.resultCardId);
+      expect(first.battle?.playerMana.current).toBe(0);
+      expect(first.battle?.playerBoard[0]?.hasAttacked).toBe(true);
+      expect(first.battle?.discardPile.map(({ instanceId }) => instanceId)).toEqual(["material-0", "material-1"]);
+      expect(first.battle?.playerBoard[0]?.instanceId).toBe(reversed.battle?.playerBoard[0]?.instanceId);
+    }
+  });
+
+  it("places the result at the lower source slot, allocates a new ID, and resolves its battlecry", () => {
+    const recipe = FUSION_RECIPES.find(({ id }) => id === "demonist-greater-caller")!;
+    const run = createRun(1310, "demonist");
+    const battle = activeBattle(run);
+    const unrelated = ["unrelated-left", "unrelated-middle", "unrelated-right"].map((instanceId) => minion({ instanceId }));
+    battle.playerBoard = [
+      unrelated[0]!,
+      { ...minion({ instanceId: "material-later", cardId: recipe.sourceCardIds[1] }), hasAttacked: false },
+      unrelated[1]!,
+      { ...minion({ instanceId: "material-earlier", cardId: recipe.sourceCardIds[0] }), hasAttacked: false },
+      unrelated[2]!,
+    ];
+    battle.playerMana.current = 1;
+    const fused = fuseMinions(run, "material-earlier", "material-later");
+    expect(fused.battle?.playerBoard.map(({ cardId }) => cardId)).toEqual([
+      "ash-wolf", recipe.resultCardId, "ash-wolf", "ash-wolf", "demon-ashling",
+    ]);
+    expect(fused.battle?.playerBoard[1]?.instanceId).toMatch(/^fusion-/);
+    expect(fused.battle?.playerBoard[1]?.hasAttacked).toBe(true);
+    expect(fused.battle?.playerBoard[4]?.summonedTurn).toBe(fused.battle?.turnNumber);
+  });
+
+  it("allows fusion on a full board because two materials are replaced by one", () => {
+    const recipe = FUSION_RECIPES.find(({ id }) => id === "demonist-hellguard")!;
+    const run = createRun(1311, "demonist");
+    const battle = activeBattle(run);
+    battle.playerMana.current = 1;
+    battle.playerBoard = [
+      minion({ instanceId: "full-a" }),
+      { ...minion({ instanceId: "full-first", cardId: recipe.sourceCardIds[0] }), hasAttacked: false },
+      minion({ instanceId: "full-b" }),
+      minion({ instanceId: "full-c" }),
+      { ...minion({ instanceId: "full-second", cardId: recipe.sourceCardIds[1] }), hasAttacked: false },
+    ];
+    const fused = fuseMinions(run, "full-first", "full-second");
+    expect(fused.battle?.playerBoard).toHaveLength(4);
+    expect(fused.battle?.playerBoard[1]?.cardId).toBe(recipe.resultCardId);
+  });
+
+  it("rejects invalid pairs, identical instances, enemy minions, wrong turns, and insufficient mana without mutation", () => {
+    const invalidPair = createRun(1320, "warrior");
+    activeBattle(invalidPair).playerBoard = [
+      { ...minion({ instanceId: "bad-a", cardId: "warrior-vanguard" }), hasAttacked: false },
+      { ...minion({ instanceId: "bad-b", cardId: "warrior-oath-knight" }), hasAttacked: false },
+    ];
+    const invalidPairBefore = copyRun(invalidPair);
+    expect(() => fuseMinions(invalidPair, "bad-a", "bad-b")).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+    expect(invalidPair).toEqual(invalidPairBefore);
+    expect(() => fuseMinions(invalidPair, "bad-a", "bad-a")).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+    expect(invalidPair).toEqual(invalidPairBefore);
+
+    const valid = createRun(1321, "warrior");
+    activeBattle(valid).playerBoard = [
+      { ...minion({ instanceId: "valid-a", cardId: "warrior-vanguard" }), hasAttacked: false },
+      { ...minion({ instanceId: "valid-b", cardId: "warrior-stonewall" }), hasAttacked: false },
+    ];
+    activeBattle(valid).playerMana.current = 0;
+    const poorBefore = copyRun(valid);
+    expect(() => fuseMinions(valid, "valid-a", "valid-b")).toThrowError(expect.objectContaining({ code: "INSUFFICIENT_MANA" }));
+    expect(valid).toEqual(poorBefore);
+
+    activeBattle(valid).playerMana.current = 1;
+    activeBattle(valid).enemyBoard.push({ ...minion({ instanceId: "enemy-material", owner: "enemy", cardId: "warrior-vanguard" }), hasAttacked: false });
+    activeBattle(valid).activeSide = "enemy";
+    const wrongTurnBefore = copyRun(valid);
+    expect(() => fuseMinions(valid, "valid-a", "valid-b")).toThrowError(expect.objectContaining({ code: "WRONG_TURN" }));
+    expect(valid).toEqual(wrongTurnBefore);
+    activeBattle(valid).activeSide = "player";
+    const enemyBefore = copyRun(valid);
+    expect(() => fuseMinions(valid, "enemy-material", "valid-a")).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+    expect(valid).toEqual(enemyBefore);
   });
 });
 

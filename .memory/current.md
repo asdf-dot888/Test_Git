@@ -4,13 +4,13 @@
 [Class-Based Expedition Expansion](./plans/2026-10-27-class-based-expedition-expansion.md)
 
 ## Active Phase
-[P01 Game Core](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/phase.md)
+[P02 Game UI](./phases/2026-10-27-class-based-expedition-expansion/P02-game-ui/phase.md)
 
 ## Active Task
-[T04 Minion Fusion](./phases/2026-10-27-class-based-expedition-expansion/P01-game-core/T04-minion-fusion.md)
+[T01 Class Selection and Power UI](./phases/2026-10-27-class-based-expedition-expansion/P02-game-ui/T01-class-selection-and-power-ui.md)
 
 ## Status
-- T01 class and encounter model, T02 class hero powers, and T03 special spell effects completed and committed; validations passed.
+- P01 game-core tasks T01–T04 completed and committed; validations passed.
 
 ## Next Step
-Read the T04 blueprint and implement the nine class-specific minion fusion recipes.
+Read the P02 T01 blueprint and add the class selection screen and hero-power controls.

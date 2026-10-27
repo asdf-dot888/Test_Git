@@ -1,4 +1,4 @@
-import { BOSSES, CARD_BY_ID, CARD_CATALOG, ENEMY_BY_ID, NORMAL_ENEMIES_BY_PHASE, PLAYER_CLASS_DEFINITIONS, SHARED_STARTER_CARD_IDS } from "./catalog.js";
+import { BOSSES, CARD_BY_ID, CARD_CATALOG, ENEMY_BY_ID, FUSION_RECIPES, NORMAL_ENEMIES_BY_PHASE, PLAYER_CLASS_DEFINITIONS, SHARED_STARTER_CARD_IDS } from "./catalog.js";
 import { GameRuleError } from "./errors.js";
 import { normalizeSeed, pickIndex, shuffle } from "./random.js";
 import type {
@@ -791,6 +791,38 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
     summoned.run.battle!.playerBoard.push(summoned.minion);
     return summoned.run;
   }
+}
+
+export function fuseMinions(run: RunState, firstMinionId: string, secondMinionId: string): RunState {
+  const next = cloneRun(run);
+  const battle = assertPlayerTurn(next);
+  if (firstMinionId === secondMinionId) fail("INVALID_TARGET", "Select two different friendly minions to fuse.");
+  const firstIndex = battle.playerBoard.findIndex((minion) => minion.instanceId === firstMinionId);
+  const secondIndex = battle.playerBoard.findIndex((minion) => minion.instanceId === secondMinionId);
+  if (firstIndex < 0 || secondIndex < 0) fail("INVALID_TARGET", "Both fusion materials must be on your board.");
+  const first = battle.playerBoard[firstIndex]!;
+  const second = battle.playerBoard[secondIndex]!;
+  const recipe = FUSION_RECIPES.find(({ classId, sourceCardIds }) =>
+    classId === next.playerClass
+      && ((sourceCardIds[0] === first.cardId && sourceCardIds[1] === second.cardId)
+        || (sourceCardIds[0] === second.cardId && sourceCardIds[1] === first.cardId)));
+  if (!recipe) fail("INVALID_ACTION", "These minions do not form a class fusion recipe.");
+  if (battle.playerBoard.length - 1 > MAX_BOARD) fail("MAX_BOARD", "There is no space for the fused minion.");
+  ensureMana(next, 1);
+
+  const insertionIndex = Math.min(firstIndex, secondIndex);
+  const removed = [first, second];
+  battle.playerMana.current -= 1;
+  battle.discardPile.push(...removed.map(({ instanceId, cardId }) => ({ instanceId, cardId })));
+  battle.playerBoard.splice(Math.max(firstIndex, secondIndex), 1);
+  battle.playerBoard.splice(insertionIndex, 1);
+
+  const resultInstance = makeInstance(next, recipe.resultCardId, "fusion");
+  next.nextInstanceNumber += 1;
+  const made = createMinion(next, recipe.resultCardId, "player", battle.turnNumber, resultInstance);
+  made.minion.hasAttacked = true;
+  made.run.battle!.playerBoard.splice(insertionIndex, 0, made.minion);
+  return triggerMinionEffect(made.run, made.minion);
 }
 
 export function startBattle(run: RunState, enemyId: string): RunState {

@@ -44,6 +44,13 @@ export interface PlayerClassDefinition {
   starterCardIds: readonly string[];
 }
 
+export interface FusionRecipe {
+  id: string;
+  classId: PlayerClass;
+  sourceCardIds: readonly [string, string];
+  resultCardId: string;
+}
+
 export interface CardInstance {
   instanceId: string;
   cardId: string;

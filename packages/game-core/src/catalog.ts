@@ -1,4 +1,4 @@
-import type { CardDefinition, EnemyDefinition, MinionEffect, PlayerClass, PlayerClassDefinition, SpellEffect } from "./types.js";
+import type { CardDefinition, EnemyDefinition, FusionRecipe, MinionEffect, PlayerClass, PlayerClassDefinition, SpellEffect } from "./types.js";
 
 const SUMMONED_CARD_NAMES: Readonly<Record<string, string>> = {
   "bone-rat": "뼈 쥐",
@@ -184,6 +184,18 @@ const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
   demonToken(minion("demon-lesser-imp", "하급 임프", 0, 1, 1)),
   demonToken(minion("demon-ashling", "잿불 악마", 0, 2, 2)),
   demonToken(minion("demon-cinder-fiend", "숯불 마귀", 0, 3, 2)),
+
+  forClass(minion("warrior-fused-bulwark", "융합된 성채", 5, 4, 9), "warrior"),
+  forClass(minion("warrior-iron-oath", "철의 맹세", 5, 5, 8, "normal", { kind: "battlecryBuff", attack: 1, health: 1, target: "self" }), "warrior"),
+  forClass(minion("warrior-war-banner", "전쟁 깃발 거신", 6, 7, 7, "normal", { kind: "battlecryBuff", attack: 1, health: 1, target: "otherFriendly" }), "warrior"),
+
+  forClass(minion("assassin-twinfang", "쌍송곳니", 3, 6, 3), "assassin"),
+  forClass(minion("assassin-venom-empress", "맹독 여제", 5, 7, 4, "normal", { kind: "battlecryBuff", attack: 1, health: 0, target: "self" }), "assassin"),
+  forClass(minion("assassin-red-mirror", "핏빛 거울", 5, 6, 5, "normal", { kind: "deathSummon", cardId: "bone-rat", count: 2 }), "assassin"),
+
+  forClass(minion("demonist-greater-caller", "상급 악마 소환사", 5, 4, 6, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
+  forClass(minion("demonist-hellguard", "지옥의 파수장", 5, 5, 7), "demonist", "demon"),
+  forClass(minion("demonist-abyss-lord", "심연의 군주", 7, 7, 8, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
 ];
 
 export const CARD_CATALOG: readonly CardDefinition[] = [...BASE_CARD_CATALOG, ...CLASS_CARD_CATALOG];
@@ -203,13 +215,30 @@ export const SHARED_STARTER_CARD_IDS: readonly string[] = [
   "mana-spring", "healing-mist",
 ];
 
-const classCards = (classId: PlayerClass): readonly string[] =>
-  CLASS_CARD_CATALOG.filter((card) => card.classId === classId && !card.tokenOnly).map((card) => card.id);
+const STARTER_CLASS_CARD_IDS: Readonly<Record<PlayerClass, readonly string[]>> = {
+  warrior: ["warrior-vanguard", "warrior-shield-maiden", "warrior-stonewall", "warrior-banner-captain", "warrior-oath-knight", "warrior-iron-ram", "warrior-bastion-colossus", "warrior-brace", "warrior-hammerfall", "warrior-rally"],
+  assassin: ["assassin-quickblade", "assassin-night-knife", "assassin-venom-dancer", "assassin-shadow-duelist", "assassin-silk-stalker", "assassin-blood-viper", "assassin-executioner", "assassin-venom-coat", "assassin-shuriken", "assassin-smoke-step"],
+  demonist: ["demonist-imp-caller", "demonist-hellbound-adept", "demonist-pit-ritualist", "demonist-demon-houndmaster", "demonist-infernal-guardian", "demonist-summoner", "demonist-abyssal-matriarch", "demonist-dark-rite", "demonist-hellfire", "demonist-soul-bond"],
+};
+
+const classCards = (classId: PlayerClass): readonly string[] => STARTER_CLASS_CARD_IDS[classId];
 
 export const PLAYER_CLASS_DEFINITIONS: readonly PlayerClassDefinition[] = [
   { id: "warrior", name: "전사", archetype: "체력과 방어력이 높은 하수인", heroPowerName: "방패 다지기", heroPowerDescription: "영웅에게 방어도 2를 부여합니다.", starterCardIds: classCards("warrior") },
   { id: "assassin", name: "암살자", archetype: "공격력과 특수 효과가 강한 하수인", heroPowerName: "그림자 습격", heroPowerDescription: "아직 공격하지 않은 아군 하수인 하나의 공격력을 이번 턴에만 1 올립니다.", starterCardIds: classCards("assassin") },
   { id: "demonist", name: "악마술사", archetype: "악마 소환과 하수인 연계", heroPowerName: "하급 악마 소환", heroPowerDescription: "하급 임프 1마리를 소환합니다.", starterCardIds: classCards("demonist") },
+];
+
+export const FUSION_RECIPES: readonly FusionRecipe[] = [
+  { id: "warrior-bulwark", classId: "warrior", sourceCardIds: ["warrior-vanguard", "warrior-stonewall"], resultCardId: "warrior-fused-bulwark" },
+  { id: "warrior-iron-oath", classId: "warrior", sourceCardIds: ["warrior-shield-maiden", "warrior-oath-knight"], resultCardId: "warrior-iron-oath" },
+  { id: "warrior-war-banner", classId: "warrior", sourceCardIds: ["warrior-banner-captain", "warrior-iron-ram"], resultCardId: "warrior-war-banner" },
+  { id: "assassin-twinfang", classId: "assassin", sourceCardIds: ["assassin-quickblade", "assassin-night-knife"], resultCardId: "assassin-twinfang" },
+  { id: "assassin-venom-empress", classId: "assassin", sourceCardIds: ["assassin-venom-dancer", "assassin-silk-stalker"], resultCardId: "assassin-venom-empress" },
+  { id: "assassin-red-mirror", classId: "assassin", sourceCardIds: ["assassin-shadow-duelist", "assassin-blood-viper"], resultCardId: "assassin-red-mirror" },
+  { id: "demonist-greater-caller", classId: "demonist", sourceCardIds: ["demonist-imp-caller", "demonist-pit-ritualist"], resultCardId: "demonist-greater-caller" },
+  { id: "demonist-hellguard", classId: "demonist", sourceCardIds: ["demonist-hellbound-adept", "demonist-infernal-guardian"], resultCardId: "demonist-hellguard" },
+  { id: "demonist-abyss-lord", classId: "demonist", sourceCardIds: ["demonist-summoner", "demonist-abyssal-matriarch"], resultCardId: "demonist-abyss-lord" },
 ];
 
 export const NORMAL_ENEMIES: readonly EnemyDefinition[] = [
