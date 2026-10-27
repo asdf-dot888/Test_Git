@@ -60,7 +60,7 @@ export interface GameSession {
   resolving: boolean;
   combatEffects: CombatEffectEvent[];
   nextCombatEffectId: number;
-  enemyTurnPlayback: { steps: EnemyTurnPlaybackStep[]; currentIndex: number } | null;
+  enemyTurnPlayback: { steps: EnemyTurnPlaybackStep[]; currentIndex: number; stage: "intent" | "effect" } | null;
 }
 
 export const initialGameSession: GameSession = {
@@ -99,15 +99,11 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
 function sessionForEnemyTurn(resolution: ReturnType<typeof endPlayerTurnWithPlayback>, previous: GameSession): GameSession {
   const run = structuredClone(resolution.run);
   if (run.battle?.enemyTurnEvents) delete run.battle.enemyTurnEvents;
-  const firstStep = resolution.steps[0];
-  const events = firstStep
-    ? collectEnemyActionEffects(firstStep.beforeRun, firstStep.presentationRun, firstStep.action, previous.nextCombatEffectId)
-    : [];
   return {
     ...sessionForRun(run, previous),
-    enemyTurnPlayback: resolution.steps.length > 0 ? { steps: resolution.steps, currentIndex: 0 } : null,
-    combatEffects: events,
-    nextCombatEffectId: previous.nextCombatEffectId + events.length,
+    enemyTurnPlayback: resolution.steps.length > 0 ? { steps: resolution.steps, currentIndex: 0, stage: "intent" } : null,
+    combatEffects: [],
+    nextCombatEffectId: previous.nextCombatEffectId,
   };
 }
 
@@ -160,15 +156,24 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
   if (action.type === "advance-enemy-turn-playback") {
     const playback = session.enemyTurnPlayback;
     if (!playback) return session;
+    if (playback.stage === "intent") {
+      const step = playback.steps[playback.currentIndex];
+      if (!step) return { ...session, enemyTurnPlayback: null, combatEffects: [] };
+      const events = collectEnemyActionEffects(step.beforeRun, step.presentationRun, step.action, session.nextCombatEffectId);
+      return {
+        ...session,
+        enemyTurnPlayback: { ...playback, stage: "effect" },
+        combatEffects: events,
+        nextCombatEffectId: session.nextCombatEffectId + events.length,
+      };
+    }
     const nextIndex = playback.currentIndex + 1;
     const nextStep = playback.steps[nextIndex];
     if (!nextStep) return { ...session, enemyTurnPlayback: null, combatEffects: [] };
-    const events = collectEnemyActionEffects(nextStep.beforeRun, nextStep.presentationRun, nextStep.action, session.nextCombatEffectId);
     return {
       ...session,
-      enemyTurnPlayback: { ...playback, currentIndex: nextIndex },
-      combatEffects: events,
-      nextCombatEffectId: session.nextCombatEffectId + events.length,
+      enemyTurnPlayback: { ...playback, currentIndex: nextIndex, stage: "intent" },
+      combatEffects: [],
     };
   }
   if (session.enemyTurnPlayback) return session;

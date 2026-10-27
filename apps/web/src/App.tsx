@@ -76,7 +76,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const run = session.run;
   const playback = session.enemyTurnPlayback;
   const playbackStep = playback?.steps[playback.currentIndex];
-  const displayRun = playbackStep?.presentationRun ?? run;
+  const displayRun = playbackStep ? (playback?.stage === "intent" ? playbackStep.beforeRun : playbackStep.presentationRun) : run;
   const battle = displayRun?.battle;
   const rewardLimitKey = run?.pendingReward && run.deck.length >= 35
     ? `${run.runId}:${run.pendingReward.encounterIndex}`
@@ -567,6 +567,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onUseHeroPower={activateHeroPower}
           onAllAttack={() => dispatch({ type: "all-attack" })}
           onDropInteraction={handleDropInteraction}
+          enemyIntentStep={playback?.stage === "intent" ? playbackStep ?? null : null}
         />
       {leaderboardSubmitNotice}
       <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />

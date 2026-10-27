@@ -12,9 +12,10 @@ interface MinionLaneProps {
   turnNumber: number;
   onSelectTarget(targetId: string): void;
   onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
+  intentTargetIds?: string[];
 }
 
-export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget, onDropTarget }: MinionLaneProps) {
+export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget, onDropTarget, intentTargetIds = [] }: MinionLaneProps) {
   const occupied = new Map(minions.map((minion) => [minion.instanceId, minion]));
   return (
     <section className={`minion-lane lane-${side}`} aria-label={`${side === "player" ? "내" : "적"} 하수인 전장`}>
@@ -41,6 +42,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
                 targetable={targetMode !== "none" && targetSide === side}
                 disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side)}
                 draggable={side === "player" && !disabled}
+                intentTarget={intentTargetIds.includes(minion.instanceId)}
                 onSelect={() => {
                   if (side === "player" && targetMode === "none" && (minion.summonedTurn >= turnNumber || minion.hasAttacked)) return;
                   onSelectTarget(minion.instanceId);

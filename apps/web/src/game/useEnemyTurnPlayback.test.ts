@@ -5,6 +5,7 @@ import { useEnemyTurnPlayback } from "./useEnemyTurnPlayback.js";
 
 afterEach(() => {
   vi.useRealTimers();
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
 });
 
 describe("useEnemyTurnPlayback", () => {
@@ -37,6 +38,24 @@ describe("useEnemyTurnPlayback", () => {
     expect(onAdvance).not.toHaveBeenCalled();
     rerender({ active: true, stepKey: 0, paused: false, hasEffects: false, onAdvance });
     act(() => { vi.advanceTimersByTime(599); });
+    expect(onAdvance).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(onAdvance).toHaveBeenCalledOnce();
+  });
+
+  it("pauses the intent countdown while the browser tab is hidden", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    const onAdvance = vi.fn();
+    const { rerender } = renderHook((props) => useEnemyTurnPlayback(props), {
+      initialProps: { active: true, stepKey: 0, paused: false, hasEffects: false, onAdvance },
+    });
+    act(() => { vi.advanceTimersByTime(5_000); });
+    expect(onAdvance).not.toHaveBeenCalled();
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    rerender({ active: true, stepKey: 0, paused: false, hasEffects: false, onAdvance });
+    act(() => { vi.advanceTimersByTime(999); });
     expect(onAdvance).not.toHaveBeenCalled();
     act(() => { vi.advanceTimersByTime(1); });
     expect(onAdvance).toHaveBeenCalledOnce();

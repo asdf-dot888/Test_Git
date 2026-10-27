@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const ACTION_GAP_MS = 1_000;
 
@@ -10,6 +10,7 @@ export function useEnemyTurnPlayback(options: {
   onAdvance(): void;
 }): void {
   const { active, stepKey, paused, hasEffects, onAdvance } = options;
+  const [documentHidden, setDocumentHidden] = useState(() => typeof document !== "undefined" && document.visibilityState === "hidden");
   const remainingMs = useRef(ACTION_GAP_MS);
   const deadline = useRef<number | null>(null);
   const activeTimer = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
@@ -19,6 +20,12 @@ export function useEnemyTurnPlayback(options: {
   useEffect(() => {
     onAdvanceRef.current = onAdvance;
   }, [onAdvance]);
+
+  useEffect(() => {
+    const updateVisibility = () => setDocumentHidden(document.visibilityState === "hidden");
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => document.removeEventListener("visibilitychange", updateVisibility);
+  }, []);
 
   useEffect(() => {
     if (!active) {
@@ -36,7 +43,7 @@ export function useEnemyTurnPlayback(options: {
       deadline.current = null;
     }
 
-    if (paused || hasEffects) {
+    if (paused || documentHidden || hasEffects) {
       if (activeTimer.current !== null) {
         globalThis.clearTimeout(activeTimer.current);
         activeTimer.current = null;
@@ -66,5 +73,5 @@ export function useEnemyTurnPlayback(options: {
         deadline.current = null;
       }
     };
-  }, [active, hasEffects, paused, stepKey]);
+  }, [active, documentHidden, hasEffects, paused, stepKey]);
 }

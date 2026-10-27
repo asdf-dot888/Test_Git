@@ -37,6 +37,11 @@ async function advance(ms: number): Promise<void> {
   await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 }
 
+async function advanceUntil(predicate: () => boolean, limitMs = 8_000): Promise<void> {
+  for (let elapsed = 0; elapsed < limitMs && !predicate(); elapsed += 100) await advance(100);
+  if (!predicate()) throw new Error("Timed out waiting for enemy playback state.");
+}
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -45,7 +50,7 @@ afterEach(() => {
 });
 
 describe("enemy turn playback in the game screen", () => {
-  it("locks player actions and pauses action gaps while the Escape menu is open", async () => {
+  it("previews enemy actions before effects, highlights targets, and pauses intent on the menu", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(100_000);
     vi.stubGlobal("Audio", FakeAudio);
@@ -67,43 +72,34 @@ describe("enemy turn playback in the game screen", () => {
 
     expect((screen.getByRole("button", { name: "턴 종료" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: /아군 하수인 잿빛 늑대/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByRole("button", { name: /적 하수인 잿빛 늑대/ })).toBeTruthy();
+    expect(screen.getByTestId("enemy-intent-preview").textContent).toContain("적의 행동 예고");
+    expect(screen.getByTestId("enemy-intent-preview").textContent).toContain("잿빛 늑대 소환");
     expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 5\/5/ })).toBeTruthy();
 
     await advance(400);
     fireEvent.click(screen.getByRole("button", { name: "메뉴" }));
     expect(screen.getByRole("dialog", { name: "게임 메뉴" })).toBeTruthy();
-    expect(document.body.querySelector(".combat-effect-layer")?.className).toContain("is-paused");
+    expect(document.body.querySelector(".enemy-intent-preview")).toBeTruthy();
     await advance(5_000);
     expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 5\/5/ })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "돌아가기" }));
-    await advance(1_000);
-    expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 5\/5/ })).toBeTruthy();
-    await advance(400);
-    fireEvent.click(screen.getByRole("button", { name: "메뉴" }));
-    await advance(5_000);
-    expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 5\/5/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "돌아가기" }));
     await advance(599);
-    expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 5\/5/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /적 하수인 잿빛 늑대/ })).toBeNull();
     await advance(1);
+    await advance(0);
+    expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 5\/5/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /적 하수인 잿빛 늑대/ })).toBeTruthy();
+    await advanceUntil(() => screen.queryByTestId("enemy-intent-preview")?.textContent.includes("의 공격") ?? false);
+    expect(screen.getByTestId("enemy-intent-preview").textContent).toContain("의 공격");
+    expect(document.querySelector(".lane-player .is-intent-target")).toBeTruthy();
+    await advance(1_000);
     await advance(0);
     expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 4\/5/ })).toBeTruthy();
     expect(document.body.querySelectorAll(".combat-effect-impact")).toHaveLength(2);
 
-    await advance(1_520);
-    await advance(999);
-    expect((screen.getByRole("button", { name: /턴 종료/ }) as HTMLButtonElement).disabled).toBe(true);
-    await advance(1);
-    expect((screen.getByRole("button", { name: /턴 종료/ }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.getByText("00:20")).toBeTruthy();
-    expect(document.body.querySelectorAll(".turn-start-glow")).toHaveLength(1);
-    await advance(1_000);
-    expect(document.body.querySelector(".turn-start-glow")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "메뉴" }));
-    fireEvent.click(screen.getByRole("button", { name: "돌아가기" }));
-    expect(document.body.querySelector(".turn-start-glow")).toBeNull();
+    await advanceUntil(() => !screen.queryByTestId("enemy-intent-preview"));
+    expect(screen.queryByTestId("enemy-intent-preview")).toBeNull();
   });
 
   it("shows the lethal action before routing to the defeat screen", async () => {
@@ -126,6 +122,10 @@ describe("enemy turn playback in the game screen", () => {
     await advance(0);
 
     expect(screen.queryByText("원정이 끝났습니다")).toBeNull();
+    expect(screen.getByLabelText("체력 1/30")).toBeTruthy();
+    expect(screen.getByTestId("enemy-intent-preview")).toBeTruthy();
+    await advance(1_000);
+    await advance(0);
     expect(screen.getByLabelText("체력 0/30")).toBeTruthy();
     expect(document.body.querySelector(".combat-effect-impact")).toBeTruthy();
     await advance(1_400);

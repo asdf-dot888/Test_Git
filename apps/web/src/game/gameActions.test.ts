@@ -18,18 +18,22 @@ describe("reduceGameAction timer snapshots", () => {
     expect(cleared.combatEffects).toEqual([]);
   });
 
-  it("converts enemy turn records to visual events and removes them before publishing state", () => {
+  it("starts with a one-second enemy intent before applying its visual event", () => {
     const run = createRun(541);
     run.battle!.enemyHand = [{ instanceId: "enemy-minion", cardId: "ash-wolf" }];
     run.battle!.enemyDrawPile = [{ instanceId: "enemy-draw", cardId: "eclipse" }];
     const session = reduceGameAction(initialGameSession, { type: "restore-run", run });
     const afterTurn = reduceGameAction(session, { type: "end-turn" });
 
-    expect(afterTurn.combatEffects.some((event) => event.source.kind === "hand" && event.source.side === "enemy")).toBe(true);
+    expect(afterTurn.combatEffects).toEqual([]);
     expect(afterTurn.run?.battle).not.toHaveProperty("enemyTurnEvents");
     expect(afterTurn.enemyTurnPlayback?.currentIndex).toBe(0);
+    expect(afterTurn.enemyTurnPlayback?.stage).toBe("intent");
     expect(afterTurn.run?.battle?.activeSide).toBe("player");
     expect(afterTurn.enemyTurnPlayback?.steps[0]?.presentationRun.battle?.activeSide).toBe("enemy");
+    const effect = reduceGameAction(afterTurn, { type: "advance-enemy-turn-playback" });
+    expect(effect.enemyTurnPlayback?.stage).toBe("effect");
+    expect(effect.combatEffects.some((event) => event.source.kind === "hand" && event.source.side === "enemy")).toBe(true);
   });
 
   it("advances one action group at a time and clears playback after the final group", () => {
@@ -42,17 +46,25 @@ describe("reduceGameAction timer snapshots", () => {
     session = reduceGameAction(session, { type: "end-turn" });
 
     expect(session.enemyTurnPlayback?.steps).toHaveLength(2);
-    expect(session.combatEffects).toHaveLength(1);
+    expect(session.combatEffects).toHaveLength(0);
     expect(session.enemyTurnPlayback?.currentIndex).toBe(0);
     expect(session.run?.battle?.enemyTurnEvents).toBeUndefined();
     expect(session.run?.battle?.playerBoard[0]?.health).toBe(4);
     expect(session.enemyTurnPlayback?.steps[0]?.presentationRun.battle?.playerBoard[0]?.health).toBe(5);
 
+    session = reduceGameAction(session, { type: "advance-enemy-turn-playback" });
+    expect(session.enemyTurnPlayback?.stage).toBe("effect");
+    expect(session.combatEffects).toHaveLength(1);
     session = reduceGameAction(session, { type: "clear-combat-effect", eventId: session.combatEffects[0]!.id });
     session = reduceGameAction(session, { type: "advance-enemy-turn-playback" });
     expect(session.enemyTurnPlayback?.currentIndex).toBe(1);
-    expect(session.combatEffects[0]?.id).toBeGreaterThan(1);
+    expect(session.enemyTurnPlayback?.stage).toBe("intent");
+    expect(session.combatEffects).toEqual([]);
 
+    session = reduceGameAction(session, { type: "advance-enemy-turn-playback" });
+    expect(session.enemyTurnPlayback?.stage).toBe("effect");
+    expect(session.combatEffects[0]?.id).toBeGreaterThan(1);
+    session = reduceGameAction(session, { type: "clear-combat-effect", eventId: session.combatEffects[0]!.id });
     session = reduceGameAction(session, { type: "advance-enemy-turn-playback" });
     expect(session.enemyTurnPlayback).toBeNull();
     expect(session.combatEffects).toEqual([]);

@@ -9,16 +9,17 @@ interface MinionCardProps {
   disabled: boolean;
   onSelect(): void;
   draggable?: boolean;
+  intentTarget?: boolean;
 }
 
-export function MinionCard({ minion, selected, targetable, disabled, onSelect, draggable = false }: MinionCardProps) {
+export function MinionCard({ minion, selected, targetable, disabled, onSelect, draggable = false, intentTarget = false }: MinionCardProps) {
   const card = CARD_BY_ID.get(minion.cardId);
   const name = card?.name ?? "알 수 없는 하수인";
   const faction = minion.owner === "enemy" ? "적" : "아군";
   const tooltipId = `minion-ability-${minion.instanceId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
   return (
     <button
-      className={`minion-card ${minion.owner === "enemy" ? "minion-enemy" : "minion-friendly"}${selected ? " is-selected" : ""}${targetable ? " is-targetable" : ""}`}
+      className={`minion-card ${minion.owner === "enemy" ? "minion-enemy" : "minion-friendly"}${selected ? " is-selected" : ""}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}`}
       type="button"
       disabled={disabled}
       aria-pressed={selected}

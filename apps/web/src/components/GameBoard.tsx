@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { ENEMY_BY_ID, type RunState } from "@board-game/game-core";
+import { ENEMY_BY_ID, type EnemyTurnPlaybackStep, type RunState } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
 import type { PlayerSide } from "@board-game/game-core";
 import type { CombatEffectEvent } from "../game/combatEffects.js";
@@ -13,6 +13,7 @@ import { MinionLane } from "./MinionLane.js";
 import { TargetPicker } from "./TargetPicker.js";
 import { TurnControls } from "./TurnControls.js";
 import { HeroPowerControl } from "./HeroPowerControl.js";
+import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
 
 export interface GameBoardProps {
@@ -36,6 +37,7 @@ export interface GameBoardProps {
   onUseHeroPower?(): void;
   onAllAttack?(): void;
   onDropInteraction?(payload: DragPayload, target: DropTarget): void;
+  enemyIntentStep?: EnemyTurnPlaybackStep | null;
 }
 
 function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide | null {
@@ -53,10 +55,21 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
+  const intentAction = enemyIntentStep?.action;
+  const intentTargetIds = intentAction?.type === "attack"
+    ? [intentAction.targetId]
+    : intentAction?.type === "cast-spell"
+      ? intentAction.effects.map((effect) => effect.targetId).filter((id): id is string => Boolean(id))
+      : intentAction?.type === "boss-area" ? intentAction.targetMinionIds : [];
+  const intentHeroTarget = intentAction?.type === "attack"
+    ? intentAction.targetId === battle.playerHero.id
+    : intentAction?.type === "cast-spell"
+      ? intentAction.effects.some((effect) => effect.targetId === battle.playerHero.id || effect.targetId === "player-hero")
+      : intentAction?.type === "boss-area";
   const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
   const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked).length;
@@ -93,8 +106,10 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span><span className={`turn-timer${turnTimer.remainingSeconds <= 5 ? " is-critical" : ""}${turnTimer.visible ? "" : " is-hidden"}`} aria-label={`남은 시간 ${turnTimer.remainingSeconds}초`} aria-live="off" aria-hidden={!turnTimer.visible}>{turnTimer.text}</span></div>
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>
+      {enemy?.kind === "boss" && <aside className="boss-pattern-panel" data-testid="boss-pattern-panel"><strong>보스 고유 패턴</strong><span>보스의 3·6·9번째 턴 행동은 카드 행동 후 이어집니다.</span><span>광역 강타: 내 하수인과 영웅 모두에게 피해 1</span></aside>}
 
       <section className={`battle-board${showTimerWarning ? " is-timer-critical" : ""}`} id="battle" aria-label="카드 전투 보드">
+        {enemyIntentStep && <EnemyIntentPreview step={enemyIntentStep} />}
         <div className="battle-opponent">
           <div className="enemy-resource-bar">
             <EnemyHand count={battle.enemyHand.length} instanceIds={battle.enemyHand.map((card) => card.instanceId)} />
@@ -109,8 +124,8 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
-          <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
-          <HeroPanel hero={battle.playerHero} side="player" artKey="player" name="잿빛 방랑자" armor={battle.playerArmor} targetable={false} onSelectTarget={onSelectTarget} />
+          <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
+          <HeroPanel hero={battle.playerHero} side="player" artKey="player" name="잿빛 방랑자" armor={battle.playerArmor} targetable={false} intentTarget={intentHeroTarget} onSelectTarget={onSelectTarget} />
         </div>
         {targetMode !== "none" && <TargetPicker mode={targetMode} onCancel={onCancelTarget} />}
       </section>

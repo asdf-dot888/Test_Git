@@ -8,15 +8,16 @@ interface HeroPanelProps {
   name: string;
   targetable: boolean;
   armor?: number;
+  intentTarget?: boolean;
   onSelectTarget(targetId: string): void;
   onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, onSelectTarget, onDropTarget }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, onSelectTarget, onDropTarget }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
     <section
-      className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}`}
+      className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}`}
       data-effect-anchor={`hero:${side}`}
       aria-label={`${name} 영웅`}
       onDragOver={(event) => { if (side === "enemy" && onDropTarget) event.preventDefault(); }}

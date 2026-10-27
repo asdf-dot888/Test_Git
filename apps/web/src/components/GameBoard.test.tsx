@@ -155,4 +155,15 @@ describe("GameBoard", () => {
     const blocked = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
     expect(blocked).toContain('class="all-attack-button is-unavailable"');
   });
+
+  it("keeps the boss area-attack cadence and targets visible throughout the boss battle", () => {
+    const run = createRun(414);
+    run.battle!.enemyId = "boss-blood-matron";
+    const markup = renderToStaticMarkup(
+      <GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />,
+    );
+    expect(markup).toContain("data-testid=\"boss-pattern-panel\"");
+    expect(markup).toContain("3·6·9번째 턴");
+    expect(markup).toContain("내 하수인과 영웅 모두에게 피해 1");
+  });
 });

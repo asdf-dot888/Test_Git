@@ -39,6 +39,18 @@
 .battle-board.is-shaking { animation: boss-board-shake 500ms ease-in-out; border-color: rgb(235 122 86 / 78%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 60px rgb(180 48 31 / 38%); }
 @keyframes boss-board-shake { 0%, 100% { transform: translateX(0); } 12%, 38%, 64%, 88% { transform: translateX(-7px); } 25%, 51%, 77% { transform: translateX(7px); } }
 .battle-board.is-timer-critical { animation: battle-board-timer-breath 1.35s ease-in-out infinite; }
+.enemy-intent-preview { position: absolute; z-index: 8; top: 10px; left: 50%; width: min(520px, calc(100% - 28px)); min-height: 76px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; transform: translateX(-50%); border: 1px solid rgb(244 207 142 / 72%); border-radius: 12px; color: #fff1d7; background: linear-gradient(120deg, rgb(45 31 27 / 97%), rgb(25 23 23 / 96%)); box-shadow: 0 8px 28px #000b, 0 0 24px rgb(222 153 75 / 22%); pointer-events: none; }
+.enemy-intent-preview > img { flex: none; width: 46px; height: 58px; object-fit: cover; border: 1px solid #d9b16a; border-radius: 5px; }
+.enemy-intent-preview > div { min-width: 0; display: grid; gap: 2px; }
+.enemy-intent-preview__eyebrow { color: #e9ba6f; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.enemy-intent-preview strong { font-size: 14px; }
+.enemy-intent-preview p, .enemy-intent-preview small { margin: 0; color: #ddcfb7; font-size: 11px; line-height: 1.35; }
+.enemy-intent-preview small { color: #f0c77f; }
+.boss-pattern-panel { width: min(100% - 48px, 1160px); margin: 12px auto -8px; padding: 9px 14px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 18px; border: 1px solid rgb(194 91 70 / 45%); border-radius: 10px; color: #e3c7b5; background: linear-gradient(90deg, rgb(57 29 27 / 78%), rgb(33 25 24 / 85%)); font-size: 11px; }
+.boss-pattern-panel strong { color: #ffb18f; letter-spacing: .06em; }
+.minion-card.is-intent-target, .hero-panel.is-intent-target { outline: 2px solid #ff765e; outline-offset: 3px; box-shadow: 0 0 18px 5px rgb(255 88 61 / 48%); animation: enemy-intent-pulse .8s ease-in-out infinite alternate; }
+.hero-panel.is-intent-target { border-color: #ff765e; }
+@keyframes enemy-intent-pulse { to { filter: brightness(1.2); box-shadow: 0 0 24px 8px rgb(255 88 61 / 62%); } }
 @keyframes battle-board-timer-breath {
   0%, 100% { border-color: rgb(233 196 133 / 35%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); }
   50% { border-color: rgb(255 83 91 / 95%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), 0 0 26px 5px rgb(224 55 59 / 58%), inset 0 0 40px rgb(35 23 10 / 26%), inset 0 0 32px rgb(214 45 48 / 30%); }
@@ -254,6 +266,11 @@
   .menu-button { padding: 5px 8px; font-size: 9px; }
   .game-menu-panel { border-radius: 12px; }
   .battle-board { width: calc(100% - 20px); min-height: 370px; margin: 10px auto; padding: 13px 10px; border-radius: 16px; }
+  .boss-pattern-panel { width: calc(100% - 20px); margin-top: 7px; justify-content: flex-start; font-size: 10px; }
+  .enemy-intent-preview { top: 5px; min-height: 60px; padding: 7px 9px; gap: 8px; }
+  .enemy-intent-preview > img { width: 36px; height: 45px; }
+  .enemy-intent-preview strong { font-size: 12px; }
+  .enemy-intent-preview p, .enemy-intent-preview small { font-size: 10px; }
   .battle-opponent, .battle-player { grid-template-columns: minmax(102px, .8fr) minmax(0, 2fr); gap: 7px; }
   .enemy-resource-bar { gap: 6px; padding-bottom: 3px; }
   .enemy-hand { max-width: 45%; gap: 2px; }
