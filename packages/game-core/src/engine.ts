@@ -116,8 +116,9 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   if (!battle || run.status !== "active" || battle.status !== "active") return run;
   const hasEnemyZones = Boolean(battle.enemyMana && battle.enemyStarterDeck && battle.enemyHand && battle.enemyDrawPile && battle.enemyDiscardPile);
   const hasClassResources = Number.isInteger(battle.playerArmor) && Number.isInteger(battle.soulShards) && typeof battle.heroPowerUsed === "boolean";
+  const hasTemporaryMana = Number.isInteger(battle.playerMana?.temporary) && Number.isInteger(battle.enemyMana?.temporary);
   const hasObsoleteCharge = Object.prototype.hasOwnProperty.call(battle, "pendingEnemyCharge");
-  if (hasEnemyZones && hasClassResources && !hasObsoleteCharge) return run;
+  if (hasEnemyZones && hasClassResources && hasTemporaryMana && !hasObsoleteCharge) return run;
 
   const next = cloneRun(run);
   const current = next.battle!;
@@ -125,13 +126,15 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
     const enemy = ENEMY_BY_ID.get(current.enemyId);
     if (!enemy) fail("INVALID_ACTION", `Unknown enemy: ${current.enemyId}`);
     const generated = createEnemyDeck(enemy, current.rngState, `${current.battleId}-enemy-card`);
-    current.enemyMana = { current: INITIAL_MANA, max: MAX_MANA };
+    current.enemyMana = { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 };
     current.enemyStarterDeck = generated.starterDeck;
     current.enemyHand = generated.shuffledDeck.slice(0, 3);
     current.enemyDrawPile = generated.shuffledDeck.slice(3);
     current.enemyDiscardPile = [];
     current.rngState = generated.state;
   }
+  current.playerMana.temporary ??= 0;
+  current.enemyMana.temporary ??= 0;
   current.playerArmor ??= 0;
   current.soulShards ??= 0;
   current.heroPowerUsed ??= false;
@@ -246,6 +249,22 @@ function ensureMana(run: RunState, cost: number): BattleState {
   const battle = assertPlayerTurn(run);
   if (battle.playerMana.current < cost) fail("INSUFFICIENT_MANA", "Not enough mana to play this card.");
   return battle;
+}
+
+function spendMana(battle: BattleState, side: PlayerSide, cost: number): void {
+  const mana = side === "player" ? battle.playerMana : battle.enemyMana;
+  mana.current -= cost;
+  mana.temporary -= Math.min(mana.temporary, cost);
+}
+
+function gainRegularMana(mana: BattleState["playerMana"], amount: number): void {
+  const regular = mana.current - mana.temporary;
+  mana.current = Math.min(mana.max, regular + amount) + mana.temporary;
+}
+
+function expireTemporaryMana(mana: BattleState["playerMana"]): void {
+  mana.current -= mana.temporary;
+  mana.temporary = 0;
 }
 
 function refillDrawPile(run: RunState, battle: BattleState): void {
@@ -460,7 +479,25 @@ function applySpellEffect(
       return run;
     case "gainMana": {
       const mana = caster === "player" ? battle.playerMana : battle.enemyMana;
-      mana.current = Math.min(mana.max, mana.current + effect.amount);
+      gainRegularMana(mana, effect.amount);
+      return run;
+    }
+    case "discardRandom": {
+      const hand = caster === "player" ? battle.hand : battle.enemyHand;
+      if (hand.length === 0) return run;
+      const picked = pickIndex(hand.length, battle.rngState);
+      battle.rngState = picked.state;
+      const [discarded] = hand.splice(picked.value, 1);
+      if (discarded) {
+        const discardPile = caster === "player" ? battle.discardPile : battle.enemyDiscardPile;
+        discardPile.push(discarded);
+      }
+      return run;
+    }
+    case "gainTemporaryMana": {
+      const mana = caster === "player" ? battle.playerMana : battle.enemyMana;
+      mana.current += effect.amount;
+      mana.temporary += effect.amount;
       return run;
     }
   }
@@ -474,7 +511,7 @@ function startPlayerTurn(run: RunState): RunState {
   // Normalize saved runs created under the previous, growing-cap rule.
   battle.playerMana.max = MAX_MANA;
   const manaRecovery = battle.turnNumber <= 3 ? 1 : battle.turnNumber <= 6 ? 2 : 3;
-  battle.playerMana.current = Math.min(MAX_MANA, battle.playerMana.current + manaRecovery);
+  gainRegularMana(battle.playerMana, manaRecovery);
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   battle.heroPowerUsed = false;
   drawForPlayerTurn(run, battle);
@@ -584,7 +621,7 @@ function playEnemyCard(run: RunState, handInstanceId: string, deferDefeat = fals
   const card = getCard(instance.cardId);
   if (!isEnemyCardPlayable(card, battle)) return run;
   battle.enemyHand.splice(handSlot, 1);
-  battle.enemyMana.current -= card.cost;
+  spendMana(battle, "enemy", card.cost);
   if (card.kind === "minion" && card.minion) {
     const before = new Set(battle.enemyBoard.map((minion) => minion.instanceId));
     const made = createMinion(run, card.id, "enemy", battle.turnNumber, instance);
@@ -691,8 +728,8 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     activeSide: "player",
     playerHero: { id: "player", health: HERO_HEALTH, maxHealth: HERO_HEALTH },
     enemyHero: { id: "enemy", health: enemy.maxHealth, maxHealth: enemy.maxHealth },
-    playerMana: { current: INITIAL_MANA, max: MAX_MANA },
-    enemyMana: { current: INITIAL_MANA, max: MAX_MANA },
+    playerMana: { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 },
+    enemyMana: { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 },
     playerArmor: 0,
     soulShards: 0,
     heroPowerUsed: false,
@@ -768,7 +805,7 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
     if (battle.playerBoard.length >= MAX_BOARD) fail("MAX_BOARD", "The player board is full.");
   }
 
-  battle.playerMana.current -= 2;
+  spendMana(battle, "player", 2);
   battle.heroPowerUsed = true;
   if (next.playerClass === "assassin") {
     if (targetId === "enemy-hero") return dealDamageToEnemyHero(next, 2);
@@ -812,7 +849,7 @@ export function fuseMinions(run: RunState, firstMinionId: string, secondMinionId
 
   const insertionIndex = Math.min(firstIndex, secondIndex);
   const removed = [first, second];
-  battle.playerMana.current -= 1;
+  spendMana(battle, "player", 1);
   battle.discardPile.push(...removed.map(({ instanceId, cardId }) => ({ instanceId, cardId })));
   battle.playerBoard.splice(Math.max(firstIndex, secondIndex), 1);
   battle.playerBoard.splice(insertionIndex, 1);
@@ -847,7 +884,7 @@ export function playMinion(run: RunState, handInstanceId: string, slotIndex?: nu
   ensureMana(next, card.cost);
 
   const [instance] = battle.hand.splice(handIndex, 1);
-  battle.playerMana.current -= card.cost;
+  spendMana(battle, "player", card.cost);
   const made = createMinion(next, card.id, "player", battle.turnNumber, instance);
   made.run.battle!.playerBoard.splice(insertionIndex, 0, made.minion);
   return triggerMinionEffect(made.run, made.minion);
@@ -879,7 +916,7 @@ export function castSpell(run: RunState, handInstanceId: string, targetId?: stri
 
   const [instance] = battle.hand.splice(handIndex, 1);
   battle.discardPile.push(instance!);
-  battle.playerMana.current -= card.cost;
+  spendMana(battle, "player", card.cost);
   let current = next;
   for (const effect of card.spellEffects) {
     current = applySpellEffect(current, effect, targetId);
@@ -956,7 +993,7 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   battle.enemyTurnEvents = [];
   delete (battle as BattleState & { pendingEnemyCharge?: unknown }).pendingEnemyCharge;
   battle.enemyMana.max = MAX_MANA;
-  if (battle.turnNumber > 1) battle.enemyMana.current = Math.min(MAX_MANA, battle.enemyMana.current + 1);
+  if (battle.turnNumber > 1) gainRegularMana(battle.enemyMana, 1);
 
   if (battle.enemyHand.length >= MAX_HAND) {
     const scored = battle.enemyHand.map((instance) => ({ instance, score: scoreEnemyCard(getCard(instance.cardId), battle, enemy) }));
@@ -1005,6 +1042,7 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   }, true);
   if (next.battle?.playerHero.health === 0) return { run: finishDefeat(next), steps };
   if (next.status !== "active" || !next.battle) return { run: next, steps };
+  expireTemporaryMana(next.battle.enemyMana);
   return { run: startPlayerTurn(next), steps };
 }
 
@@ -1016,6 +1054,7 @@ export function endPlayerTurnWithPlayback(run: RunState): EnemyTurnResolution {
   const next = cloneRun(run);
   const battle = assertPlayerTurn(next);
   battle.activeSide = "enemy";
+  expireTemporaryMana(battle.playerMana);
   battle.enemyBoard = battle.enemyBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   return resolveEnemyTurnWithPlayback(next);
 }

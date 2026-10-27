@@ -10,6 +10,8 @@ export type SpellEffect =
   | { kind: "buff"; attack: number; health: number; target: "playerMinion" }
   | { kind: "draw"; count: number }
   | { kind: "gainMana"; amount: number }
+  | { kind: "discardRandom" }
+  | { kind: "gainTemporaryMana"; amount: number }
   | { kind: "randomDamage"; min: 0; max: 5 }
   | { kind: "cleave"; amount: number; target: "enemyMinion" }
   | { kind: "stealFromOpponentDeck"; count: 1 };
@@ -79,8 +81,8 @@ export interface BattleState {
   activeSide: PlayerSide;
   playerHero: HeroState;
   enemyHero: HeroState;
-  playerMana: { current: number; max: number };
-  enemyMana: { current: number; max: number };
+  playerMana: { current: number; max: number; temporary: number };
+  enemyMana: { current: number; max: number; temporary: number };
   playerArmor: number;
   soulShards: number;
   heroPowerUsed: boolean;

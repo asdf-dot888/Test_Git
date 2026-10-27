@@ -56,6 +56,8 @@ function describeSpellEffects(effects: readonly SpellEffect[]): string {
     if (effect.kind === "cleave") return `선택한 적 하수인에게 ${effect.amount}의 피해를 주고 양옆 하수인에게 ${Math.max(1, Math.floor(effect.amount / 2))}의 피해를 줍니다.`;
     if (effect.kind === "stealFromOpponentDeck") return `상대 덱에서 무작위 카드 1장을 가져와 손패에 추가합니다.`;
     if (effect.kind === "gainMana") return `마나 ${effect.amount}을 얻습니다.`;
+    if (effect.kind === "discardRandom") return `손패에서 무작위 카드 1장을 버립니다.`;
+    if (effect.kind === "gainTemporaryMana") return `이번 턴에만 임시 마나 ${effect.amount}을 얻습니다.`;
     if (effect.kind === "buff") {
       return `아군 하수인에게 ${describeStatChanges(effect.attack, effect.health)}${statChangesParticle(effect.attack, effect.health)} 부여합니다.`;
     }
@@ -127,6 +129,7 @@ const BASE_CARD_CATALOG: readonly CardDefinition[] = [
   spell("soul-lance", "영혼 창", 2, [{ kind: "damage", amount: 3, target: "enemyMinion" }]),
   spell("healing-mist", "치유 안개", 2, [{ kind: "heal", amount: 4, target: "playerHero" }]),
   spell("mana-spring", "마력의 샘", 0, [{ kind: "gainMana", amount: 1 }], "normal", true),
+  spell("soul-bargain", "영혼의 거래", 1, [{ kind: "discardRandom" }, { kind: "gainTemporaryMana", amount: 3 }]),
   spell("raise-bones", "뼈 무리", 3, [{ kind: "summon", cardId: "bone-rat", count: 2 }]),
   spell("rune-surge", "룬의 파동", 2, [{ kind: "buff", attack: 2, health: 1, target: "playerMinion" }]),
   spell("dark-insight", "어둠의 통찰", 3, [{ kind: "draw", count: 2 }]),

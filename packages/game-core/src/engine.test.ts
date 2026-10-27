@@ -93,10 +93,10 @@ describe("card and enemy catalog", () => {
   });
 
   it("contains unique base, class, and token cards with complete effect descriptions", () => {
-    expect(CARD_CATALOG).toHaveLength(76);
-    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(76);
+    expect(CARD_CATALOG).toHaveLength(77);
+    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(77);
     expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(53);
-    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(23);
+    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(24);
     for (const card of CARD_CATALOG) {
       expect(card.cost).toBeGreaterThanOrEqual(0);
       expect(card.cost).toBeLessThanOrEqual(10);
@@ -131,6 +131,7 @@ describe("card and enemy catalog", () => {
       "shadow-bolt": "적 영웅에게 2의 피해를 줍니다.",
       "soul-lance": "적 하수인에게 3의 피해를 줍니다.",
       "mana-spring": "마나 1을 얻습니다.",
+      "soul-bargain": "손패에서 무작위 카드 1장을 버립니다. / 이번 턴에만 임시 마나 3을 얻습니다.",
       "healing-mist": "내 영웅의 체력을 4 회복합니다.",
       "raise-bones": "뼈 쥐 2마리를 소환합니다.",
       "rune-surge": "아군 하수인에게 공격력 +2 및 체력 +1을 부여합니다.",
@@ -205,8 +206,8 @@ describe("seeded run setup and random helpers", () => {
       expect(encounters[3]?.enemyId).toBe(BOSSES[phase - 1]?.id);
     }
     expect(first.battle?.hand).toHaveLength(3);
-    expect(first.battle?.playerMana).toEqual({ current: 5, max: 10 });
-    expect(first.battle?.enemyMana).toEqual({ current: 5, max: 10 });
+    expect(first.battle?.playerMana).toEqual({ current: 5, max: 10, temporary: 0 });
+    expect(first.battle?.enemyMana).toEqual({ current: 5, max: 10, temporary: 0 });
     expect(first.battle?.enemyStarterDeck).toHaveLength(30);
     expect(first.battle?.enemyHand).toHaveLength(3);
     expect(first.battle?.enemyDrawPile).toHaveLength(27);
@@ -284,7 +285,7 @@ describe("seeded run setup and random helpers", () => {
     expect(hydrated).not.toBe(legacy);
     expect(hydrated.battle?.hand).toEqual(playerHand);
     expect(hydrated.battle?.playerBoard).toEqual(playerBoard);
-    expect(hydrated.battle?.enemyMana).toEqual({ current: 5, max: 10 });
+    expect(hydrated.battle?.enemyMana).toEqual({ current: 5, max: 10, temporary: 0 });
     expect(hydrated.battle?.enemyStarterDeck).toHaveLength(30);
     expect(hydrated.battle?.enemyHand).toHaveLength(3);
     expect(hydrated.battle?.enemyDrawPile).toHaveLength(27);
@@ -293,6 +294,25 @@ describe("seeded run setup and random helpers", () => {
     const unchanged = hydrateRunForCurrentBattle(modern);
     expect(unchanged).toBe(modern);
     expect(unchanged.battle?.enemyStarterDeck).toEqual(expectedDeck);
+  });
+
+  it("hydrates missing temporary mana independently for both sides", () => {
+    const legacy = copyRun(createRun(791));
+    const battle = activeBattle(legacy) as unknown as { playerMana: Record<string, unknown>; enemyMana: Record<string, unknown> };
+    delete battle.playerMana.temporary;
+    delete battle.enemyMana.temporary;
+
+    const hydrated = hydrateRunForCurrentBattle(legacy);
+    expect(hydrated.battle?.playerMana).toEqual({ current: 5, max: 10, temporary: 0 });
+    expect(hydrated.battle?.enemyMana).toEqual({ current: 5, max: 10, temporary: 0 });
+
+    const partiallyLegacy = copyRun(createRun(792));
+    const partialBattle = activeBattle(partiallyLegacy) as unknown as { playerMana: Record<string, unknown>; enemyMana: Record<string, unknown> };
+    partialBattle.playerMana.temporary = 2;
+    delete partialBattle.enemyMana.temporary;
+    const partiallyHydrated = hydrateRunForCurrentBattle(partiallyLegacy);
+    expect(partiallyHydrated.battle?.playerMana.temporary).toBe(2);
+    expect(partiallyHydrated.battle?.enemyMana.temporary).toBe(0);
   });
 
   it("shuffles deterministically without changing the source array", () => {
@@ -682,7 +702,7 @@ describe("player actions and battle rules", () => {
     expect(played.battle?.playerMana.current).toBe(2);
     expect(played.battle?.hand).toHaveLength(0);
     expect(played.battle?.playerBoard[0]).toMatchObject({ attack: 3, health: 4, hasAttacked: false });
-    expect(next.battle?.playerMana).toEqual({ current: 5, max: 10 });
+    expect(next.battle?.playerMana).toEqual({ current: 5, max: 10, temporary: 0 });
     expect(() => attackWithMinion(played, handCard.instanceId, played.battle!.enemyHero.id)).toThrow(GameRuleError);
   });
 
@@ -712,9 +732,9 @@ describe("player actions and battle rules", () => {
       run = endPlayerTurn(run);
       const recovery = turn <= 3 ? 1 : turn <= 6 ? 2 : 3;
       expectedMana = Math.min(10, expectedMana + recovery);
-      expect(run.battle?.playerMana).toEqual({ current: expectedMana, max: 10 });
+      expect(run.battle?.playerMana).toEqual({ current: expectedMana, max: 10, temporary: 0 });
     }
-    expect(run.battle?.playerMana).toEqual({ current: 10, max: 10 });
+    expect(run.battle?.playerMana).toEqual({ current: 10, max: 10, temporary: 0 });
     expect(run.battle?.turnNumber).toBe(12);
   });
 
@@ -723,19 +743,19 @@ describe("player actions and battle rules", () => {
     activeBattle(preserved).playerHero.health = 30;
     activeBattle(preserved).hand = [];
     const next = endPlayerTurn(preserved);
-    expect(next.battle?.playerMana).toEqual({ current: 6, max: 10 });
+    expect(next.battle?.playerMana).toEqual({ current: 6, max: 10, temporary: 0 });
 
     const empty = copyRun(createRun(222));
     activeBattle(empty).playerMana.current = 0;
     activeBattle(empty).playerHero.health = 30;
     activeBattle(empty).hand = [];
-    expect(endPlayerTurn(empty).battle?.playerMana).toEqual({ current: 1, max: 10 });
+    expect(endPlayerTurn(empty).battle?.playerMana).toEqual({ current: 1, max: 10, temporary: 0 });
 
     const legacy = copyRun(createRun(223));
-    activeBattle(legacy).playerMana = { current: 5, max: 6 };
+    activeBattle(legacy).playerMana = { current: 5, max: 6, temporary: 0 };
     activeBattle(legacy).playerHero.health = 30;
     activeBattle(legacy).hand = [];
-    expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 6, max: 10 });
+    expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 6, max: 10, temporary: 0 });
   });
 
   it.each([
@@ -754,7 +774,7 @@ describe("player actions and battle rules", () => {
 
     const next = endPlayerTurn(run);
     expect(next.battle?.turnNumber).toBe(incomingTurn);
-    expect(next.battle?.playerMana).toEqual({ current: recovery, max: 10 });
+    expect(next.battle?.playerMana).toEqual({ current: recovery, max: 10, temporary: 0 });
   });
 
   it("adds the incoming turn recovery to carried mana and preserves enemy +1 recovery", () => {
@@ -768,8 +788,8 @@ describe("player actions and battle rules", () => {
     battle.enemyHand = [instance("enemy-eclipse", "eclipse")];
 
     const next = endPlayerTurn(run);
-    expect(next.battle?.playerMana).toEqual({ current: 7, max: 10 });
-    expect(next.battle?.enemyMana).toEqual({ current: 1, max: 10 });
+    expect(next.battle?.playerMana).toEqual({ current: 7, max: 10, temporary: 0 });
+    expect(next.battle?.enemyMana).toEqual({ current: 1, max: 10, temporary: 0 });
   });
 
   it("enforces minion target priority and applies damage from both minions", () => {
@@ -847,10 +867,88 @@ describe("player actions and battle rules", () => {
       battle.hand = [card];
 
       const cast = castSpell(run, card.instanceId);
-      expect(cast.battle?.playerMana).toEqual({ current: Math.min(10, currentMana + 1), max: 10 });
+      expect(cast.battle?.playerMana).toEqual({ current: Math.min(10, currentMana + 1), max: 10, temporary: 0 });
       expect(cast.battle?.discardPile).toContainEqual(card);
       expect(cast.battle?.hand).toHaveLength(0);
     }
+  });
+
+  it("casts Soul Bargain, discards one deterministic remaining card, and can exceed ten mana", () => {
+    const run = copyRun(createRun(501));
+    const battle = activeBattle(run);
+    const bargain = instance("bargain", "soul-bargain");
+    const candidates = [instance("candidate-a", "ash-wolf"), instance("candidate-b", "crypt-guard")];
+    battle.playerMana.current = 10;
+    battle.hand = [bargain, ...candidates];
+    battle.rngState = 991;
+    const expectedPick = pickIndex(candidates.length, battle.rngState);
+
+    const cast = castSpell(run, bargain.instanceId);
+    const discardedCandidate = candidates[expectedPick.value]!;
+    const remainingCandidate = candidates[1 - expectedPick.value]!;
+    expect(cast.battle?.hand).toEqual([remainingCandidate]);
+    expect(cast.battle?.discardPile).toEqual([bargain, discardedCandidate]);
+    expect(cast.battle?.rngState).toBe(expectedPick.state);
+    expect(cast.battle?.playerMana).toEqual({ current: 12, max: 10, temporary: 3 });
+  });
+
+  it("still grants temporary mana without advancing RNG when Soul Bargain has no discard target", () => {
+    const run = copyRun(createRun(502));
+    const battle = activeBattle(run);
+    const bargain = instance("bargain-empty", "soul-bargain");
+    battle.playerMana.current = 10;
+    battle.hand = [bargain];
+    const rngState = battle.rngState;
+
+    const cast = castSpell(run, bargain.instanceId);
+    expect(cast.battle?.hand).toEqual([]);
+    expect(cast.battle?.discardPile).toEqual([bargain]);
+    expect(cast.battle?.rngState).toBe(rngState);
+    expect(cast.battle?.playerMana).toEqual({ current: 12, max: 10, temporary: 3 });
+  });
+
+  it("spends temporary mana before regular mana and preserves regular mana gain around it", () => {
+    const run = copyRun(createRun(503));
+    const battle = activeBattle(run);
+    battle.playerMana = { current: 7, max: 10, temporary: 3 };
+    battle.hand = [instance("bolt", "shadow-bolt")];
+    const paid = castSpell(run, "bolt");
+    expect(paid.battle?.playerMana).toEqual({ current: 6, max: 10, temporary: 2 });
+
+    const springRun = copyRun(createRun(504));
+    const springBattle = activeBattle(springRun);
+    springBattle.playerMana = { current: 9, max: 10, temporary: 2 };
+    springBattle.hand = [instance("spring", "mana-spring")];
+    expect(castSpell(springRun, "spring").battle?.playerMana).toEqual({ current: 10, max: 10, temporary: 2 });
+  });
+
+  it("expires unused player temporary mana at turn end while retaining regular mana", () => {
+    const run = copyRun(createRun(505));
+    const battle = activeBattle(run);
+    battle.playerMana = { current: 8, max: 10, temporary: 3 };
+    battle.hand = [];
+
+    const nextTurn = endPlayerTurn(run);
+    expect(nextTurn.battle?.turnNumber).toBe(2);
+    expect(nextTurn.battle?.playerMana).toEqual({ current: 6, max: 10, temporary: 0 });
+  });
+
+  it("uses enemy-owned discard and temporary mana, then expires its remainder", () => {
+    const run = asEnemyTurn(createRun(506));
+    const battle = activeBattle(run);
+    const bargain = instance("enemy-bargain", "soul-bargain");
+    const candidate = instance("enemy-discard-candidate", "eclipse");
+    battle.enemyMana = { current: 1, max: 10, temporary: 0 };
+    battle.enemyHand = [bargain, candidate];
+    battle.enemyStarterDeck = Array.from({ length: 30 }, (_, index) => instance(`enemy-high-${index}`, "eclipse"));
+    battle.enemyDrawPile = [];
+
+    const resolution = resolveEnemyTurnWithPlayback(run);
+    expect(resolution.run.battle?.enemyDiscardPile).toContainEqual(candidate);
+    expect(resolution.run.battle?.discardPile).not.toContainEqual(candidate);
+    const spellStep = resolution.steps.find((step) => step.action.type === "cast-spell" && step.action.cardId === "soul-bargain");
+    expect(spellStep?.presentationRun.battle?.enemyMana).toEqual({ current: 3, max: 10, temporary: 3 });
+    expect(resolution.run.battle?.enemyMana).toEqual({ current: 0, max: 10, temporary: 0 });
   });
 
   it("rejects a summon spell on a full board and does not consume its card", () => {
@@ -999,7 +1097,7 @@ describe("enemy turns, rewards, and run progression", () => {
     battle.enemyHand = [instance("enemy-wolf", "ash-wolf"), instance("enemy-guard", "crypt-guard"), instance("enemy-raven", "dusk-raven")];
     battle.enemyDrawPile = [instance("enemy-expensive", "eclipse")];
     const result = endPlayerTurn(run);
-    expect(result.battle?.enemyMana).toEqual({ current: 0, max: 10 });
+    expect(result.battle?.enemyMana).toEqual({ current: 0, max: 10, temporary: 0 });
     expect(result.battle?.enemyBoard).toHaveLength(3);
     expect(result.battle?.enemyBoard.every((minion) => minion.summonedTurn === 1 && !minion.hasAttacked)).toBe(true);
     expect(result.battle?.enemyHand.map((card) => card.cardId)).toEqual(["eclipse"]);
@@ -1273,7 +1371,7 @@ describe("enemy turns, rewards, and run progression", () => {
     const next = startBattle(waiting, nextEncounter!.enemyId);
     expect(next.battle?.enemyId).toBe(nextEncounter!.enemyId);
     expect(next.battle?.playerHero.health).toBe(30);
-    expect(next.battle?.playerMana).toEqual({ current: 5, max: 10 });
+    expect(next.battle?.playerMana).toEqual({ current: 5, max: 10, temporary: 0 });
     expect(next.battle?.hand).toHaveLength(3);
     expect(next.battle?.playerBoard).toHaveLength(0);
     expect(next.encounters[next.completedBattles]?.status).toBe("active");
