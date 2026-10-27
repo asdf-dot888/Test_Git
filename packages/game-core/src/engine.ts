@@ -834,7 +834,7 @@ export function startBattle(run: RunState, enemyId: string): RunState {
   return beginEncounter(cloneRun(run), encounterIndex, normalizeSeed(run.seed + run.completedBattles + 1));
 }
 
-export function playMinion(run: RunState, handInstanceId: string): RunState {
+export function playMinion(run: RunState, handInstanceId: string, slotIndex?: number): RunState {
   const next = cloneRun(run);
   const battle = ensureMana(next, 0);
   const handIndex = battle.hand.findIndex((instance) => instance.instanceId === handInstanceId);
@@ -842,12 +842,14 @@ export function playMinion(run: RunState, handInstanceId: string): RunState {
   const card = getCard(battle.hand[handIndex]!.cardId);
   if (card.kind !== "minion" || !card.minion) fail("INVALID_ACTION", "This card is not a minion.");
   if (battle.playerBoard.length >= MAX_BOARD) fail("MAX_BOARD", "The player's board is full.");
+  const insertionIndex = slotIndex ?? battle.playerBoard.length;
+  if (insertionIndex < 0 || insertionIndex > battle.playerBoard.length) fail("INVALID_TARGET", "Choose an empty player board slot.");
   ensureMana(next, card.cost);
 
   const [instance] = battle.hand.splice(handIndex, 1);
   battle.playerMana.current -= card.cost;
   const made = createMinion(next, card.id, "player", battle.turnNumber, instance);
-  made.run.battle!.playerBoard.push(made.minion);
+  made.run.battle!.playerBoard.splice(insertionIndex, 0, made.minion);
   return triggerMinionEffect(made.run, made.minion);
 }
 
@@ -906,6 +908,26 @@ export function attackWithMinion(run: RunState, attackerId: string, targetId: st
   if (targetId !== battle.enemyHero.id) fail("INVALID_TARGET", "The enemy hero is the only available target.");
   attacker.hasAttacked = true;
   return dealDamageToEnemyHero(next, attacker.attack);
+}
+
+export function attackAllReadyMinions(run: RunState): RunState {
+  const initial = cloneRun(run);
+  const battle = assertPlayerTurn(initial);
+  if (battle.enemyBoard.length > 0) fail("INVALID_TARGET", "Clear enemy minions before attacking the enemy hero.");
+  const attackerIds = battle.playerBoard
+    .filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked)
+    .map(({ instanceId }) => instanceId);
+  if (attackerIds.length === 0) fail("INVALID_ACTION", "There are no ready minions to attack.");
+
+  let current = initial;
+  for (const attackerId of attackerIds) {
+    const currentBattle = current.battle;
+    if (!currentBattle || current.status !== "active" || currentBattle.activeSide !== "player" || currentBattle.status !== "active") break;
+    const attacker = currentBattle.playerBoard.find((minion) => minion.instanceId === attackerId);
+    if (!attacker || attacker.summonedTurn >= currentBattle.turnNumber || attacker.hasAttacked) continue;
+    current = attackWithMinion(current, attackerId, currentBattle.enemyHero.id);
+  }
+  return current;
 }
 
 export function discardBeforeDraw(run: RunState, handInstanceId: string): RunState {

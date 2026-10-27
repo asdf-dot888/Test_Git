@@ -14,6 +14,7 @@ import {
 import {
   advanceRun,
   acknowledgeVictory,
+  attackAllReadyMinions,
   attackWithMinion,
   castSpell,
   chooseReward,
@@ -617,6 +618,47 @@ describe("class minion fusion", () => {
 });
 
 describe("player actions and battle rules", () => {
+  it("plays a minion into the chosen board slot and rejects invalid slot indexes", () => {
+    const run = copyRun(createRun(6));
+    const battle = activeBattle(run);
+    battle.playerBoard = [minion({ instanceId: "left" }), minion({ instanceId: "right" })];
+    battle.hand = [instance("slot-card", "iron-hound")];
+    battle.playerMana.current = 5;
+    const played = playMinion(run, "slot-card", 1);
+    expect(played.battle?.playerBoard.map(({ instanceId }) => instanceId)).toEqual(["left", "slot-card", "right"]);
+    expect(() => playMinion(run, "slot-card", 4)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+  });
+
+  it("attacks with ready minions in board order and stops at lethal", () => {
+    const run = copyRun(createRun(61));
+    const battle = activeBattle(run);
+    battle.turnNumber = 2;
+    battle.enemyBoard = [];
+    battle.enemyHero.health = 4;
+    battle.playerBoard = [
+      minion({ instanceId: "first", attack: 2 }),
+      minion({ instanceId: "second", attack: 3 }),
+      minion({ instanceId: "third", attack: 8 }),
+    ];
+    const result = attackAllReadyMinions(run);
+    expect(result.battle?.enemyHero.health).toBe(0);
+    expect(result.battle?.playerBoard.map(({ hasAttacked }) => hasAttacked)).toEqual([true, true, false]);
+    expect(run.battle?.enemyHero.health).toBe(4);
+  });
+
+  it("rejects All Attack when enemy minions block the hero or no minion is ready", () => {
+    const blocked = copyRun(createRun(62));
+    const blockedBattle = activeBattle(blocked);
+    blockedBattle.turnNumber = 2;
+    blockedBattle.playerBoard = [minion({ instanceId: "ready" })];
+    blockedBattle.enemyBoard = [{ ...minion({ instanceId: "enemy", owner: "enemy" }), attack: 1 }];
+    expect(() => attackAllReadyMinions(blocked)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+
+    const noneReady = copyRun(createRun(63));
+    activeBattle(noneReady).playerBoard = [minion({ instanceId: "new", summonedTurn: 1 })];
+    expect(() => attackAllReadyMinions(noneReady)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+  });
+
   it("uses mana to play minions, keeps the input state unchanged, and prevents same-turn attacks", () => {
     const run = createRun(7);
     const next = copyRun(run);

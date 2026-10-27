@@ -2,6 +2,7 @@ import {
   GameRuleError,
   acknowledgeVictory,
   advanceRun,
+  attackAllReadyMinions,
   attackWithMinion,
   castSpell,
   chooseReward,
@@ -9,6 +10,7 @@ import {
   createRun,
   discardBeforeDraw,
   endPlayerTurnWithPlayback,
+  fuseMinions,
   hydrateRunForCurrentBattle,
   playMinion,
   skipReward,
@@ -30,9 +32,11 @@ export type GameAction =
   | { type: "select-hero-power" }
   | { type: "use-hero-power"; targetId?: string }
   | { type: "cancel-selection" }
-  | { type: "play-minion"; instanceId: string }
+  | { type: "play-minion"; instanceId: string; slotIndex?: number }
   | { type: "cast-spell"; instanceId: string; targetId?: string }
   | { type: "attack"; attackerId: string; targetId: string }
+  | { type: "all-attack" }
+  | { type: "fuse-minions"; firstMinionId: string; secondMinionId: string }
   | { type: "end-turn" }
   | { type: "discard-before-draw"; instanceId: string }
   | { type: "choose-reward"; cardId: string }
@@ -197,9 +201,11 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
 
   if (!session.run) return { ...session, error: "먼저 새 원정을 시작하세요." };
   try {
-    if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId), session, action);
+    if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId, action.slotIndex), session, action);
     if (action.type === "cast-spell") return sessionForAction(castSpell(session.run, action.instanceId, action.targetId), session, action);
     if (action.type === "attack") return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
+    if (action.type === "all-attack") return sessionForAction(attackAllReadyMinions(session.run), session, action);
+    if (action.type === "fuse-minions") return sessionForAction(fuseMinions(session.run, action.firstMinionId, action.secondMinionId), session, action);
     if (action.type === "use-hero-power") return sessionForAction(useHeroPower(session.run, action.targetId), session, action);
     if (action.type === "end-turn") return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run), session);
     if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);

@@ -143,4 +143,16 @@ describe("GameBoard", () => {
     expect(markup).toContain("영웅 능력 대상을 선택하세요");
     expect(markup).toContain("타락한 엘프 정찰자을(를) 대상으로 선택");
   });
+
+  it("lights All Attack only when the enemy board is empty and a friendly minion is ready", () => {
+    const run = createRun(419);
+    run.battle!.turnNumber = 2;
+    run.battle!.playerBoard = [{ instanceId: "ready", cardId: "ash-wolf", owner: "player", attack: 2, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    const ready = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    expect(ready).toContain('class="all-attack-button is-ready"');
+
+    run.battle!.enemyBoard = [{ instanceId: "blocker", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    const blocked = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    expect(blocked).toContain('class="all-attack-button is-unavailable"');
+  });
 });

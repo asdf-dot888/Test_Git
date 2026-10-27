@@ -1,4 +1,5 @@
 import type { HeroState, PlayerSide } from "@board-game/game-core";
+import { readDragPayload, type DropTarget } from "./dragInteractions.js";
 
 interface HeroPanelProps {
   hero: HeroState;
@@ -8,12 +9,23 @@ interface HeroPanelProps {
   targetable: boolean;
   armor?: number;
   onSelectTarget(targetId: string): void;
+  onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, onSelectTarget }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, onSelectTarget, onDropTarget }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
-    <section className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}`} data-effect-anchor={`hero:${side}`} aria-label={`${name} 영웅`}>
+    <section
+      className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}`}
+      data-effect-anchor={`hero:${side}`}
+      aria-label={`${name} 영웅`}
+      onDragOver={(event) => { if (side === "enemy" && onDropTarget) event.preventDefault(); }}
+      onDrop={(event) => {
+        if (side !== "enemy" || !onDropTarget) return;
+        const payload = readDragPayload(event);
+        if (payload) { event.preventDefault(); onDropTarget(payload, { kind: "hero", side }); }
+      }}
+    >
       {targetable && <button className="hero-target-button" type="button" aria-label={`${name}을(를) 대상으로 선택`} onClick={() => onSelectTarget(hero.id)} />}
       <div className="hero-portrait-wrap">
         <img className="hero-portrait" src={`/art/${isPlayer ? "heroes" : "enemies"}/${artKey}.png`} alt={`${name} 초상화`} />

@@ -19,8 +19,7 @@ class FakeAudio {
   pause(): void { this.paused = true; }
 }
 
-function makeReadySync(): LocalRunController {
-  const run = createRun(14);
+function makeReadySync(run = createRun(14)): LocalRunController {
   return {
     status: "ready", etag: null, expiresAt: null, message: null, run, loaded: true, loadVersion: 1,
     saveRun: vi.fn(async () => undefined), createRun: vi.fn(async () => run), replaceRun: vi.fn(async () => run),
@@ -42,6 +41,39 @@ afterEach(() => {
 });
 
 describe("game pointer and keyboard interactions", () => {
+  it("plays a hand minion when it is dragged to an empty board slot", async () => {
+    const run = createRun(15);
+    run.battle!.hand = [{ instanceId: "drag-iron-hound", cardId: "iron-hound" }];
+    const sync = makeReadySync(run);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    const card = await screen.findByRole("button", { name: /철갑 사냥개/ });
+    const dataTransfer = { effectAllowed: "", setData: vi.fn(), getData: vi.fn((type: string) => type === "application/x-ashen-expedition" ? JSON.stringify({ kind: "card", instanceId: "drag-iron-hound" }) : "card:drag-iron-hound") } as unknown as DataTransfer;
+    fireEvent.dragStart(card, { dataTransfer });
+    const slot = document.querySelector(".battle-player .lane-slot")!;
+    fireEvent.dragOver(slot, { dataTransfer });
+    fireEvent.drop(slot, { dataTransfer });
+    expect(await screen.findByRole("button", { name: /아군 하수인 철갑 사냥개/ })).toBeTruthy();
+    expect(sync.saveRun).toHaveBeenCalled();
+  });
+
+  it("uses All Attack for every ready minion in order until the enemy hero is defeated", async () => {
+    const run = createRun(16);
+    run.battle!.turnNumber = 2;
+    run.battle!.playerBoard = [
+      { instanceId: "ready-a", cardId: "ash-wolf", owner: "player", attack: 2, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false },
+      { instanceId: "ready-b", cardId: "crypt-guard", owner: "player", attack: 3, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false },
+    ];
+    const sync = makeReadySync(run);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    const allAttack = await screen.findByRole("button", { name: /전체 공격/ });
+    expect((allAttack as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(allAttack);
+    await waitFor(() => expect(document.querySelector(".hero-enemy .health-value")?.textContent).toContain("16"));
+    expect(screen.getAllByRole("button", { name: /이번 턴 공격함/ })).toHaveLength(2);
+  });
+
   it("plays one click per enabled pointer interaction and ignores disabled controls", async () => {
     const players: FakeAudio[] = [];
     vi.stubGlobal("Audio", class extends FakeAudio {

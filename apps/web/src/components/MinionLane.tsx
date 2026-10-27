@@ -1,5 +1,6 @@
 import type { MinionState, PlayerSide } from "@board-game/game-core";
 import { MinionCard } from "./MinionCard.js";
+import { readDragPayload, type DropTarget } from "./dragInteractions.js";
 
 interface MinionLaneProps {
   side: PlayerSide;
@@ -10,23 +11,40 @@ interface MinionLaneProps {
   disabled: boolean;
   turnNumber: number;
   onSelectTarget(targetId: string): void;
+  onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
 }
 
-export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget }: MinionLaneProps) {
+export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget, onDropTarget }: MinionLaneProps) {
   const occupied = new Map(minions.map((minion) => [minion.instanceId, minion]));
   return (
     <section className={`minion-lane lane-${side}`} aria-label={`${side === "player" ? "내" : "적"} 하수인 전장`}>
       {Array.from({ length: 5 }, (_, index) => {
         const minion = minions[index];
         return (
-          <div className={`lane-slot${minion ? " is-occupied" : ""}`} data-effect-anchor={`minion:${side}:${index}`} key={`${side}-${index}`}>
+          <div
+            className={`lane-slot${minion ? " is-occupied" : ""}`}
+            data-effect-anchor={`minion:${side}:${index}`}
+            key={`${side}-${index}`}
+            onDragOver={(event) => { if (!disabled && onDropTarget && (minion || side === "player")) event.preventDefault(); }}
+            onDrop={(event) => {
+              if (disabled || !onDropTarget) return;
+              const payload = readDragPayload(event);
+              if (!payload) return;
+              if (!minion && side === "player" && payload.kind === "card") { event.preventDefault(); onDropTarget(payload, { kind: "slot", slotIndex: index }); }
+              else if (minion) { event.preventDefault(); onDropTarget(payload, { kind: "minion", side, instanceId: minion.instanceId }); }
+            }}
+          >
             {minion ? (
               <MinionCard
                 minion={minion}
                 selected={selectedAttackerId === minion.instanceId}
                 targetable={targetMode !== "none" && targetSide === side}
-                disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side) || (side === "player" && targetMode !== "spell" && (minion.summonedTurn >= turnNumber || minion.hasAttacked))}
-                onSelect={() => onSelectTarget(minion.instanceId)}
+                disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side)}
+                draggable={side === "player" && !disabled}
+                onSelect={() => {
+                  if (side === "player" && targetMode === "none" && (minion.summonedTurn >= turnNumber || minion.hasAttacked)) return;
+                  onSelectTarget(minion.instanceId);
+                }}
               />
             ) : <span className="empty-slot" aria-hidden="true" />}
           </div>

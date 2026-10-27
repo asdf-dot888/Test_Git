@@ -199,6 +199,21 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
       const targetDied = targetSlot >= 0 && !next.enemyBoard.some((minion) => minion.instanceId === action.targetId);
       pushEvent(events, firstEventId, attacker.cardId, "attack", { kind: "minion", side: "player", slot: attackerSlot }, target, targetDied ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
     }
+  } else if (action.type === "all-attack") {
+    let remainingHealth = previous.enemyHero.health - (nextRun.battle?.enemyHero.health ?? 0);
+    for (const attacker of previous.playerBoard) {
+      if (attacker.summonedTurn >= previous.turnNumber || attacker.hasAttacked || remainingHealth <= 0) continue;
+      const slot = slotOf(previous.playerBoard, attacker.instanceId);
+      const lethal = attacker.attack >= remainingHealth;
+      pushEvent(events, firstEventId + events.length, attacker.cardId, "attack", { kind: "minion", side: "player", slot }, { kind: "hero", side: "enemy" }, lethal ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"]);
+      remainingHealth -= attacker.attack;
+    }
+  } else if (action.type === "fuse-minions") {
+    const fused = next.playerBoard.find((minion) => !previous.playerBoard.some((old) => old.instanceId === minion.instanceId));
+    const sourceSlot = slotOf(previous.playerBoard, action.firstMinionId);
+    if (fused && sourceSlot >= 0) {
+      pushEvent(events, firstEventId, fused.cardId, "summon", { kind: "minion", side: "player", slot: sourceSlot }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, fused.instanceId) }, ["summon"]);
+    }
   } else if (action.type === "use-hero-power") {
     const playerClass = previousRun.playerClass;
     if (playerClass === "warrior") {

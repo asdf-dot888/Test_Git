@@ -82,6 +82,10 @@
 .empty-slot { width: min(100%, 82px); aspect-ratio: .72; border: 1px dashed rgb(60 46 29 / 24%); border-radius: 12px; background: rgb(50 41 29 / 9%); }
 .minion-card { position: relative; width: min(100%, 96px); min-width: 54px; padding: 4px 4px 6px; display: grid; justify-items: center; gap: 3px; color: #f9efdc; border: 1px solid rgb(247 212 151 / 66%); border-radius: 13px; background: linear-gradient(160deg, #645141, #26242a 72%); box-shadow: 0 6px 13px rgb(0 0 0 / 33%); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
 .minion-card:hover { transform: translateY(-3px); }
+.minion-card[draggable="true"] { cursor: grab; }
+.minion-card[draggable="true"]:active { cursor: grabbing; }
+.minion-ability-tooltip { position: absolute; z-index: 8; bottom: calc(100% + 8px); left: 50%; width: max-content; max-width: min(240px, 65vw); padding: 8px 10px; color: #f3e6ce; border: 1px solid rgb(221 177 103 / 60%); border-radius: 7px; background: #211d1df2; box-shadow: 0 8px 22px #000a; font-size: 11px; font-weight: 500; line-height: 1.4; text-align: center; white-space: normal; opacity: 0; visibility: hidden; transform: translate(-50%, 4px); transition: opacity .12s ease, transform .12s ease, visibility .12s; pointer-events: none; }
+.minion-card:hover .minion-ability-tooltip, .minion-card:focus-visible .minion-ability-tooltip { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 .minion-card:disabled { opacity: .62; filter: saturate(.55); cursor: not-allowed; }
 .minion-art-frame { position: relative; display: block; width: 100%; aspect-ratio: 1 / .9; overflow: hidden; border: 1px solid rgb(238 219 179 / 54%); border-radius: 9px; background: #30292a; box-shadow: inset 0 0 12px #0008; }
 .minion-art-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -98,7 +102,7 @@
 .board-divider { position: relative; height: 1px; margin: 8px 0; background: linear-gradient(90deg, transparent, rgb(79 57 33 / 38%), transparent); }
 .board-divider span { position: absolute; left: 50%; top: 50%; padding: 0 12px; color: #6c4d2a; background: #b9a27e; font-size: 14px; transform: translate(-50%, -50%); }
 .player-controls { width: min(100% - 48px, 1160px); margin: 0 auto; padding-bottom: 16px; }
-.player-toolbar { min-height: 52px; display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(230px, 1.5fr) auto; align-items: center; gap: 12px; }
+.player-toolbar { min-height: 52px; display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(220px, 1.5fr) auto auto; align-items: center; gap: 9px; }
 .deck-counts { display: flex; gap: 18px; color: var(--muted); font-size: 11px; }
 .deck-counts span { display: flex; gap: 6px; align-items: center; }
 .deck-counts i { color: var(--gold); font-style: normal; }
@@ -120,6 +124,9 @@
 .hero-power-button strong { color: #fff0d3; font-size: 11px; }
 .hero-power-button small { max-width: 190px; color: var(--muted); font-size: 9px; }
 .hero-power-status { color: var(--gold-bright); font-size: 9px; white-space: nowrap; }
+.all-attack-button { min-height: 40px; padding: 0 13px; color: #eee1ca; border: 1px solid #715d42; border-radius: 8px; background: linear-gradient(145deg, #332b24, #211f20); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.all-attack-button.is-ready { color: #241d12; border-color: #f2d291; background: linear-gradient(135deg, #efce8d, #c08a42); box-shadow: 0 0 14px rgb(212 170 98 / 28%); cursor: pointer; }
+.all-attack-button.is-unavailable { opacity: .5; cursor: not-allowed; }
 .soul-shard-count { color: #d59aff; font-size: 10px; }
 .turn-controls-spacer { justify-self: end; }
 .turn-controls-spacer .turn-status { display: none; }
@@ -278,6 +285,7 @@
   .hero-power-control { grid-column: 1 / 3; grid-row: 2; justify-self: stretch; }
   .hero-power-button { width: 100%; min-height: 36px; }
   .hero-power-button small { max-width: 160px; }
+  .all-attack-button { grid-column: 3; grid-row: 1; min-height: 31px; padding-inline: 7px; font-size: 9px; }
   .turn-controls-spacer { grid-column: 3; grid-row: 2; }
   .class-choice-grid { grid-template-columns: 1fr; }
   .class-choice { min-height: 118px; }

@@ -6,6 +6,7 @@ import { GameBoard } from "./components/GameBoard.js";
 import { ExpeditionRoadmap } from "./components/ExpeditionRoadmap.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { ClassSelectionScreen } from "./components/ClassSelectionScreen.js";
+import type { DragPayload, DropTarget } from "./components/dragInteractions.js";
 import { RewardScreen } from "./components/RewardScreen.js";
 import { DeckLimitDialog } from "./components/DeckLimitDialog.js";
 import { DiscardPicker } from "./components/DiscardPicker.js";
@@ -399,6 +400,38 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     else dispatch({ type: "use-hero-power" });
   };
 
+  const handleDropInteraction = (payload: DragPayload, target: DropTarget) => {
+    if (!battle) return;
+    if (payload.kind === "card") {
+      const card = battle.hand.find(({ instanceId }) => instanceId === payload.instanceId);
+      const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
+      if (!card || !definition) return;
+      if (target.kind === "slot" && definition.kind === "minion") {
+        dispatch({ type: "play-minion", instanceId: payload.instanceId, slotIndex: target.slotIndex });
+        return;
+      }
+      if (definition.kind === "spell" && target.kind === "minion") {
+        dispatch({ type: "cast-spell", instanceId: payload.instanceId, targetId: target.instanceId });
+        return;
+      }
+      if (definition.kind === "spell" && target.kind === "hero" && target.side === "enemy") {
+        const targetId = definition.spellEffects?.some((effect) => effect.kind === "randomDamage") ? "enemy-hero" : battle.enemyHero.id;
+        dispatch({ type: "cast-spell", instanceId: payload.instanceId, targetId });
+      }
+      return;
+    }
+
+    const attacker = battle.playerBoard.find(({ instanceId }) => instanceId === payload.instanceId);
+    if (!attacker) return;
+    if (target.kind === "minion" && target.side === "enemy") {
+      dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: target.instanceId });
+    } else if (target.kind === "hero" && target.side === "enemy") {
+      dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: battle.enemyHero.id });
+    } else if (target.kind === "minion" && target.side === "player") {
+      dispatch({ type: "fuse-minions", firstMinionId: attacker.instanceId, secondMinionId: target.instanceId });
+    }
+  };
+
   const leaderboardModal = (
     <LeaderboardModal
       open={leaderboardOpen}
@@ -532,6 +565,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onEndTurn={() => dispatch({ type: "end-turn" })}
           onMenu={() => setMenuView("choices")}
           onUseHeroPower={activateHeroPower}
+          onAllAttack={() => dispatch({ type: "all-attack" })}
+          onDropInteraction={handleDropInteraction}
         />
       {leaderboardSubmitNotice}
       <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />

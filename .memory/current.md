@@ -7,10 +7,10 @@
 [P02 Game UI](./phases/2026-10-27-class-based-expedition-expansion/P02-game-ui/phase.md)
 
 ## Active Task
-[T01 Class Selection and Power UI](./phases/2026-10-27-class-based-expedition-expansion/P02-game-ui/T01-class-selection-and-power-ui.md)
+[T04 Enemy Intent Preview](./phases/2026-10-27-class-based-expedition-expansion/P02-game-ui/T04-enemy-intent-preview.md)
 
 ## Status
-- P01 game-core tasks T01–T04 completed and committed; validations passed.
+- P01 game-core tasks T01–T04 and P02 T01–T02 completed and committed; validations passed.
 
 ## Next Step
-Read the P02 T01 blueprint and add the class selection screen and hero-power controls.
+Read the P02 T04 blueprint and preview enemy actions and boss area-attack patterns.
