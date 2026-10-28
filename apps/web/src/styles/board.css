@@ -38,8 +38,10 @@
 .battle-board { position: relative; isolation: isolate; width: min(calc(100% - 32px), 1800px); min-width: 0; min-height: 0; margin: 8px auto; padding: 8px clamp(20px, 6vw, 86px) 12px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr); border: 1px solid rgb(233 196 133 / 35%); border-radius: 26px; background: #75624a url("/art/board-surface.png") center / cover no-repeat; box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); overflow: hidden; }
 .battle-board::before { position: absolute; z-index: -1; content: ""; inset: 0; background: linear-gradient(180deg, rgb(28 23 19 / 27%), transparent 30%, transparent 65%, rgb(25 22 19 / 32%)); }
 .battle-board.is-shaking { animation: boss-board-shake 500ms ease-in-out; border-color: rgb(235 122 86 / 78%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 60px rgb(180 48 31 / 38%); }
+.battle-board.is-hit-shaking { animation: direct-hit-board-shake 500ms ease-in-out 930ms both; border-color: rgb(201 66 61 / 68%); }
 .battle-board.is-boss-area-warning::after { position: absolute; z-index: 7; inset: 0; content: ""; border: 3px solid rgb(255 73 57 / 88%); border-radius: inherit; box-shadow: inset 0 0 46px 12px rgb(184 28 24 / 48%), 0 0 44px 8px rgb(221 45 32 / 52%); pointer-events: none; animation: boss-area-warning-pulse 1.25s ease-in-out both; animation-play-state: var(--boss-warning-play-state, running); }
 @keyframes boss-board-shake { 0%, 100% { transform: translateX(0); } 12%, 38%, 64%, 88% { transform: translateX(-7px); } 25%, 51%, 77% { transform: translateX(7px); } }
+@keyframes direct-hit-board-shake { 0%, 100% { transform: translateX(0); } 18%, 58% { transform: translateX(-4px); } 38%, 78% { transform: translateX(4px); } }
 @keyframes boss-area-warning-pulse { 0%, 100% { opacity: .08; } 25%, 70% { opacity: 1; } }
 .battle-board.is-timer-critical { animation: battle-board-timer-breath 1.35s ease-in-out infinite; }
 .enemy-intent-preview { position: absolute; z-index: 8; top: 62px; left: 50%; width: min(520px, calc(100% - 28px)); min-height: 76px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; transform: translateX(-50%); border: 1px solid rgb(244 207 142 / 72%); border-radius: 12px; color: #fff1d7; background: linear-gradient(120deg, rgb(45 31 27 / 97%), rgb(25 23 23 / 96%)); box-shadow: 0 8px 28px #000b, 0 0 24px rgb(222 153 75 / 22%); pointer-events: none; }
@@ -455,6 +457,13 @@
 @keyframes combat-card-particles { 0% { opacity: 0; transform: scale(.6) rotate(-12deg); } 28% { opacity: .9; } 100% { opacity: 0; transform: scale(1.4) rotate(18deg); } }
 .combat-effect-card-frame.is-minion-attack { width: clamp(70px, 9vw, 112px); height: clamp(92px, 12vw, 148px); }
 .combat-effect-minion-portrait { z-index: 83; width: clamp(46px, 6vw, 72px); height: clamp(46px, 6vw, 72px); align-self: center; border: 3px solid #e8c777; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px #201a14, 0 0 18px #ffd982; animation-duration: 930ms; }
+.combat-effect-sprite.combat-effect-minion-portrait { animation-name: combat-effect-minion-lunge; }
+.combat-effect-sprite.combat-effect-weapon-trail { z-index: 82; width: clamp(74px, 11vw, 150px); height: 9px; border: 0; border-radius: 999px; transform-origin: 0 50%; background: linear-gradient(90deg, transparent, var(--trail-color), #fff7cf, var(--trail-color), transparent); box-shadow: 0 0 14px 4px color-mix(in srgb, var(--trail-color) 72%, transparent); animation-name: combat-effect-weapon-trail; }
+.combat-effect-weapon-trail[data-particles="steel"] { --trail-color: #c6e7f4; }
+.combat-effect-weapon-trail[data-particles="shadow"] { --trail-color: #c890f5; }
+.combat-effect-weapon-trail[data-particles="ember"] { --trail-color: #ff7041; }
+.combat-effect-weapon-trail[data-particles="bone"] { --trail-color: #eee0b7; }
+.combat-effect-weapon-trail[data-particles="rune"] { --trail-color: #a99aff; }
 .combat-effect-impact-art { width: clamp(42px, 6vw, 72px); height: clamp(42px, 6vw, 72px); object-fit: contain; }
 .combat-effect-impact { position: fixed; z-index: 32; width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 2px solid var(--card-accent, #ffe2a0); border-radius: 50%; opacity: 0; box-shadow: 0 0 20px 8px color-mix(in srgb, var(--card-accent, #ffce74) 65%, transparent), inset 0 0 12px rgb(255 255 220 / 65%); animation: combat-effect-impact var(--profile-duration, 520ms) ease-out both; }
 .turn-start-glow { position: fixed; z-index: 34; inset: 0; border: 2px solid rgb(255 213 133 / 68%); box-shadow: inset 0 0 34px 8px rgb(255 190 82 / 34%), inset 0 0 110px rgb(255 190 82 / 12%); pointer-events: none; animation: turn-start-edge-glow 1000ms ease-out both; }
@@ -462,6 +471,10 @@
 @media (prefers-reduced-motion: reduce) { .turn-start-glow { animation: none; opacity: .3; } }
 .combat-effect-impact.is-area-impact { width: min(64vw, 520px); height: min(35vh, 220px); margin: 0; border-width: 3px; border-radius: 50%; box-shadow: 0 0 70px 24px rgb(231 69 43 / 42%), inset 0 0 44px rgb(255 191 105 / 58%); }
 .combat-effect-impact.effect-damage, .combat-effect-impact.effect-attack, .combat-effect-impact.effect-impact { border-color: #ffd1a0; box-shadow: 0 0 20px 8px rgb(240 96 71 / 64%), inset 0 0 12px rgb(255 239 210 / 75%); }
+.combat-effect-impact.is-minion-hit { border-color: #fff0df; box-shadow: 0 0 28px 12px rgb(255 79 69 / 78%), inset 0 0 16px #fff; }
+.combat-effect-impact.is-hero-hit { border-color: #ffe0d8; box-shadow: 0 0 28px 12px rgb(255 54 49 / 82%), inset 0 0 16px #fff; }
+.combat-effect-blood-splatter { position: fixed; z-index: 84; width: clamp(54px, 7vw, 88px); height: clamp(54px, 7vw, 88px); margin: 0; border-radius: 50%; opacity: 0; pointer-events: none; background: radial-gradient(ellipse at 52% 52%, rgb(122 5 16 / 94%) 0 12%, transparent 14%), radial-gradient(ellipse at 24% 36%, #a10d20 0 4%, transparent 6%), radial-gradient(ellipse at 76% 31%, #8b0717 0 3%, transparent 5%), radial-gradient(ellipse at 29% 72%, #780510 0 4%, transparent 6%), radial-gradient(ellipse at 76% 71%, #a11424 0 3%, transparent 5%), radial-gradient(ellipse at 50% 14%, #780510 0 2%, transparent 4%); filter: drop-shadow(0 0 7px rgb(117 0 8 / 82%)); animation: combat-hit-blood 540ms ease-out both; }
+.combat-effect-hero-hit-flash { position: fixed; z-index: 29; inset: 0; opacity: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 38%, rgb(142 4 18 / 44%) 100%), rgb(255 35 38 / 10%); animation: combat-hero-hit-flash 480ms ease-out both; }
 .combat-effect-impact.effect-impact.is-area-impact { border-color: #ffb39a; box-shadow: 0 0 70px 24px rgb(231 69 43 / 42%), inset 0 0 44px rgb(255 191 105 / 58%); }
 .combat-effect-impact.effect-buff, .combat-effect-impact.effect-heal, .combat-effect-impact.effect-mana { border-color: #b9ffd8; box-shadow: 0 0 20px 8px rgb(74 231 168 / 58%), inset 0 0 12px rgb(221 255 238 / 78%); }
 .combat-effect-impact.effect-summon { border-color: #e0c4ff; box-shadow: 0 0 20px 8px rgb(166 112 255 / 58%), inset 0 0 12px rgb(248 230 255 / 78%); }
@@ -483,6 +496,20 @@
   76% { opacity: 1; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.92); }
   100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.72); }
 }
+@keyframes combat-effect-minion-lunge {
+  0%, 18% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(.68) rotate(-9deg); }
+  28% { opacity: 1; transform: translate(-50%, -50%) translate(0, 0) scale(1) rotate(0); }
+  72% { opacity: 1; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.94) rotate(5deg); }
+  88%, 100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.72) rotate(8deg); }
+}
+@keyframes combat-effect-weapon-trail {
+  0%, 24% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--effect-angle)) scaleX(.05); }
+  32% { opacity: .92; transform: translate(-50%, -50%) rotate(var(--effect-angle)) scaleX(.7); }
+  72% { opacity: .8; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) rotate(var(--effect-angle)) scaleX(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) rotate(var(--effect-angle)) scaleX(.35); }
+}
+@keyframes combat-hit-blood { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.35); } 22% { opacity: .96; transform: translate(-50%, -50%) scale(1.08); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.32); } }
+@keyframes combat-hero-hit-flash { 0%, 100% { opacity: 0; } 16% { opacity: .82; } 48% { opacity: .35; } }
 @keyframes combat-effect-slash { 0% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) rotate(-28deg) scale(.6); } 18% { opacity: 1; } 76% { opacity: 1; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) rotate(8deg) scale(1.08); } 100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) rotate(18deg) scale(.78); } }
 @keyframes combat-effect-arcane { 0% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) rotate(-15deg) scale(.5); } 24% { opacity: 1; transform: translate(-50%, -50%) translate(0, 0) rotate(0) scale(1.12); } 78% { opacity: 1; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) rotate(220deg) scale(.88); } 100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) rotate(360deg) scale(.68); } }
 @keyframes combat-effect-guard { 0% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0) scale(.78); } 22% { opacity: 1; transform: translate(-50%, -50%) translate(0, 0) scale(1.06); } 70% { opacity: 1; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.96); } 100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--effect-dx), var(--effect-dy)) scale(.8); } }
@@ -493,13 +520,14 @@
   100% { opacity: 0; transform: scale(1.8); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .battle-board.is-shaking { animation: none; }
+  .battle-board.is-shaking, .battle-board.is-hit-shaking { animation: none; }
   .battle-board.is-boss-area-warning::after { animation: none; opacity: .55; }
   .victory-card h1, .victory-light { animation: none; }
   .turn-timer.is-critical { animation: none; }
   .combat-effect-sprite { animation-duration: 160ms; animation-delay: 0ms !important; }
   .combat-effect-impact { animation-duration: 160ms; animation-delay: 0ms !important; }
   .combat-effect-death { animation-duration: 160ms; }
+  .combat-effect-blood-splatter, .combat-effect-hero-hit-flash { animation-duration: 180ms; animation-delay: 0ms !important; }
 }
 .game-guide-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(5 5 5 / 78%); }
 .game-guide-panel { width: min(100%, 700px); max-height: min(90dvh, 820px); padding: clamp(20px, 4vw, 34px); overflow: auto; color: #e9dcc4; border: 1px solid rgb(219 173 101 / 52%); border-radius: 16px; background: radial-gradient(ellipse at 50% 0, #38302a, #1d1b1d 70%); box-shadow: 0 28px 90px rgb(0 0 0 / 68%); }

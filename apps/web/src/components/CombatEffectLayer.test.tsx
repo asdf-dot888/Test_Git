@@ -10,21 +10,26 @@ afterEach(() => {
 });
 
 describe("CombatEffectLayer", () => {
-  it("renders paired card and minion art for an attack and completes the event once", async () => {
+  it("renders a single attacking portrait, themed trail, and impact for a minion attack", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
     vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
     const onComplete = vi.fn();
-    render(<CombatEffectLayer events={[{ id: 7, assetCardId: "ash-wolf", effectKind: "attack", soundCues: [], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={onComplete} />);
+    render(<CombatEffectLayer events={[{ id: 7, assetCardId: "ash-wolf", effectKind: "attack", damageTarget: "hero", soundCues: [], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={onComplete} />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelectorAll(".combat-effect-sprite")).toHaveLength(2);
     const frame = document.body.querySelector(".combat-effect-card-frame");
     const portrait = document.body.querySelector(".combat-effect-minion-portrait");
+    const trail = document.body.querySelector<HTMLElement>(".combat-effect-weapon-trail");
     const impact = document.body.querySelector<HTMLElement>(".combat-effect-impact");
-    expect(frame?.querySelector("img")?.getAttribute("src")).toBe("/art/cards/ash-wolf.png");
+    expect(frame).toBeNull();
     expect(portrait?.getAttribute("src")).toBe("/art/cards/ash-wolf.png");
+    expect(trail?.dataset.particles).toBe("bone");
+    expect(trail?.style.getPropertyValue("--effect-angle")).not.toBe("");
     expect(impact?.style.animationDelay).toBe("930ms");
+    expect(document.body.querySelector(".combat-effect-hero-hit-flash")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-blood-splatter")).toBeNull();
     await act(async () => { await vi.advanceTimersByTimeAsync(950); });
     expect(onComplete).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(1_400); });
@@ -90,6 +95,43 @@ describe("CombatEffectLayer", () => {
     expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(false);
   });
 
+  it("shows blood for minion hits and keeps a shared shake active through overlapping hits", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    render(<div className="battle-board"><CombatEffectLayer events={[
+      { id: 31, assetCardId: "ash-wolf", effectKind: "attack", damageTarget: "minion", soundCues: [], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } },
+      { id: 32, assetCardId: "crypt-guard", effectKind: "damage", damageTarget: "minion", soundCues: [], source: { kind: "hand", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 } },
+    ]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelectorAll(".combat-effect-blood-splatter")).toHaveLength(2);
+    expect(document.body.querySelector(".combat-effect-hero-hit-flash")).toBeNull();
+    const board = document.querySelector(".battle-board");
+    expect(board?.classList.contains("is-hit-shaking")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_430); });
+    expect(board?.classList.contains("is-hit-shaking")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(120); });
+    expect(board?.classList.contains("is-hit-shaking")).toBe(false);
+  });
+
+  it("pauses direct hit feedback and suppresses its shake for reduced motion", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const event = { id: 33, assetCardId: null, effectKind: "damage" as const, damageTarget: "hero" as const, soundCues: [], source: { kind: "hero" as const, side: "enemy" as const }, target: { kind: "hero" as const, side: "player" as const } };
+    const view = render(<div className="battle-board"><CombatEffectLayer events={[event]} paused onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelector<HTMLElement>(".combat-effect-hero-hit-flash")?.style.animationPlayState).toBe("paused");
+    expect(document.querySelector(".battle-board")?.classList.contains("is-hit-shaking")).toBe(true);
+    view.unmount();
+
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    render(<div className="battle-board"><CombatEffectLayer events={[{ ...event, id: 34 }]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.querySelector(".battle-board")?.classList.contains("is-hit-shaking")).toBe(false);
+    expect(document.body.querySelector(".combat-effect-hero-hit-flash")).not.toBeNull();
+  });
+
   it("shows the boss warning edge and death tear at the fallen unit anchor", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
@@ -98,7 +140,7 @@ describe("CombatEffectLayer", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.querySelector(".battle-board")?.classList.contains("is-boss-area-warning")).toBe(true);
     expect(document.body.querySelector(".combat-effect-death")?.querySelectorAll("i")).toHaveLength(4);
-    expect(document.body.querySelector(".combat-effect-card-frame")?.getAttribute("style")).toContain("--card-accent");
+    expect(document.body.querySelector(".combat-effect-minion-portrait")?.getAttribute("style")).toContain("--card-accent");
   });
 
   it("positions fallback anchors across all six field slots", async () => {
