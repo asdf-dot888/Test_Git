@@ -25,16 +25,16 @@ describe("game action adapter", () => {
     expect(result.run?.battle?.hand[0]?.instanceId).toBe("expensive");
   });
 
-  it("does not let a minion play onto a full five-unit lane", () => {
+  it("allows six minions and rejects another on a full lane", () => {
     const session = startSession();
     const battle = session.run!.battle!;
     battle.hand = [{ instanceId: "extra", cardId: "ash-wolf" }];
-    battle.playerBoard = Array.from({ length: 5 }, (_, index) => makeMinion(`friendly-${index}`, "bone-rat", "player"));
+    battle.playerBoard = Array.from({ length: 6 }, (_, index) => makeMinion(`friendly-${index}`, "bone-rat", "player"));
 
     const result = reduceGameAction(session, { type: "play-minion", instanceId: "extra" });
 
     expect(result.run).toBe(session.run);
-    expect(result.error).toBe("전장에는 하수인을 5명까지만 둘 수 있습니다.");
+    expect(result.error).toBe("전장에는 하수인을 6명까지만 둘 수 있습니다.");
   });
 
   it("requires a valid spell target and applies the effect only after a target is supplied", () => {

@@ -98,6 +98,20 @@ describe("collectCombatEffectEvents", () => {
     expect(events.map((event) => event.soundCues)).toEqual([["summon"], ["spell"]]);
   });
 
+  it("anchors summons to the sixth player lane slot", () => {
+    const run = createRun(411);
+    const before = withBattle(run, (state) => {
+      state.battle!.hand = [{ instanceId: "sixth-minion", cardId: "ash-wolf" }];
+      state.battle!.playerBoard = Array.from({ length: 5 }, (_, index) => ({ instanceId: `existing-${index}`, cardId: "bone-rat", owner: "player" as const, attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }));
+    });
+    const after = withBattle(before, (state) => {
+      state.battle!.hand = [];
+      state.battle!.playerBoard.push({ instanceId: "sixth-minion", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 1, hasAttacked: false });
+    });
+    const events = collectCombatEffectEvents(before, after, { type: "play-minion", instanceId: "sixth-minion" }, 11);
+    expect(events[0]?.target).toEqual({ kind: "minion", side: "player", slot: 5 });
+  });
+
   it("anchors a minion attack to the attacker card and exact lane slots", () => {
     const run = createRun(41);
     const before = withBattle(run, (state) => {

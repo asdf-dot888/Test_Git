@@ -101,6 +101,18 @@ describe("CombatEffectLayer", () => {
     expect(document.body.querySelector(".combat-effect-card-frame")?.getAttribute("style")).toContain("--card-accent");
   });
 
+  it("positions fallback anchors across all six field slots", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    render(<div className="battle-board"><CombatEffectLayer events={[{ id: 25, assetCardId: "ash-wolf", effectKind: "summon", soundCues: [], source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "minion", side: "player", slot: 5 } }]} onComplete={vi.fn()} /></div>);
+    const board = document.querySelector<HTMLElement>(".battle-board")!;
+    vi.spyOn(board, "getBoundingClientRect").mockReturnValue({ left: 100, top: 50, width: 600, height: 300, right: 700, bottom: 350, x: 100, y: 50, toJSON: () => ({}) });
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelector<HTMLElement>(".combat-effect-impact")?.style.left).toBe("650px");
+  });
+
   it("skips the board shake for reduced motion while still completing the area event", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));

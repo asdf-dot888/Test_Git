@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { gameConstants } from "@board-game/game-core";
 import { MinionLane } from "./MinionLane.js";
 
 function transfer(value: string) {
@@ -17,6 +18,11 @@ const base = {
 };
 
 describe("MinionLane drag and click", () => {
+  it("renders six field slots", () => {
+    const { container } = render(<MinionLane {...base} side="player" minions={[]} />);
+    expect(container.querySelectorAll(".lane-slot")).toHaveLength(gameConstants.maxBoard);
+  });
+
   it("marks newly summoned and already-attacked friendly minions as exhausted without disabling them", () => {
     const newlySummoned = { instanceId: "new-unit", cardId: "ash-wolf", owner: "player" as const, attack: 2, health: 1, maxHealth: 1, summonedTurn: 2, hasAttacked: false };
     const spent = { ...newlySummoned, instanceId: "spent-unit", summonedTurn: 0, hasAttacked: true };

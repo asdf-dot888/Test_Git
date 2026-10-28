@@ -1,4 +1,4 @@
-import type { MinionState, PlayerSide } from "@board-game/game-core";
+import { gameConstants, type MinionState, type PlayerSide } from "@board-game/game-core";
 import { MinionCard } from "./MinionCard.js";
 import { readDragPayload, type DropTarget } from "./dragInteractions.js";
 
@@ -19,7 +19,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
   const occupied = new Map(minions.map((minion) => [minion.instanceId, minion]));
   return (
     <section className={`minion-lane lane-${side}`} aria-label={`${side === "player" ? "내" : "적"} 하수인 전장`}>
-      {Array.from({ length: 5 }, (_, index) => {
+      {Array.from({ length: gameConstants.maxBoard }, (_, index) => {
         const minion = minions[index];
         const attackUnavailable = Boolean(minion && side === "player" && (minion.summonedTurn >= turnNumber || minion.hasAttacked));
         return (
@@ -54,7 +54,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
           </div>
         );
       })}
-      <span className="sr-only">{occupied.size} / 5 자리 사용 중</span>
+      <span className="sr-only">{occupied.size} / {gameConstants.maxBoard} 자리 사용 중</span>
     </section>
   );
 }

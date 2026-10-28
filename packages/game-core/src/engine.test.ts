@@ -432,8 +432,12 @@ describe("class hero powers and battle resources", () => {
     expect(() => useHeroPower(tooFew)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
     expect(tooFew).toEqual(tooFewBefore);
 
+    const nearlyFullBoard = copyRun(base);
+    activeBattle(nearlyFullBoard).playerBoard = Array.from({ length: gameConstants.maxBoard - 1 }, (_, index) => minion({ instanceId: `nearly-full-${index}` }));
+    expect(useHeroPower(nearlyFullBoard).battle?.playerBoard).toHaveLength(gameConstants.maxBoard);
+
     const fullBoard = copyRun(base);
-    activeBattle(fullBoard).playerBoard = Array.from({ length: 5 }, (_, index) => minion({ instanceId: `full-${index}` }));
+    activeBattle(fullBoard).playerBoard = Array.from({ length: gameConstants.maxBoard }, (_, index) => minion({ instanceId: `full-${index}` }));
     const fullBefore = copyRun(fullBoard);
     expect(() => useHeroPower(fullBoard)).toThrowError(expect.objectContaining({ code: "MAX_BOARD" }));
     expect(fullBoard).toEqual(fullBefore);
@@ -612,9 +616,10 @@ describe("class minion fusion", () => {
       minion({ instanceId: "full-b" }),
       minion({ instanceId: "full-c" }),
       { ...minion({ instanceId: "full-second", cardId: recipe.sourceCardIds[1] }), hasAttacked: false },
+      minion({ instanceId: "full-d" }),
     ];
     const fused = fuseMinions(run, "full-first", "full-second");
-    expect(fused.battle?.playerBoard).toHaveLength(4);
+    expect(fused.battle?.playerBoard).toHaveLength(gameConstants.maxBoard - 1);
     expect(fused.battle?.playerBoard[1]?.cardId).toBe(recipe.resultCardId);
   });
 
@@ -710,7 +715,7 @@ describe("player actions and battle rules", () => {
     expect(() => attackWithMinion(played, handCard.instanceId, played.battle!.enemyHero.id)).toThrow(GameRuleError);
   });
 
-  it("rejects insufficient mana, wrong card kind, and a sixth minion without mutation", () => {
+  it("rejects invalid plays and enforces six-minion capacity", () => {
     const run = copyRun(createRun(8));
     const battle = activeBattle(run);
     battle.playerMana.current = 0;
@@ -722,9 +727,15 @@ describe("player actions and battle rules", () => {
     battle.hand = [instance("spell", "shadow-bolt")];
     expect(() => playMinion(run, "spell")).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
 
-    battle.playerBoard = Array.from({ length: gameConstants.maxBoard }, (_, index) => minion({ instanceId: `full-${index}` }));
+    battle.playerBoard = Array.from({ length: gameConstants.maxBoard - 1 }, (_, index) => minion({ instanceId: `nearly-full-${index}` }));
     battle.hand = [instance("sixth", "ash-wolf")];
-    expect(() => playMinion(run, "sixth")).toThrowError(expect.objectContaining({ code: "MAX_BOARD" }));
+    const sixth = playMinion(run, "sixth");
+    expect(sixth.battle?.playerBoard).toHaveLength(gameConstants.maxBoard);
+    const seventh = copyRun(sixth);
+    activeBattle(seventh).hand = [instance("seventh", "ash-wolf")];
+    const seventhBefore = copyRun(seventh);
+    expect(() => playMinion(seventh, "seventh")).toThrowError(expect.objectContaining({ code: "MAX_BOARD" }));
+    expect(seventh).toEqual(seventhBefore);
   });
 
   it("recovers mana by turn tier and caps at ten", () => {
@@ -1043,12 +1054,14 @@ describe("player actions and battle rules", () => {
     expect(run.battle?.drawPile).toHaveLength(0);
   });
 
-  it("runs battlecry and death summon effects without exceeding five board slots", () => {
+  it("fills a sixth board slot with a battlecry summon and keeps death summons within capacity", () => {
     const run = copyRun(createRun(15));
     const battle = activeBattle(run);
+    battle.playerBoard = Array.from({ length: gameConstants.maxBoard - 2 }, (_, index) => minion({ instanceId: `setup-${index}`, cardId: "ash-wolf" }));
     battle.hand = [instance("imp", "cinder-imp")];
     const summoned = playMinion(run, "imp");
-    expect(summoned.battle?.playerBoard.map((entry) => entry.cardId)).toEqual(["cinder-imp", "bone-rat"]);
+    expect(summoned.battle?.playerBoard).toHaveLength(gameConstants.maxBoard);
+    expect(summoned.battle?.playerBoard.slice(-2).map((entry) => entry.cardId)).toEqual(["cinder-imp", "bone-rat"]);
 
     const deathRun = copyRun(createRun(16));
     const deathBattle = activeBattle(deathRun);

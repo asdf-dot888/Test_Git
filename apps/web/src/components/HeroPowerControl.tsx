@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { PLAYER_CLASS_DEFINITIONS, type PlayerClass } from "@board-game/game-core";
+import { gameConstants, PLAYER_CLASS_DEFINITIONS, type PlayerClass } from "@board-game/game-core";
 
 interface HeroPowerControlProps {
   playerClass?: PlayerClass;
@@ -25,7 +25,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
     && !used
     && active
     && !resolving
-    && (playerClass !== "demonist" || (shardCount >= 3 && boardSize < 5));
+    && (playerClass !== "demonist" || (shardCount >= 3 && boardSize < gameConstants.maxBoard));
   const disabled = !ready && !targetMode;
   const status = used
     ? "이번 턴 사용 완료"
@@ -37,7 +37,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
           ? "마나 2 부족"
           : playerClass === "demonist" && shardCount < 3
             ? "영혼 조각 3 부족"
-            : playerClass === "demonist" && boardSize >= 5
+            : playerClass === "demonist" && boardSize >= gameConstants.maxBoard
               ? "필드가 가득 참"
               : "사용 가능";
 

@@ -92,7 +92,7 @@
 .health-track { height: 4px; margin-top: 2px; overflow: hidden; background: rgb(255 255 255 / 12%); border-radius: 5px; }
 .health-track span { display: block; height: 100%; background: linear-gradient(90deg, #d75d58, #f6a278); border-radius: inherit; }
 .hero-player .health-track span { background: linear-gradient(90deg, #318b83, #74e0cb); }
-.minion-lane { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; justify-items: center; gap: clamp(4px, 1vw, 14px); min-width: 0; }
+.minion-lane { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: center; justify-items: center; gap: clamp(4px, 1vw, 14px); min-width: 0; }
 .lane-enemy::before { position: absolute; z-index: 0; right: 1%; bottom: 2%; left: 1%; height: 30%; border-radius: 50%; background: radial-gradient(ellipse, rgb(139 34 31 / 24%), rgb(139 34 31 / 9%) 54%, transparent 76%); content: ""; pointer-events: none; }
 .lane-slot { position: relative; z-index: 1; width: 100%; min-width: 0; display: grid; place-items: center; }
 .empty-slot { width: min(100%, 82px); aspect-ratio: .72; border: 1px dashed rgb(60 46 29 / 24%); border-radius: 12px; background: rgb(50 41 29 / 9%); }

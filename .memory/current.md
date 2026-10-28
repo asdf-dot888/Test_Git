@@ -1,16 +1,17 @@
 # Current Context
 
 ## Active Plan
-[Class-Based Expedition Expansion](./plans/2026-10-27-class-based-expedition-expansion.md)
+None — all planned work is complete.
 
 ## Active Phase
-[P03 Presentation](./phases/2026-10-27-class-based-expedition-expansion/P03-presentation/phase.md)
+None — all planned phases are complete.
 
 ## Active Task
 None — all planned tasks are complete.
 
 ## Status
-- P01, P02, and P03 are complete and committed; all specified validations passed.
+- Plan `2026-10-28-six-minion-field-limit` is complete.
+- T01 is implemented, validated, and committed.
 
 ## Next Step
-No remaining tasks in the active plan.
+No pending task remains in this plan.

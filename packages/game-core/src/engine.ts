@@ -18,7 +18,7 @@ import type {
 } from "./types.js";
 
 const MAX_HAND = 10;
-const MAX_BOARD = 5;
+const MAX_BOARD = 6;
 const HERO_HEALTH = 30;
 const INITIAL_MANA = 5;
 const MAX_MANA = 10;

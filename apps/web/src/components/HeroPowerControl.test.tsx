@@ -45,6 +45,14 @@ describe("HeroPowerControl", () => {
     expect(screen.getByText("보유 영혼 조각 4/6")).toBeTruthy();
   });
 
+  it("keeps the Demonist power available at five minions and disables it at six", () => {
+    const onActivate = vi.fn();
+    const view = render(<HeroPowerControl playerClass="demonist" currentMana={5} used={false} active resolving={false} shardCount={4} boardSize={5} targetMode={false} onActivate={onActivate} />);
+    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(false);
+    view.rerender(<HeroPowerControl playerClass="demonist" currentMana={5} used={false} active resolving={false} shardCount={4} boardSize={6} targetMode={false} onActivate={onActivate} />);
+    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("keeps the icon disabled when Demonist resources are insufficient and explains why", () => {
     render(<HeroPowerControl playerClass="demonist" currentMana={2} used={false} active resolving={false} shardCount={2} boardSize={0} targetMode={false} onActivate={vi.fn()} />);
     const button = screen.getByRole("button", { name: /영혼 조각 3/ });

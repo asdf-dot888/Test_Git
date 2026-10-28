@@ -1,4 +1,4 @@
-import type { CardInstance } from "@board-game/game-core";
+import { gameConstants, type CardInstance } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
 import { CardView } from "./CardView.js";
 
@@ -23,7 +23,7 @@ export function HandPanel({ cards, selectedCardInstanceId, currentMana, boardSiz
             instance={instance}
             effectSlot={index}
             selected={selectedCardInstanceId === instance.instanceId}
-            disabled={disabled || !canSelectCard(instance) || (CARD_BY_ID.get(instance.cardId)?.cost ?? Number.POSITIVE_INFINITY) > currentMana || (CARD_BY_ID.get(instance.cardId)?.kind === "minion" && boardSize >= 5)}
+            disabled={disabled || !canSelectCard(instance) || (CARD_BY_ID.get(instance.cardId)?.cost ?? Number.POSITIVE_INFINITY) > currentMana || (CARD_BY_ID.get(instance.cardId)?.kind === "minion" && boardSize >= gameConstants.maxBoard)}
             onSelect={() => onSelectCard(instance.instanceId)}
           />
         ))}

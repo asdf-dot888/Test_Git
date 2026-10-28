@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { gameConstants } from "@board-game/game-core";
 import { CARD_COMBAT_VISUAL_PROFILES, type CombatAnchor, type CombatEffectEvent } from "../game/combatEffects.js";
 
 interface CombatEffectLayerProps {
@@ -42,7 +43,7 @@ function fallbackPoint(anchor: CombatAnchor): Point {
     : (anchor.side === "enemy" ? bounds.top + bounds.height * 0.32 : bounds.top + bounds.height * 0.68);
   const x = anchor.kind === "hero"
     ? bounds.left + bounds.width / 2
-    : bounds.left + bounds.width * ((anchor.slot + 0.5) / 5);
+    : bounds.left + bounds.width * ((anchor.slot + 0.5) / gameConstants.maxBoard);
   return { x, y };
 }
 

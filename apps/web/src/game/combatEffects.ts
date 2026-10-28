@@ -1,4 +1,4 @@
-import { CARD_BY_ID, CARD_CATALOG, type CardDefinition, type EnemyCombatRecord, type PlayerSide, type RunState, type SpellEffect } from "@board-game/game-core";
+import { CARD_BY_ID, CARD_CATALOG, gameConstants, type CardDefinition, type EnemyCombatRecord, type PlayerSide, type RunState, type SpellEffect } from "@board-game/game-core";
 import type { GameAction } from "./gameActions.js";
 import type { SoundEffectKind } from "./audio.js";
 
@@ -92,7 +92,7 @@ function playerSpellTarget(battle: NonNullable<RunState["battle"]>, effect: Spel
     return { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId ?? "")) };
   }
   if (effect.kind === "buff") return { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId ?? "")) };
-  if (effect.kind === "summon") return { kind: "minion", side: "player", slot: Math.min(4, battle.playerBoard.length) };
+  if (effect.kind === "summon") return { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, battle.playerBoard.length) };
   return { kind: "hand", side: "player", slot: Math.min(9, battle.hand.length) };
 }
 
@@ -115,7 +115,7 @@ function enemySpellTarget(battle: NonNullable<RunState["battle"]>, effect: Spell
       : { kind: "minion", side: "enemy", slot: Math.max(0, slotOf(battle.enemyBoard, targetId ?? "")) };
   }
   if (effect.kind === "buff") return { kind: "minion", side: "enemy", slot: Math.max(0, slotOf(battle.enemyBoard, targetId ?? "")) };
-  if (effect.kind === "summon") return { kind: "minion", side: "enemy", slot: Math.min(4, battle.enemyBoard.length) };
+  if (effect.kind === "summon") return { kind: "minion", side: "enemy", slot: Math.min(gameConstants.maxBoard - 1, battle.enemyBoard.length) };
   return { kind: "hand", side: "enemy", slot: Math.min(9, battle.enemyHand.length) };
 }
 
@@ -125,7 +125,7 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
       const summoned = record.summonedIds.map((instanceId) => next.enemyBoard.find((minion) => minion.instanceId === instanceId)).filter((minion) => minion !== undefined);
       const source: CombatAnchor = { kind: "hand", side: "enemy", slot: record.handSlot, instanceId: record.instanceId };
       const first = summoned[0];
-      const firstSlot = first ? slotOf(next.enemyBoard, first.instanceId) : Math.min(4, previous.enemyBoard.length);
+      const firstSlot = first ? slotOf(next.enemyBoard, first.instanceId) : Math.min(gameConstants.maxBoard - 1, previous.enemyBoard.length);
       pushEvent(events, firstEventId, record.cardId, "summon", source, { kind: "minion", side: "enemy", slot: Math.max(0, firstSlot) }, ["summon"]);
       for (const extra of summoned.slice(1)) {
         pushEvent(events, firstEventId, record.cardId, "summon", { kind: "minion", side: "enemy", slot: Math.max(0, firstSlot) }, { kind: "minion", side: "enemy", slot: slotOf(next.enemyBoard, extra.instanceId) }, ["summon"]);
@@ -220,15 +220,15 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     if (card && definition?.kind === "minion") {
       const summoned = next.playerBoard.find((minion) => minion.instanceId === card.instanceId);
       const targetSlot = summoned ? slotOf(next.playerBoard, summoned.instanceId) : Math.max(0, previous.playerBoard.length);
-      pushEvent(events, firstEventId, card.cardId, "summon", { kind: "hand", side: "player", slot: handSlot, instanceId: card.instanceId }, { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, ["summon"]);
+      pushEvent(events, firstEventId, card.cardId, "summon", { kind: "hand", side: "player", slot: handSlot, instanceId: card.instanceId }, { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, targetSlot) }, ["summon"]);
       const effect = definition.minion?.effect;
       if (effect?.kind === "battlecryBuff") {
         const target = effect.target === "self" ? summoned : next.playerBoard.find((minion) => minion.instanceId !== card.instanceId);
-        if (target) pushEvent(events, firstEventId, card.cardId, "buff", { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, target.instanceId) }, ["spell"]);
+        if (target) pushEvent(events, firstEventId, card.cardId, "buff", { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, target.instanceId) }, ["spell"]);
       }
       if (effect?.kind === "battlecrySummon") {
         const extra = next.playerBoard.find((minion) => minion.cardId === effect.cardId && !previous.playerBoard.some((old) => old.instanceId === minion.instanceId) && minion.instanceId !== card.instanceId);
-        if (extra) pushEvent(events, firstEventId, card.cardId, "summon", { kind: "minion", side: "player", slot: Math.min(4, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, extra.instanceId) }, ["summon"]);
+        if (extra) pushEvent(events, firstEventId, card.cardId, "summon", { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, extra.instanceId) }, ["summon"]);
       }
     }
   } else if (action.type === "cast-spell") {
