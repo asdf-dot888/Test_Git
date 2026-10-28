@@ -141,6 +141,20 @@ describe("GameBoard", () => {
     expect(markup).toContain("방어도 3");
   });
 
+  it("uses the selected class portrait and keeps the legacy hero portrait", () => {
+    const renderPlayerPortrait = (run: ReturnType<typeof createRun>) => renderToStaticMarkup(
+      <GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />,
+    );
+
+    expect(renderPlayerPortrait(createRun(420, "warrior"))).toContain('src="/art/heroes/warrior.png"');
+    expect(renderPlayerPortrait(createRun(421, "assassin"))).toContain('src="/art/heroes/assassin.png"');
+    expect(renderPlayerPortrait(createRun(422, "demonist"))).toContain('src="/art/heroes/demonist.png"');
+
+    const legacyRun = createRun(423);
+    delete legacyRun.playerClass;
+    expect(renderPlayerPortrait(legacyRun)).toContain('src="/art/heroes/player.png"');
+  });
+
   it("allows Assassin power to target enemy minions and hero", () => {
     const assassin = createRun(418, "assassin");
     const markup = renderToStaticMarkup(<GameBoard run={assassin} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="hero-power" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);

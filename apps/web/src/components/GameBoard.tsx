@@ -58,6 +58,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
 export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
+  const playerHeroArtKey = run.playerClass ?? "player";
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
   const intentAction = enemyIntentStep?.action;
   const intentTargetIds = intentAction?.type === "attack"
@@ -128,7 +129,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
           <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
-          <HeroPanel hero={battle.playerHero} side="player" artKey="player" name="잿빛 방랑자" armor={battle.playerArmor} targetable={false} intentTarget={intentHeroTarget} onSelectTarget={onSelectTarget} />
+          <HeroPanel hero={battle.playerHero} side="player" artKey={playerHeroArtKey} name="잿빛 방랑자" armor={battle.playerArmor} targetable={false} intentTarget={intentHeroTarget} onSelectTarget={onSelectTarget} />
         </div>
         {targetMode !== "none" && <TargetPicker mode={targetMode} onCancel={onCancelTarget} />}
       </section>
