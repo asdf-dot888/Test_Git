@@ -7,13 +7,15 @@ interface MainMenuProps {
   onStart(): void;
   onContinue(): void;
   onLeaderboard(): void;
+  onAudioSettings(): void;
 }
 
-export function MainMenu({ canContinue, disabled = false, onStart, onContinue, onLeaderboard }: MainMenuProps) {
+export function MainMenu({ canContinue, disabled = false, onStart, onContinue, onLeaderboard, onAudioSettings }: MainMenuProps) {
   const [guideOpen, setGuideOpen] = useState(false);
 
   return (
     <main className="menu-screen">
+      <button className="menu-audio-settings-button" type="button" aria-label="음향 설정" title="음향 설정" disabled={disabled} onClick={onAudioSettings}><span aria-hidden="true">🔊</span></button>
       <div className="menu-card">
         <span className="menu-emblem" aria-hidden="true">✦</span>
         <span className="eyebrow">ASHEN EXPEDITION</span>

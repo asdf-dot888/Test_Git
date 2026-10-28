@@ -11,6 +11,7 @@ import { RewardScreen } from "./components/RewardScreen.js";
 import { DeckLimitDialog } from "./components/DeckLimitDialog.js";
 import { DiscardPicker } from "./components/DiscardPicker.js";
 import { GameMenu } from "./components/GameMenu.js";
+import { AudioSettingsModal } from "./components/AudioSettingsModal.js";
 import { TurnStartGlow } from "./components/TurnStartGlow.js";
 import { LeaderboardModal, type LeaderboardLoadState } from "./components/LeaderboardModal.js";
 import { useGameSession } from "./game/useGameSession.js";
@@ -59,6 +60,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const [abandonToMenuOpen, setAbandonToMenuOpen] = useState(false);
   const [abandonToMenuBusy, setAbandonToMenuBusy] = useState(false);
   const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => loadAudioSettings());
+  const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
   const [audioController, setAudioController] = useState<AudioController | null>(null);
   const appliedLoadVersion = useRef(0);
   const restoringSavedRun = useRef(false);
@@ -451,6 +453,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       <button className="menu-secondary" type="button" onClick={retryLeaderboardProgress}>랭킹 제출 재시도</button>
     </aside>
   ) : null;
+  const audioSettingsModal = audioSettingsOpen ? <AudioSettingsModal settings={audioSettings} onSettingsChange={setAudioSettings} onClose={() => setAudioSettingsOpen(false)} /> : null;
 
   if (screen === "class-selection") {
     return <ClassSelectionScreen
@@ -463,7 +466,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
-      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} onLeaderboard={openLeaderboard} />
+      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} onLeaderboard={openLeaderboard} onAudioSettings={() => setAudioSettingsOpen(true)} />
+      {audioSettingsModal}
       {leaderboardModal}
       {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
@@ -534,7 +538,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         onSelectEncounter={selectRoadmapEncounter}
         onMainMenu={() => setScreen("menu")}
         onLeaderboard={openLeaderboard}
+        onAudioSettings={() => setAudioSettingsOpen(true)}
       />
+      {audioSettingsModal}
       {leaderboardModal}
       {leaderboardSubmitNotice}
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}

@@ -184,6 +184,9 @@
 .audio-settings-mute { display: flex; align-items: center; gap: 10px; color: #e9dcc4; font-size: 13px; }
 .audio-settings-mute input { width: 17px; height: 17px; accent-color: var(--gold-bright); }
 .game-menu-actions { margin-top: 24px; }
+.audio-settings-backdrop { z-index: 55; }
+.audio-settings-modal { position: relative; max-height: min(90dvh, 620px); overflow-y: auto; }
+.audio-settings-modal h2 { padding-right: 32px; }
 .target-picker { position: absolute; z-index: 5; top: 58px; left: 50%; width: min(92%, 390px); min-height: 54px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; color: #f7edd9; border: 1px solid rgb(241 204 131 / 80%); border-radius: 9px; background: rgb(27 25 24 / 94%); box-shadow: 0 8px 24px rgb(0 0 0 / 35%); transform: translateX(-50%); }
 .target-picker div { display: grid; gap: 3px; }
 .target-picker strong { font-size: 12px; }
@@ -215,6 +218,11 @@
 .run-screen { position: relative; min-height: 100vh; background: radial-gradient(ellipse at 50% 35%, #322b22, #111214 70%); }
 .run-card { width: min(100%, 820px); }
 .menu-screen { background: linear-gradient(130deg, rgb(10 11 13 / 92%), rgb(20 18 20 / 88%)), url("/art/board-surface.png") center / cover; }
+.menu-audio-settings-button { position: absolute; z-index: 2; top: 26px; right: 28px; width: 48px; height: 48px; display: grid; place-items: center; color: #f1d591; border: 1px solid rgb(219 173 101 / 65%); border-radius: 50%; background: radial-gradient(circle at 35% 25%, #675132, #211b18 68%); box-shadow: 0 0 18px rgb(208 161 75 / 20%); cursor: pointer; }
+.menu-audio-settings-button span, .expedition-roadmap__audio-button span { font-size: 24px; line-height: 1; }
+.menu-audio-settings-button:hover:not(:disabled), .expedition-roadmap__audio-button:hover:not(:disabled) { border-color: #f5d88a; box-shadow: 0 0 22px rgb(230 188 100 / 46%); transform: translateY(-1px); }
+.menu-audio-settings-button:focus-visible, .expedition-roadmap__audio-button:focus-visible { outline: 3px solid #f1d18a; outline-offset: 3px; }
+.menu-audio-settings-button:disabled, .expedition-roadmap__audio-button:disabled { opacity: .55; cursor: not-allowed; }
 .menu-card { width: min(100%, 560px); padding-block: clamp(35px, 8vh, 78px); }
 .menu-emblem { display: block; margin-bottom: 13px; color: var(--gold-bright); font-size: 30px; }
 .menu-card h1 { margin: 12px 0; font-size: clamp(42px, 9vw, 68px); letter-spacing: .06em; }
@@ -546,7 +554,9 @@
 .leaderboard-player strong { overflow: hidden; color: #fff2d9; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .leaderboard-player span, .leaderboard-date { color: #b9aa94; font-size: 11px; }
 .leaderboard-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.expedition-roadmap__header { padding-inline: 58px; }
+.expedition-roadmap__header { padding-inline: 112px; }
+.expedition-roadmap__audio-button { position: absolute; z-index: 4; top: 20px; right: 80px; width: 48px; height: 48px; display: grid; place-items: center; color: #f1d591; border: 1px solid rgb(219 173 101 / 65%); border-radius: 50%; background: radial-gradient(circle at 35% 25%, #675132, #211b18 68%); box-shadow: 0 0 18px rgb(208 161 75 / 20%), inset 0 1px rgb(255 255 255 / 12%); cursor: pointer; }
+.expedition-roadmap__audio-button span { font-size: 24px; }
 .expedition-roadmap__leaderboard-button { position: absolute; z-index: 4; top: 20px; right: 24px; width: 48px; height: 48px; display: grid; place-items: center; color: #f1d591; border: 1px solid rgb(219 173 101 / 65%); border-radius: 50%; background: radial-gradient(circle at 35% 25%, #675132, #211b18 68%); box-shadow: 0 0 18px rgb(208 161 75 / 20%), inset 0 1px rgb(255 255 255 / 12%); cursor: pointer; }
 .expedition-roadmap__leaderboard-button span { font-size: 27px; line-height: 1; }
 .expedition-roadmap__leaderboard-button:hover:not(:disabled) { border-color: #f5d88a; box-shadow: 0 0 22px rgb(230 188 100 / 46%); transform: translateY(-1px); }
@@ -556,6 +566,9 @@
 .leaderboard-submit-notice p { margin: 0; font-size: 12px; line-height: 1.45; }
 .leaderboard-submit-notice button { flex: 0 0 auto; min-height: 36px; }
 @media (max-width: 600px) {
+  .menu-audio-settings-button { top: 12px; right: 12px; width: 42px; height: 42px; }
+  .menu-audio-settings-button span, .expedition-roadmap__audio-button span { font-size: 21px; }
+  .expedition-roadmap__audio-button { top: 12px; right: 62px; width: 42px; height: 42px; }
   .expedition-roadmap__leaderboard-button { top: 12px; right: 12px; width: 42px; height: 42px; }
   .expedition-roadmap__leaderboard-button span { font-size: 23px; }
   .expedition-roadmap__header { padding-inline: 44px; }

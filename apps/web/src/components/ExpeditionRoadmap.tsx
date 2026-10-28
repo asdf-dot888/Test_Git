@@ -7,9 +7,10 @@ export interface ExpeditionRoadmapProps {
   onSelectEncounter: (encounterIndex: number) => void;
   onMainMenu: () => void;
   onLeaderboard: () => void;
+  onAudioSettings: () => void;
 }
 
-export function ExpeditionRoadmap({ run, disabled = false, onSelectEncounter, onMainMenu, onLeaderboard }: ExpeditionRoadmapProps): ReactElement {
+export function ExpeditionRoadmap({ run, disabled = false, onSelectEncounter, onMainMenu, onLeaderboard, onAudioSettings }: ExpeditionRoadmapProps): ReactElement {
   const encounters = run.encounters;
   const activeIndex = encounters.findIndex((encounter) => encounter.status === "active");
   const targetIndex = activeIndex >= 0 ? activeIndex : encounters.findIndex((encounter) => encounter.status === "pending");
@@ -23,6 +24,7 @@ export function ExpeditionRoadmap({ run, disabled = false, onSelectEncounter, on
     <main className="expedition-roadmap" aria-labelledby="expedition-roadmap-title">
       <div className="expedition-roadmap__shade" aria-hidden="true" />
       <section className="expedition-roadmap__panel">
+        <button className="expedition-roadmap__audio-button" type="button" aria-label="음향 설정" title="음향 설정" disabled={disabled} onClick={onAudioSettings}><span aria-hidden="true">🔊</span></button>
         <button className="expedition-roadmap__leaderboard-button" type="button" aria-label="랭킹" title="랭킹" disabled={disabled} onClick={onLeaderboard}>
           <span aria-hidden="true">♛</span>
         </button>
