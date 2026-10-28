@@ -152,6 +152,17 @@ describe("collectCombatEffectEvents", () => {
     expect(impact[0]).toMatchObject({ assetCardId: null, effectKind: "impact", soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } });
   });
 
+  it("maps Soul Bargain discard and temporary mana to existing combat visuals", () => {
+    const before = withBattle(createRun(432), (state) => {
+      state.battle!.hand = [{ instanceId: "bargain", cardId: "soul-bargain" }];
+    });
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "bargain" }, 30);
+    expect(events.map(({ effectKind, soundCues, target }) => [effectKind, soundCues, target])).toEqual([
+      ["theft", ["spell"], { kind: "hand", side: "player", slot: 1 }],
+      ["mana", ["spell"], { kind: "hero", side: "player" }],
+    ]);
+  });
+
   it("cues spell damage, minion death, and healing separately", () => {
     const run = createRun(431);
     const before = withBattle(run, (state) => {

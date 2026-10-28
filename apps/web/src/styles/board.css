@@ -128,6 +128,7 @@
 .mana-orbs { grid-column: 1 / -1; display: flex; gap: 3px; }
 .mana-orb { width: 11px; height: 11px; border: 1px solid #7d7772; border-radius: 50%; background: #302e31; }
 .mana-orb.is-full { border-color: #b9f2eb; background: radial-gradient(circle at 35% 30%, #e7ffff, #64d7cd 45%, #287f8c); box-shadow: 0 0 7px rgb(99 221 216 / 70%); }
+.mana-orb.is-temporary { border-color: #e1b1ff; background: radial-gradient(circle at 35% 30%, #fff0ff, #c77bfa 45%, #7436ad); box-shadow: 0 0 7px rgb(199 123 250 / 78%); }
 .hero-power-control { justify-self: center; min-width: 0; display: grid; justify-items: center; gap: 4px; }
 .hero-power-button { width: min(100%, 270px); min-height: 42px; padding: 5px 9px; display: grid; grid-template-columns: 25px minmax(0, 1fr) auto; align-items: center; gap: 8px; color: #e9dfce; text-align: left; border: 1px solid #6a5a43; border-radius: 9px; background: linear-gradient(145deg, #302a24, #211f20); }
 .hero-power-button:not(:disabled) { cursor: pointer; }

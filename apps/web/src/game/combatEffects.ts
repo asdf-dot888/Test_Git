@@ -76,7 +76,7 @@ function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardI
 }
 
 function playerSpellTarget(battle: NonNullable<RunState["battle"]>, effect: SpellEffect, targetId?: string): CombatAnchor {
-  if (effect.kind === "gainMana") return { kind: "hero", side: "player" };
+  if (effect.kind === "gainMana" || effect.kind === "gainTemporaryMana") return { kind: "hero", side: "player" };
   if (effect.kind === "randomDamage") {
     return targetId === "enemy-hero"
       ? { kind: "hero", side: "enemy" }
@@ -97,7 +97,7 @@ function playerSpellTarget(battle: NonNullable<RunState["battle"]>, effect: Spel
 }
 
 function enemySpellTarget(battle: NonNullable<RunState["battle"]>, effect: SpellEffect, targetId?: string): CombatAnchor {
-  if (effect.kind === "gainMana") return { kind: "hero", side: "enemy" };
+  if (effect.kind === "gainMana" || effect.kind === "gainTemporaryMana") return { kind: "hero", side: "enemy" };
   if (effect.kind === "randomDamage") {
     return targetId
       ? { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId)) }
@@ -140,8 +140,8 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
         const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage"
           ? "damage"
           : effect.kind === "cleave" ? "cleave"
-          : effect.kind === "gainMana" ? "mana"
-            : effect.kind === "stealFromOpponentDeck" ? "theft" : effect.kind;
+          : effect.kind === "gainMana" || effect.kind === "gainTemporaryMana" ? "mana"
+            : effect.kind === "stealFromOpponentDeck" || effect.kind === "discardRandom" ? "theft" : effect.kind;
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
           cues.push("damage");
@@ -240,8 +240,8 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
         const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage"
           ? "damage"
           : effect.kind === "cleave" ? "cleave"
-          : effect.kind === "gainMana" ? "mana"
-            : effect.kind === "stealFromOpponentDeck" ? "theft" : effect.kind;
+          : effect.kind === "gainMana" || effect.kind === "gainTemporaryMana" ? "mana"
+            : effect.kind === "stealFromOpponentDeck" || effect.kind === "discardRandom" ? "theft" : effect.kind;
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
           cues.push("damage");

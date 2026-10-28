@@ -53,13 +53,16 @@ describe("GameBoard", () => {
     );
     const run = createRun(413);
     run.battle!.enemyHand = [{ instanceId: "secret-instance-1", cardId: "eclipse" }, { instanceId: "secret-instance-2", cardId: "shadow-bolt" }];
-    run.battle!.enemyMana = { current: 4, max: 10 };
+    run.battle!.playerMana = { current: 7, max: 10, temporary: 2 };
+    run.battle!.enemyMana = { current: 7, max: 10, temporary: 3 };
     run.battle!.enemyDrawPile = run.battle!.enemyDrawPile.slice(0, 12);
     run.battle!.enemyDiscardPile = [{ instanceId: "enemy-discard", cardId: "ash-wolf" }];
     const markup = renderBoard(run);
     expect(markup).toContain("aria-label=\"적 손패 2장\"");
     expect(markup.match(/class="enemy-card-back"/g)).toHaveLength(2);
-    expect(markup).toContain("마나 4/10");
+    expect(markup).toContain("마나 7/10, 임시 마나 3");
+    expect(markup).toContain("마나 7/10, 임시 마나 2");
+    expect(markup.match(/mana-orb is-full is-temporary/g)).toHaveLength(5);
     expect(markup).toContain("적 덱 12장, 적 버린 카드 1장");
     expect(markup).not.toContain("eclipse");
     expect(markup).not.toContain("shadow-bolt");

@@ -117,7 +117,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
               <span>덱 <b>{battle.enemyDrawPile.length}</b></span>
               <span>버림 <b>{battle.enemyDiscardPile.length}</b></span>
             </div>
-            <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} />
+            <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} temporary={battle.enemyMana.temporary} />
           </div>
           <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
           <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
@@ -136,7 +136,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             <span><i aria-hidden="true">▤</i> 덱 <b>{battle.drawPile.length}</b></span>
             <span><i aria-hidden="true">▧</i> 버림 <b>{battle.discardPile.length}</b></span>
           </div>
-          <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} />
+          <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
           <HeroPowerControl
             {...(run.playerClass ? { playerClass: run.playerClass } : {})}
             currentMana={battle.playerMana.current}
