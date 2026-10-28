@@ -1,7 +1,7 @@
 # Current Context
 
 ## Active Plan
-None. Minion Attack Effects is complete.
+None. Exhausted Minion Target Visibility is complete.
 
 ## Active Phase
 None.
@@ -10,8 +10,8 @@ None.
 None.
 
 ## Status
-- Minion Attack Effects completed. T01 committed as `b6e836e`; T02 committed as `c588b73`.
-- Validation passed for component tests, combat event tests, and production build.
+- T01 is implemented, validated, and committed as `5b7692d`.
+- MinionLane tests passed (10 tests); production build passed.
 
 ## Next Step
 Wait for the next requested task.
