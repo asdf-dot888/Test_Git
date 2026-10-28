@@ -1,5 +1,6 @@
 #root { min-height: 100vh; }
-.game-shell { min-height: 100dvh; display: grid; grid-template-rows: auto minmax(420px, 1fr) auto; overflow-x: hidden; overflow-y: auto; background: radial-gradient(ellipse at 50% 45%, #29241d 0, #17171a 60%, #111214 100%); }
+.game-shell { width: 100%; height: 100dvh; min-height: 0; display: grid; grid-template-rows: 68px minmax(0, 1fr) auto; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, #29241d 0, #17171a 60%, #111214 100%); }
+.game-shell.has-boss-pattern { grid-template-rows: 68px auto minmax(0, 1fr) auto; }
 .class-selection-screen { min-height: 100vh; padding: 32px 20px; display: grid; place-items: center; color: var(--ink); background: radial-gradient(ellipse at 50% 35%, #352a25, #171719 62%, #101113); }
 .class-selection-panel { width: min(100%, 920px); padding: clamp(24px, 5vw, 48px); border: 1px solid var(--line); border-radius: 18px; background: rgb(30 28 28 / 94%); box-shadow: 0 24px 80px #0009; }
 .class-selection-panel h1 { margin: 10px 0 8px; color: #fff1d5; font-size: clamp(28px, 5vw, 42px); }
@@ -34,7 +35,7 @@
 .end-turn-button { min-height: 40px; padding: 0 18px; color: #241d12; background: linear-gradient(135deg, #efce8d, #c08a42); border: 1px solid #f3d89f; border-radius: 7px; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 18px rgb(0 0 0 / 25%); }
 .end-turn-button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
 .end-turn-button:disabled { opacity: .55; cursor: not-allowed; }
-.battle-board { position: relative; isolation: isolate; width: min(calc(100% - 32px), 1800px); min-height: 470px; margin: 22px auto 12px; padding: 14px clamp(20px, 6vw, 86px) 24px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr); border: 1px solid rgb(233 196 133 / 35%); border-radius: 26px; background: #75624a url("/art/board-surface.png") center / cover no-repeat; box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); overflow: hidden; }
+.battle-board { position: relative; isolation: isolate; width: min(calc(100% - 32px), 1800px); min-width: 0; min-height: 0; margin: 8px auto; padding: 8px clamp(20px, 6vw, 86px) 12px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr); border: 1px solid rgb(233 196 133 / 35%); border-radius: 26px; background: #75624a url("/art/board-surface.png") center / cover no-repeat; box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); overflow: hidden; }
 .battle-board::before { position: absolute; z-index: -1; content: ""; inset: 0; background: linear-gradient(180deg, rgb(28 23 19 / 27%), transparent 30%, transparent 65%, rgb(25 22 19 / 32%)); }
 .battle-board.is-shaking { animation: boss-board-shake 500ms ease-in-out; border-color: rgb(235 122 86 / 78%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 60px rgb(180 48 31 / 38%); }
 .battle-board.is-boss-area-warning::after { position: absolute; z-index: 7; inset: 0; content: ""; border: 3px solid rgb(255 73 57 / 88%); border-radius: inherit; box-shadow: inset 0 0 46px 12px rgb(184 28 24 / 48%), 0 0 44px 8px rgb(221 45 32 / 52%); pointer-events: none; animation: boss-area-warning-pulse 1.25s ease-in-out both; animation-play-state: var(--boss-warning-play-state, running); }
@@ -49,7 +50,7 @@
 .enemy-intent-preview strong { font-size: 14px; }
 .enemy-intent-preview p, .enemy-intent-preview small { margin: 0; color: #ddcfb7; font-size: 11px; line-height: 1.35; }
 .enemy-intent-preview small { color: #f0c77f; }
-.boss-pattern-panel { width: min(calc(100% - 32px), 1800px); margin: 12px auto -8px; padding: 9px 14px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 18px; border: 1px solid rgb(194 91 70 / 45%); border-radius: 10px; color: #e3c7b5; background: linear-gradient(90deg, rgb(57 29 27 / 78%), rgb(33 25 24 / 85%)); font-size: 11px; }
+.boss-pattern-panel { width: min(calc(100% - 32px), 1800px); margin: 3px auto 0; padding: 5px 12px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 14px; border: 1px solid rgb(194 91 70 / 45%); border-radius: 8px; color: #e3c7b5; background: linear-gradient(90deg, rgb(57 29 27 / 78%), rgb(33 25 24 / 85%)); font-size: 10px; }
 .boss-pattern-panel strong { color: #ffb18f; letter-spacing: .06em; }
 .minion-card.is-intent-target, .hero-panel.is-intent-target { outline: 2px solid #ff765e; outline-offset: 3px; box-shadow: 0 0 18px 5px rgb(255 88 61 / 48%); animation: enemy-intent-pulse .8s ease-in-out infinite alternate; }
 .hero-panel.is-intent-target { border-color: #ff765e; }
@@ -58,7 +59,7 @@
   0%, 100% { border-color: rgb(233 196 133 / 35%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); }
   50% { border-color: rgb(255 83 91 / 95%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), 0 0 26px 5px rgb(224 55 59 / 58%), inset 0 0 40px rgb(35 23 10 / 26%), inset 0 0 32px rgb(214 45 48 / 30%); }
 }
-.battle-opponent, .battle-player { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(175px, .8fr) minmax(0, 2fr); align-items: center; gap: clamp(12px, 3vw, 38px); }
+.battle-opponent, .battle-player { width: 100%; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(175px, .8fr) minmax(0, 2fr); align-items: center; gap: clamp(12px, 3vw, 38px); }
 .battle-opponent { grid-template-rows: auto 1fr; }
 .enemy-resource-bar { grid-column: 1 / -1; min-width: 0; display: flex; align-items: center; gap: clamp(8px, 2vw, 22px); padding: 2px 4px 6px; }
 .enemy-hand { min-width: 0; max-width: 55%; display: flex; align-items: center; gap: 3px; overflow-x: auto; scrollbar-width: thin; }
@@ -118,8 +119,8 @@
 .is-targetable:hover { outline: 3px solid #f0d48d; outline-offset: 2px; }
 .board-divider { position: relative; height: 1px; margin: 8px 0; background: linear-gradient(90deg, transparent, rgb(79 57 33 / 38%), transparent); }
 .board-divider span { position: absolute; left: 50%; top: 50%; padding: 0 12px; color: #6c4d2a; background: #b9a27e; font-size: 14px; transform: translate(-50%, -50%); }
-.player-controls { width: min(calc(100% - 32px), 1800px); margin: 0 auto; padding-bottom: 16px; }
-.player-toolbar { min-height: 52px; display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(220px, 1.5fr) auto; align-items: center; gap: 9px; }
+.player-controls { position: relative; width: min(calc(100% - 32px), 1800px); min-width: 0; min-height: 0; margin: 0 auto; padding-bottom: 8px; }
+.player-toolbar { min-height: 42px; display: grid; grid-template-columns: minmax(110px, 1fr) auto auto; align-items: center; gap: 9px; }
 .deck-counts { display: flex; gap: 18px; color: var(--muted); font-size: 11px; }
 .deck-counts span { display: flex; gap: 6px; align-items: center; }
 .deck-counts i { color: var(--gold); font-style: normal; }
@@ -161,24 +162,30 @@
 .soul-shard-count { color: #d59aff; font-size: 10px; }
 .turn-controls-spacer { justify-self: end; }
 .turn-controls-spacer .turn-status { display: none; }
-.hand-panel { padding: 10px 15px 12px; border: 1px solid rgb(231 194 135 / 17%); border-radius: 12px; background: linear-gradient(180deg, #242225, #19191b); }
-.hand-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; color: var(--muted); }
+.hand-panel { position: relative; min-width: 0; padding: 6px 10px 7px; border: 1px solid rgb(231 194 135 / 17%); border-radius: 10px; background: linear-gradient(180deg, #242225, #19191b); }
+.hand-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; color: var(--muted); }
 .hand-heading h2 { margin: 0; color: #e9dfce; font-size: 12px; }
 .hand-heading span { font-size: 10px; }
-.hand-cards { display: flex; align-items: stretch; gap: 8px; min-height: 106px; overflow-x: auto; padding: 2px 3px 8px; scrollbar-color: #66513a #242225; }
-.game-card { position: relative; flex: 0 0 clamp(116px, 12vw, 154px); min-height: 188px; padding: 6px; display: grid; grid-template-rows: minmax(0, 1fr) auto auto auto auto; justify-items: center; align-content: stretch; gap: 3px; color: var(--ink); text-align: center; border: 2px solid rgb(219 187 129 / 58%); border-radius: 12px; background: linear-gradient(155deg, #4e443d, #29272a 55%, #1e1d20); box-shadow: 0 4px 12px rgb(0 0 0 / 36%), inset 0 0 0 2px rgb(19 16 14 / 55%); cursor: pointer; transition: transform .14s ease, opacity .14s ease; }
+.hand-cards { display: flex; flex-flow: row nowrap; align-items: stretch; gap: 6px; min-height: 0; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 3px 5px; scrollbar-color: #806343 #242225; scrollbar-width: thin; touch-action: pan-x; }
+.game-card { position: relative; flex: 0 0 clamp(96px, 8vw, 122px); min-width: 0; min-height: 112px; padding: 4px; display: grid; grid-template-rows: minmax(0, 1fr) auto auto; justify-items: center; align-content: stretch; gap: 2px; color: var(--ink); text-align: center; border: 2px solid rgb(219 187 129 / 58%); border-radius: 10px; background: linear-gradient(155deg, #4e443d, #29272a 55%, #1e1d20); box-shadow: 0 4px 12px rgb(0 0 0 / 36%), inset 0 0 0 2px rgb(19 16 14 / 55%); cursor: pointer; transition: transform .14s ease, opacity .14s ease; }
 .game-card:hover:not(:disabled) { z-index: 2; transform: translateY(-5px); }
 .game-card:disabled { opacity: .48; cursor: not-allowed; filter: saturate(.55); }
 .card-spell { border-color: rgb(106 170 195 / 60%); background: linear-gradient(155deg, #345563, #29272d 70%); }
 .card-cost { position: absolute; top: 5px; left: 5px; z-index: 1; display: grid; place-items: center; width: 21px; height: 21px; color: #153041; border: 1px solid #b7e7f7; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #f1ffff, #63c6e4 58%, #2479a0); font-size: 12px; font-weight: 900; }
-.card-art { width: 100%; min-height: 96px; overflow: hidden; border: 1px solid rgb(238 219 179 / 45%); border-radius: 7px; background: #282526; box-shadow: inset 0 0 12px #0008; }
-.card-art img { display: block; width: 100%; height: 100%; min-height: 96px; object-fit: cover; }
-.card-kind { font-size: 8px; }
-.card-name { max-width: 100%; overflow: hidden; color: #fff3d9; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.card-stats { color: #f1c66f; font-size: 9px; }
-.card-description { align-self: start; color: #d0c7b7; font-size: 10px; line-height: 1.35; }
-.card-select-hint { display: none; color: var(--gold-bright); font-size: 9px; }
-.game-card.is-selected .card-select-hint { display: block; }
+.card-art { width: 100%; height: clamp(34px, 5vh, 58px); min-height: 0; overflow: hidden; border: 1px solid rgb(238 219 179 / 45%); border-radius: 7px; background: #282526; box-shadow: inset 0 0 12px #0008; }
+.card-art img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.card-kind, .card-description, .card-select-hint { display: none; }
+.card-name { max-width: 100%; overflow: hidden; color: #fff3d9; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.card-stats { color: #f1c66f; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.game-card.is-selected { outline: 2px solid var(--gold-bright); outline-offset: 1px; }
+.hand-card-preview { position: absolute; z-index: 30; bottom: calc(100% + 8px); left: 50%; width: min(340px, calc(100vw - 32px)); min-height: 118px; padding: 9px; display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 10px; transform: translateX(-50%); color: #eadfce; border: 1px solid rgb(224 188 119 / 70%); border-radius: 11px; background: linear-gradient(145deg, rgb(43 37 35 / 97%), rgb(20 20 22 / 98%)); box-shadow: 0 12px 32px #000b, inset 0 1px rgb(255 255 255 / 6%); pointer-events: none; }
+.hand-card-preview > img { width: 78px; height: 96px; object-fit: cover; border: 1px solid rgb(238 219 179 / 45%); border-radius: 6px; }
+.hand-card-preview__details { min-width: 0; display: grid; gap: 4px; }
+.hand-card-preview__meta { display: flex; gap: 8px; color: #c9bda8; font-size: 9px; }
+.hand-card-preview__cost { color: #aee8f6; font-weight: 800; }
+.hand-card-preview__details > strong { color: #fff1d5; font-size: 13px; }
+.hand-card-preview__stats { color: #f1c66f; font-size: 10px; font-weight: 700; }
+.hand-card-preview__details p { max-height: 52px; margin: 0; overflow: hidden; color: #d0c7b7; font-size: 10px; line-height: 1.35; }
 .empty-hand { align-self: center; color: var(--muted); font-size: 13px; }
 .board-unavailable { min-height: 100vh; display: grid; place-items: center; color: var(--muted); }
 .menu-button { justify-self: end; padding: 7px 12px; color: #d6c6a6; border: 1px solid var(--line); border-radius: 6px; background: #211f20; font-size: 11px; cursor: pointer; }
@@ -285,15 +292,16 @@
 .auth-note { margin-top: 20px; color: #989084 !important; font-size: 11px !important; }
 
 @media (max-width: 760px) {
-  .game-shell { grid-template-rows: 56px minmax(390px, 1fr) auto; }
+  .game-shell { grid-template-rows: 56px minmax(0, 1fr) auto; }
+  .game-shell.has-boss-pattern { grid-template-rows: 56px auto minmax(0, 1fr) auto; }
   .game-topbar { height: 56px; padding: 0 14px; grid-template-columns: 1fr auto auto; }
   .brand-mark { font-size: 13px; }
   .run-meta { justify-self: end; gap: 9px; font-size: 9px; }
   .run-meta > span:first-child { display: none; }
   .menu-button { padding: 5px 8px; font-size: 9px; }
   .game-menu-panel { border-radius: 12px; }
-  .battle-board { width: calc(100% - 20px); min-height: 390px; margin: 10px auto; padding: 10px 10px 13px; border-radius: 16px; }
-  .boss-pattern-panel { width: calc(100% - 20px); margin-top: 7px; justify-content: flex-start; font-size: 10px; }
+  .battle-board { width: calc(100% - 20px); min-height: 0; margin: 5px auto; padding: 6px 10px 8px; border-radius: 16px; }
+  .boss-pattern-panel { width: calc(100% - 20px); margin-top: 2px; padding: 4px 8px; justify-content: flex-start; font-size: 9px; }
   .enemy-intent-preview { top: 51px; min-height: 60px; padding: 7px 9px; gap: 8px; }
   .field-action-bar { min-height: 34px; }
   .enemy-intent-preview > img { width: 36px; height: 45px; }
@@ -344,7 +352,7 @@
   .mana-display strong { font-size: 13px; }
   .mana-orb { width: 8px; height: 8px; }
   .turn-controls-spacer .end-turn-button { min-height: 34px; padding: 0 11px; font-size: 10px; }
-  .hand-panel { padding: 8px; border-radius: 9px; }
+  .hand-panel { padding: 5px 7px; border-radius: 9px; }
   .target-picker { top: 49px; width: calc(100% - 16px); padding: 7px; }
   .target-picker strong { font-size: 10px; }
   .target-picker span { font-size: 8px; }
@@ -359,15 +367,18 @@
   .reward-card .card-kind, .reward-card .reward-stats { font-size: 9px; }
   .reward-card .reward-name { font-size: 12px; }
   .reward-card .reward-description { grid-column: 2; }
-  .hand-cards { min-height: 100px; gap: 7px; }
-  .game-card { flex-basis: 118px; min-height: 170px; padding: 5px; }
-  .card-art, .card-art img { min-height: 82px; }
+  .hand-cards { min-height: 0; gap: 6px; padding-bottom: 3px; }
+  .game-card { flex-basis: 96px; min-height: 104px; padding: 4px; }
+  .card-art { height: 39px; min-height: 0; }
+  .card-art img { min-height: 0; }
+  .card-name { font-size: 10px; }
+  .card-stats { font-size: 8px; }
 }
 
 @media (max-width: 390px) {
   .run-meta { gap: 7px; letter-spacing: .06em; }
   .run-meta > span:first-child { display: none; }
-  .battle-board { min-height: 370px; padding-inline: 7px; }
+  .battle-board { min-height: 0; padding-inline: 7px; }
   .battle-opponent, .battle-player { grid-template-columns: minmax(86px, .8fr) minmax(0, 2fr); gap: 5px; }
   .enemy-resource-bar { gap: 4px; }
   .enemy-hand { max-width: 42%; }
@@ -384,6 +395,37 @@
   .deck-counts span { gap: 3px; }
   .turn-controls-spacer .end-turn-button { padding-inline: 8px; }
   .mana-display { padding-inline: 6px; }
+}
+
+@media (max-height: 760px) {
+  .game-topbar { height: 54px; }
+  .game-shell { grid-template-rows: 54px minmax(0, 1fr) auto; }
+  .game-shell.has-boss-pattern { grid-template-rows: 54px auto minmax(0, 1fr) auto; }
+  .boss-pattern-panel { margin-top: 2px; padding-block: 3px; gap: 3px 9px; font-size: 9px; }
+  .battle-board { margin-block: 3px; padding-block: 5px 7px; }
+  .field-action-bar { min-height: 28px; }
+  .board-divider { margin-block: 2px; }
+  .player-controls { padding-bottom: 4px; }
+  .player-toolbar { min-height: 34px; }
+  .hand-panel { padding-block: 4px 5px; }
+  .hand-heading { margin-bottom: 2px; }
+  .hand-cards { padding-block: 1px 3px; }
+  .game-card { min-height: 96px; }
+  .card-art { height: 34px; }
+}
+
+@media (max-height: 680px) {
+  .game-topbar { height: 48px; }
+  .game-shell { grid-template-rows: 48px minmax(0, 1fr) auto; }
+  .game-shell.has-boss-pattern { grid-template-rows: 48px auto minmax(0, 1fr) auto; }
+  .boss-pattern-panel { padding-block: 2px; font-size: 8px; }
+  .battle-board { margin-block: 2px; padding-block: 3px 5px; }
+  .field-action-bar { min-height: 23px; }
+  .player-toolbar { min-height: 31px; }
+  .hand-panel { padding-block: 3px 4px; }
+  .hand-heading h2 { font-size: 10px; }
+  .game-card { min-height: 88px; }
+  .card-art { height: 29px; }
 }
 
 @media (max-width: 600px) {

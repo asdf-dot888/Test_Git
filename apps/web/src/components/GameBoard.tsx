@@ -101,7 +101,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
 
   return (
     <>
-    <main className="game-shell">
+    <main className={`game-shell${enemy?.kind === "boss" ? " has-boss-pattern" : ""}`}>
       <header className="game-topbar">
         <a className="brand-mark" href="#battle" aria-label="망고스톤 홈"><span aria-hidden="true">✦</span> 망고스톤</a>
         <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span><span className={`turn-timer${turnTimer.remainingSeconds <= 5 ? " is-critical" : ""}${turnTimer.visible ? "" : " is-hidden"}`} aria-label={`남은 시간 ${turnTimer.remainingSeconds}초`} aria-live="off" aria-hidden={!turnTimer.visible}>{turnTimer.text}</span></div>
@@ -129,7 +129,29 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
           <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
-          <HeroPanel hero={battle.playerHero} side="player" artKey={playerHeroArtKey} name="잿빛 방랑자" armor={battle.playerArmor} targetable={false} intentTarget={intentHeroTarget} onSelectTarget={onSelectTarget} />
+          <HeroPanel
+            hero={battle.playerHero}
+            side="player"
+            artKey={playerHeroArtKey}
+            name="잿빛 방랑자"
+            armor={battle.playerArmor}
+            targetable={false}
+            intentTarget={intentHeroTarget}
+            onSelectTarget={onSelectTarget}
+            heroPowerControl={(
+              <HeroPowerControl
+                {...(run.playerClass ? { playerClass: run.playerClass } : {})}
+                currentMana={battle.playerMana.current}
+                used={battle.heroPowerUsed}
+                active={battle.activeSide === "player" && battle.status === "active"}
+                resolving={isResolving || syncDisabled}
+                shardCount={battle.soulShards}
+                boardSize={battle.playerBoard.length}
+                targetMode={targetMode === "hero-power"}
+                onActivate={onUseHeroPower}
+              />
+            )}
+          />
         </div>
         {targetMode !== "none" && <TargetPicker mode={targetMode} onCancel={onCancelTarget} />}
       </section>
@@ -141,17 +163,6 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             <span><i aria-hidden="true">▧</i> 버림 <b>{battle.discardPile.length}</b></span>
           </div>
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
-          <HeroPowerControl
-            {...(run.playerClass ? { playerClass: run.playerClass } : {})}
-            currentMana={battle.playerMana.current}
-            used={battle.heroPowerUsed}
-            active={battle.activeSide === "player" && battle.status === "active"}
-            resolving={isResolving || syncDisabled}
-            shardCount={battle.soulShards}
-            boardSize={battle.playerBoard.length}
-            targetMode={targetMode === "hero-power"}
-            onActivate={onUseHeroPower}
-          />
           <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled} /></div>
         </div>
         <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />

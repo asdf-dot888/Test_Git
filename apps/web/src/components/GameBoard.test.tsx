@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { createRun } from "@board-game/game-core";
+import { CARD_BY_ID, createRun } from "@board-game/game-core";
 import { GameBoard } from "./GameBoard.js";
 
 describe("GameBoard", () => {
@@ -157,6 +157,22 @@ describe("GameBoard", () => {
     const legacyRun = createRun(423);
     delete legacyRun.playerClass;
     expect(renderPlayerPortrait(legacyRun)).toContain('src="/art/heroes/player.png"');
+  });
+
+  it("shows full selected-card details without removing the hand play button", () => {
+    const run = createRun(424, "warrior");
+    const selected = run.battle!.hand[0]!;
+    const definition = CARD_BY_ID.get(selected.cardId)!;
+    const markup = renderToStaticMarkup(
+      <GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={selected.instanceId} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />,
+    );
+
+    expect(markup).toContain('class="hand-card-preview"');
+    expect(markup).toContain(`src="/art/cards/${definition.artKey}.png"`);
+    expect(markup).toContain(definition.name);
+    expect(markup).toContain(definition.description);
+    expect(markup).toContain('aria-pressed="true"');
+    if (definition.minion) expect(markup).toContain(`공격 ${definition.minion.attack} · 체력 ${definition.minion.maxHealth}`);
   });
 
   it("allows Assassin power to target enemy minions and hero", () => {
