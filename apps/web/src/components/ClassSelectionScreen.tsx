@@ -29,7 +29,7 @@ export function ClassSelectionScreen({ disabled = false, onConfirm, onCancel }: 
               disabled={disabled}
               onClick={() => setSelected(option.id)}
             >
-              <span className="class-choice-icon" aria-hidden="true">{option.id === "warrior" ? "⬟" : option.id === "assassin" ? "⟡" : "♨"}</span>
+              <img className="class-choice-portrait" src={`/art/heroes/${option.id}.png`} alt={`${option.name} 초상화`} />
               <strong>{option.name}</strong>
               <span>{option.archetype}</span>
               <small>직업 카드 10장 + 공용 카드 20장</small>
