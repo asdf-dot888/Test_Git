@@ -74,6 +74,20 @@ describe("game pointer and keyboard interactions", () => {
     expect(screen.getAllByRole("button", { name: /이번 턴 공격함/ })).toHaveLength(2);
   });
 
+  it("does not let a newly summoned friendly minion attack by dragging", async () => {
+    const run = createRun(17);
+    run.battle!.turnNumber = 2;
+    run.battle!.playerBoard = [{ instanceId: "newly-summoned", cardId: "ash-wolf", owner: "player", attack: 2, health: 2, maxHealth: 2, summonedTurn: 2, hasAttacked: false }];
+    run.battle!.enemyBoard = [{ instanceId: "enemy-target", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 1, hasAttacked: false }];
+    const sync = makeReadySync(run);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    const target = document.querySelector(".battle-opponent .lane-slot.is-occupied")!;
+    const dataTransfer = { getData: vi.fn((type: string) => type === "application/x-ashen-expedition" ? JSON.stringify({ kind: "minion", instanceId: "newly-summoned" }) : "minion:newly-summoned") } as unknown as DataTransfer;
+    fireEvent.drop(target, { dataTransfer });
+    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toBe("3/3");
+  });
+
   it("plays one click per enabled pointer interaction and ignores disabled controls", async () => {
     const players: FakeAudio[] = [];
     vi.stubGlobal("Audio", class extends FakeAudio {

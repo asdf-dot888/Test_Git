@@ -109,6 +109,9 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
       {enemy?.kind === "boss" && <aside className="boss-pattern-panel" data-testid="boss-pattern-panel"><strong>보스 고유 패턴</strong><span>보스의 3·6·9번째 턴 행동은 카드 행동 후 이어집니다.</span><span>광역 강타: 내 하수인과 영웅 모두에게 피해 1</span></aside>}
 
       <section className={`battle-board${showTimerWarning ? " is-timer-critical" : ""}`} id="battle" aria-label="카드 전투 보드">
+        <div className="field-action-bar">
+          <button className={`all-attack-button${allAttackDisabled ? " is-unavailable" : " is-ready"}`} type="button" disabled={allAttackDisabled} aria-label={`전체 공격, 공격 가능한 하수인 ${readyMinionCount}명`} onClick={onAllAttack} title={battle.enemyBoard.length > 0 ? "적 하수인이 남아 있으면 사용할 수 없습니다." : "공격 가능한 아군 하수인을 모두 순서대로 적 영웅에게 보냅니다."}><span aria-hidden="true">⚔</span> 전체 공격</button>
+        </div>
         {enemyIntentStep && <EnemyIntentPreview step={enemyIntentStep} />}
         <div className="battle-opponent">
           <div className="enemy-resource-bar">
@@ -148,7 +151,6 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             targetMode={targetMode === "hero-power"}
             onActivate={onUseHeroPower}
           />
-          <button className={`all-attack-button${allAttackDisabled ? " is-unavailable" : " is-ready"}`} type="button" disabled={allAttackDisabled} aria-label={`전체 공격, 공격 가능한 하수인 ${readyMinionCount}명`} onClick={onAllAttack} title={battle.enemyBoard.length > 0 ? "적 하수인이 남아 있으면 사용할 수 없습니다." : "공격 가능한 아군 하수인을 모두 순서대로 적 영웅에게 보냅니다."}>전체 공격</button>
           <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled} /></div>
         </div>
         <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />

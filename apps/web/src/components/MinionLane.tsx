@@ -21,6 +21,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
     <section className={`minion-lane lane-${side}`} aria-label={`${side === "player" ? "내" : "적"} 하수인 전장`}>
       {Array.from({ length: 5 }, (_, index) => {
         const minion = minions[index];
+        const attackUnavailable = Boolean(minion && side === "player" && (minion.summonedTurn >= turnNumber || minion.hasAttacked));
         return (
           <div
             className={`lane-slot${minion ? " is-occupied" : ""}`}
@@ -43,6 +44,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
                 disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side)}
                 draggable={side === "player" && !disabled}
                 intentTarget={intentTargetIds.includes(minion.instanceId)}
+                exhausted={attackUnavailable}
                 onSelect={() => {
                   if (side === "player" && targetMode === "none" && (minion.summonedTurn >= turnNumber || minion.hasAttacked)) return;
                   onSelectTarget(minion.instanceId);

@@ -423,9 +423,12 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
     const attacker = battle.playerBoard.find(({ instanceId }) => instanceId === payload.instanceId);
     if (!attacker) return;
+    const canAttack = attacker.summonedTurn < battle.turnNumber && !attacker.hasAttacked;
     if (target.kind === "minion" && target.side === "enemy") {
+      if (!canAttack) return;
       dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: target.instanceId });
     } else if (target.kind === "hero" && target.side === "enemy") {
+      if (!canAttack || battle.enemyBoard.length > 0) return;
       dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: battle.enemyHero.id });
     } else if (target.kind === "minion" && target.side === "player") {
       dispatch({ type: "fuse-minions", firstMinionId: attacker.instanceId, secondMinionId: target.instanceId });
