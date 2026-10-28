@@ -135,14 +135,12 @@
 .mana-orb.is-temporary { border-color: #e1b1ff; background: radial-gradient(circle at 35% 30%, #fff0ff, #c77bfa 45%, #7436ad); box-shadow: 0 0 7px rgb(199 123 250 / 78%); }
 .hero-power-control { position: relative; z-index: 4; width: max-content; min-width: 0; display: inline-grid; justify-items: center; align-self: center; margin-top: 5px; }
 .hero-power-button { position: relative; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; color: #eee0c7; border: 1px solid #6a5a43; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #44392d, #211e20 72%); box-shadow: inset 0 0 0 2px rgb(10 9 9 / 44%), 0 3px 8px #0007; }
+.hero-power-illustration { position: absolute; z-index: 0; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); border-radius: 50%; object-fit: cover; pointer-events: none; }
 .hero-power-button:not(:disabled) { cursor: pointer; }
 .hero-power-control.is-ready .hero-power-button { border-color: #e4bd74; box-shadow: 0 0 14px rgb(212 170 98 / 38%), inset 0 0 0 2px rgb(10 9 9 / 44%); }
 .hero-power-button:disabled { opacity: .48; filter: saturate(.65); }
-.hero-power-glyph { color: #e4c37e; font-size: 21px; line-height: 1; text-shadow: 0 0 8px rgb(227 183 104 / 50%); }
-.hero-power-button.is-assassin .hero-power-glyph { color: #9fe4dc; }
-.hero-power-button.is-demonist .hero-power-glyph { color: #d5a0f2; }
-.hero-power-mana-mark { position: absolute; right: -5px; bottom: -3px; width: 18px; height: 18px; display: grid; place-items: center; color: #122533; border: 1px solid #d8f5ff; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #f4ffff, #6bc9e7 65%, #237b9e); font-size: 10px; font-weight: 900; }
-.hero-power-shard-mark { position: absolute; top: -6px; left: -8px; padding: 2px 4px; color: #f2ddff; border: 1px solid #ad78c8; border-radius: 8px; background: #482d59; font-size: 8px; font-weight: 800; }
+.hero-power-mana-mark { position: absolute; z-index: 1; right: -5px; bottom: -3px; width: 18px; height: 18px; display: grid; place-items: center; color: #122533; border: 1px solid #d8f5ff; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #f4ffff, #6bc9e7 65%, #237b9e); font-size: 10px; font-weight: 900; }
+.hero-power-shard-mark { position: absolute; z-index: 1; top: -6px; left: -8px; padding: 2px 4px; color: #f2ddff; border: 1px solid #ad78c8; border-radius: 8px; background: #482d59; font-size: 8px; font-weight: 800; }
 .hero-power-popover { position: absolute; z-index: 12; right: -5px; bottom: calc(100% + 9px); width: min(240px, 72vw); padding: 11px 12px; color: #eadfce; border: 1px solid rgb(217 174 103 / 72%); border-radius: 10px; background: linear-gradient(145deg, #2b2524f7, #171719fa); box-shadow: 0 10px 28px #000b, inset 0 1px rgb(255 255 255 / 6%); opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity .14s ease, transform .14s ease, visibility .14s; pointer-events: none; }
 .hero-power-control:hover .hero-power-popover, .hero-power-control:focus-within .hero-power-popover, .hero-power-control.is-showing-details .hero-power-popover { opacity: 1; visibility: visible; transform: translateY(0); }
 .hero-power-popover > strong { display: block; color: #fff0d3; font-size: 12px; }

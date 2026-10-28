@@ -6,6 +6,21 @@ import { HeroPowerControl } from "./HeroPowerControl.js";
 afterEach(cleanup);
 
 describe("HeroPowerControl", () => {
+  it("shows a distinct decorative illustration for each class ability", () => {
+    const onActivate = vi.fn();
+    const props = { currentMana: 5, used: false, active: true, resolving: false, shardCount: 4, boardSize: 0, targetMode: false, onActivate };
+    const { container, rerender } = render(<HeroPowerControl {...props} playerClass="warrior" />);
+
+    for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
+      rerender(<HeroPowerControl {...props} playerClass={playerClass} />);
+      const illustration = container.querySelector(".hero-power-illustration");
+      expect(illustration?.getAttribute("src")).toBe(`/art/hero-powers/${playerClass}.png`);
+      expect(illustration?.getAttribute("alt")).toBe("");
+      expect(illustration?.getAttribute("aria-hidden")).toBe("true");
+      expect(container.querySelector(".hero-power-glyph")).toBeNull();
+    }
+  });
+
   it("activates the ready Warrior power and exposes its mana cost and description", () => {
     const onActivate = vi.fn();
     const { container } = render(<HeroPowerControl playerClass="warrior" currentMana={2} used={false} active resolving={false} shardCount={0} boardSize={0} targetMode={false} onActivate={onActivate} />);

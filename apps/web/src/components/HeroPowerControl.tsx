@@ -59,7 +59,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
         aria-pressed={targetMode}
         onClick={handleActivate}
       >
-        <span className="hero-power-glyph" aria-hidden="true">{playerClass === "warrior" ? "⛨" : playerClass === "assassin" ? "✦" : "◈"}</span>
+        <img className="hero-power-illustration" src={`/art/hero-powers/${playerClass}.png`} alt="" aria-hidden="true" />
         <span className="hero-power-mana-mark" aria-hidden="true">2</span>
         {playerClass === "demonist" && <span className="hero-power-shard-mark" aria-label={`영혼 조각 ${shardCount}/6`}>{shardCount}/6</span>}
       </button>
