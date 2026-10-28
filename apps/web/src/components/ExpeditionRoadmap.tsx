@@ -29,7 +29,7 @@ export function ExpeditionRoadmap({ run, disabled = false, onSelectEncounter, on
           <span aria-hidden="true">♛</span>
         </button>
         <header className="expedition-roadmap__header">
-          <span className="eyebrow">THE ASHEN EXPEDITION</span>
+          <span className="eyebrow">MANGO STONE</span>
           <h1 id="expedition-roadmap-title">원정 경로</h1>
           <p>길을 선택해 어둠 속으로 나아가세요.</p>
           <strong className="expedition-roadmap__phase">PHASE {phase}</strong>

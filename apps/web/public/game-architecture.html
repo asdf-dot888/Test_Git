@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko" class="theme-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="망고스톤 (MANGO STONE) 카드 로그라이크의 현재 프로젝트 구조와 데이터 흐름을 설명합니다.">
+  <title>망고스톤 · MANGO STONE — 게임 구조 안내</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script>Chart.defaults.animation = false;</script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { interpolate-size: allow-keywords; scroll-behavior: smooth; }
+    html.theme-dark {
+      --bg: #17151a; --surface: #211e23; --surface-hover: #2b262a;
+      --border: rgba(217, 178, 119, .2); --text: #f3eadb;
+      --text-secondary: #b5a99a; --accent: #d19a4a;
+      --accent-secondary: #a94b3d; --positive: #83ae70;
+      --negative: #d35d55; --warning: #e5b75f;
+    }
+    html.theme-light {
+      --bg: #f5f1e9; --surface: #fffdf8; --surface-hover: #f0e9dc;
+      --border: rgba(105, 76, 43, .2); --text: #29231e;
+      --text-secondary: #6b6258; --accent: #9a6426;
+      --accent-secondary: #93423a; --positive: #48743d;
+      --negative: #a73832; --warning: #946b19;
+    }
+    body {
+      min-width: 320px; background: var(--bg); color: var(--text);
+      font: 400 1rem/1.7 Inter, "Noto Sans KR", sans-serif;
+      letter-spacing: -.015em; -webkit-font-smoothing: antialiased;
+      transition: background .25s ease, color .25s ease;
+    }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    button { font: inherit; }
+    h1, h2, h3 { line-height: 1.2; letter-spacing: -.035em; text-wrap: balance; }
+    h1 { font-size: 2.5rem; font-weight: 800; }
+    h2 { font-size: 2rem; font-weight: 700; }
+    h3 { font-size: 1.5rem; font-weight: 700; }
+    p, li { color: var(--text-secondary); }
+    .text-secondary { color: var(--text-secondary); }
+    code, .path { font-family: ui-monospace, Consolas, monospace; }
+    code { color: var(--warning); font-size: .9em; overflow-wrap: anywhere; }
+    .skip-to-content {
+      position: fixed; z-index: 10001; top: -60px; left: 12px;
+      padding: 8px 12px; color: white; background: var(--accent-secondary); border-radius: 6px;
+    }
+    .skip-to-content:focus { top: 12px; }
+    .viz-menu { position: fixed; z-index: 10000; top: 16px; right: 18px; }
+    .viz-menu-toggle {
+      display: grid; place-items: center; width: 46px; height: 46px;
+      border: 1px solid var(--border); border-radius: 12px;
+      color: var(--text); background: var(--surface); cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    }
+    .viz-menu-toggle:hover { background: var(--surface-hover); }
+    .viz-menu-dropdown {
+      position: absolute; top: 54px; right: 0; min-width: 190px; padding: 7px;
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--surface); box-shadow: 0 12px 30px rgba(0,0,0,.25);
+      opacity: 0; visibility: hidden; transform: translateY(-6px); transition: .18s ease;
+    }
+    .viz-menu-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+    .viz-menu-dropdown button {
+      width: 100%; padding: 10px 12px; border: 0; border-radius: 8px;
+      color: var(--text); background: transparent; text-align: left; cursor: pointer;
+    }
+    .viz-menu-dropdown button:hover { background: var(--surface-hover); }
+    main { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    .hero { padding: 88px 0 40px; }
+    .eyebrow { color: var(--accent); font-size: .75rem; font-weight: 800; letter-spacing: .2em; }
+    .hero h1 { margin: 14px 0; max-width: 800px; }
+    .hero p { max-width: 780px; font-size: 1.1rem; }
+    .hero-link { display: inline-flex; margin-top: 20px; padding: 10px 15px; border: 1px solid var(--border); border-radius: 9px; text-decoration: none; }
+    .hero-link:hover { background: var(--surface-hover); }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 42px; }
+    .metric { padding: 18px 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .metric strong { display: block; color: var(--warning); font-size: 1.7rem; line-height: 1.2; }
+    .metric span { color: var(--text-secondary); font-size: .88rem; }
+    section { margin: 0 0 46px; scroll-margin-top: 28px; }
+    .section-heading { display: flex; align-items: end; gap: 16px; margin-bottom: 18px; }
+    .section-heading p { max-width: 650px; margin-left: auto; }
+    .card {
+      border: 1px solid var(--border); border-radius: 14px; padding: 22px;
+      background: var(--surface); transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
+    .architecture { padding: 24px; overflow: hidden; }
+    .flow-row { display: grid; grid-template-columns: 1fr 44px 1fr 44px 1fr; align-items: stretch; gap: 8px; }
+    .flow-node { min-height: 148px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-hover); }
+    .flow-node .node-icon { font-size: 1.5rem; }
+    .flow-node h3 { margin: 8px 0; font-size: 1.15rem; }
+    .flow-node p { font-size: .9rem; }
+    .flow-arrow { display: grid; place-items: center; color: var(--accent); font-size: 1.5rem; }
+    .flow-lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+    .lane { padding: 17px; border: 1px dashed var(--border); border-radius: 12px; }
+    .lane h3 { margin-bottom: 8px; font-size: 1.05rem; }
+    .lane p { font-size: .9rem; }
+    .lane .lane-arrow { display: block; margin: 7px 0; color: var(--accent); font-weight: 700; }
+    .callout { margin-top: 14px; padding: 14px 16px; border-left: 3px solid var(--warning); border-radius: 0 9px 9px 0; background: var(--surface-hover); }
+    .callout p { font-size: .91rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .card h3 { margin-bottom: 9px; }
+    .card p + p { margin-top: 9px; }
+    .card ul, .card ol { padding-left: 1.2rem; margin-top: 10px; }
+    .card li + li { margin-top: 5px; }
+    .tag { display: inline-block; margin: 0 5px 6px 0; padding: 3px 8px; border: 1px solid var(--border); border-radius: 100px; color: var(--text-secondary); font-size: .75rem; }
+    .steps { counter-reset: step; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .step { position: relative; min-height: 175px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .step::before { counter-increment: step; content: "0" counter(step); display: block; margin-bottom: 13px; color: var(--accent); font: 800 1rem/1 Inter, sans-serif; letter-spacing: .12em; }
+    .step h3 { margin-bottom: 7px; font-size: 1.1rem; }
+    .step p { font-size: .9rem; }
+    .boundary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .current { border-top: 3px solid var(--positive); }
+    .planned { border-top: 3px solid var(--warning); }
+    .folder-tree { display: grid; gap: 8px; }
+    .folder-row { display: grid; grid-template-columns: minmax(210px, 1fr) 1.5fr; gap: 16px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .folder-row:last-child { border-bottom: 0; }
+    .folder-row p { font-size: .9rem; }
+    .folder-label { color: var(--text); font-weight: 650; }
+    .footer { padding: 16px 0 54px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: .85rem; }
+    .footer p { margin-top: 6px; }
+    [data-reveal] { animation: fadeInUp .55s ease both; }
+    .delay-1 { animation-delay: .1s; }
+    .delay-2 { animation-delay: .2s; }
+    .delay-3 { animation-delay: .3s; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 760px) {
+      main { width: min(100% - 28px, 620px); }
+      .hero { padding-top: 78px; }
+      .flow-row { grid-template-columns: 1fr; }
+      .flow-arrow { min-height: 28px; transform: rotate(90deg); }
+      .steps { grid-template-columns: repeat(2, 1fr); }
+      .section-heading { display: block; }
+      .section-heading p { margin: 8px 0 0; }
+    }
+    @media (max-width: 520px) {
+      .metrics, .grid-2, .grid-3, .flow-lanes, .boundary { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+      .metric { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+      .folder-row { grid-template-columns: 1fr; gap: 3px; }
+      .card, .architecture { padding: 17px; }
+      .hero h1 { font-size: 2.25rem; }
+    }
+    @media (max-width: 375px) { body { overflow-x: hidden; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+    @media print {
+      html.theme-dark, html.theme-light { --bg: #fff; --surface: #fff; --surface-hover: #f5f5f5; --border: #ccc; --text: #111; --text-secondary: #444; --accent: #774515; --accent-secondary: #7d332d; --positive: #346d32; --negative: #9b3028; --warning: #765312; }
+      body { background: white; color: black; }
+      .viz-menu, .hero-link { display: none; }
+      main { width: 100%; }
+      section, .card, .step { break-inside: avoid; }
+      .card:hover { transform: none; box-shadow: none; }
+      * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-to-content">본문으로 건너뛰기</a>
+  <div class="viz-menu">
+    <button class="viz-menu-toggle" onclick="toggleMenu()" aria-label="문서 메뉴 열기" aria-expanded="false" aria-controls="vizMenuDropdown">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg>
+    </button>
+    <div class="viz-menu-dropdown" id="vizMenuDropdown">
+      <button onclick="cycleTheme()"><span id="themeIcon">☀️</span> <span id="themeLabel">밝은 테마</span></button>
+      <button onclick="downloadImage()">🖼️ PNG 저장</button>
+      <button onclick="window.print()">🖨️ 인쇄 / PDF</button>
+    </div>
+  </div>
+
+  <main id="main-content">
+    <header class="hero" data-reveal>
+      <span class="eyebrow">MANGO STONE · PROJECT GUIDE</span>
+      <h1>게임은 어떤 구조로<br>움직일까요?</h1>
+      <p>카드 전투의 규칙부터 로그인, 원정 저장, 랭킹 기록까지 실제 코드가 연결되는 흐름을 한 장으로 정리했습니다. 현재 구현과 다음 확장에 필요한 부분을 나눠서 설명합니다.</p>
+      <a class="hero-link" href="https://mango-stone-0631f0d00.5.azurestaticapps.net" target="_blank" rel="noreferrer">배포된 게임 열기 ↗</a>
+    </header>
+
+    <section aria-label="게임 요약" data-reveal class="delay-1">
+      <div class="metrics">
+        <div class="metric"><strong data-count="3">3</strong><span>원정 페이즈</span></div>
+        <div class="metric"><strong data-count="12">12</strong><span>전체 전투 수</span></div>
+        <div class="metric"><strong>Top 10</strong><span>Cosmos 랭킹</span></div>
+      </div>
+    </section>
+
+    <section id="overview" data-reveal>
+      <div class="section-heading"><h2>1. 전체 구조</h2><p>브라우저가 게임 화면과 전투를 실행하고, 랭킹만 Azure API와 Cosmos DB를 사용합니다.</p></div>
+      <div class="card architecture">
+        <div class="flow-row" aria-label="게임 실행 구조: Entra 로그인, React 게임 화면, 공통 게임 엔진, 브라우저 저장">
+          <article class="flow-node"><span class="node-icon" aria-hidden="true">🔐</span><h3>Microsoft Entra ID</h3><p>회사 계정으로 로그인하고 랭킹 API용 액세스 토큰을 발급합니다.</p></article>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <article class="flow-node"><span class="node-icon" aria-hidden="true">🃏</span><h3>React 게임 화면</h3><p>메뉴, 전장, 지도, 보상, 타이머와 카드 입력을 관리합니다.</p></article>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <article class="flow-node"><span class="node-icon" aria-hidden="true">⚙️</span><h3>공통 게임 엔진</h3><p>카드 효과, 마나, 공격, 적 AI와 원정 규칙을 결정합니다.</p></article>
+        </div>
+        <div class="flow-lanes">
+          <article class="lane"><h3>원정 진행 저장</h3><span class="lane-arrow">React ↔ 브라우저 localStorage</span><p>현재 덱, 전투 상태, 지도 진행, 타이머를 이 브라우저에 저장합니다. 다른 PC와 자동 동기화되지 않습니다.</p></article>
+          <article class="lane"><h3>랭킹 저장</h3><span class="lane-arrow">React → Entra 토큰 검증 API → Cosmos DB</span><p>전투 승리 때 완료 전투 수를 제출합니다. API는 토큰에서 직원 ID와 이름을 얻고, 직원별 최고 기록을 저장합니다.</p></article>
+        </div>
+        <div class="callout"><p><strong>배포 구조:</strong> Azure Static Web Apps가 React 정적 파일과 랭킹용 관리형 Functions API를 함께 제공합니다. 별도 App Service는 현재 배포 경로에 포함되지 않습니다.</p></div>
+      </div>
+    </section>
+
+    <section id="folders" data-reveal>
+      <div class="section-heading"><h2>2. 폴더별 역할</h2><p>코드가 어디에 있는지 알면 기능을 고칠 위치도 쉽게 찾을 수 있습니다.</p></div>
+      <div class="card folder-tree">
+        <div class="folder-row"><div class="folder-label"><code>packages/game-core/src</code></div><p>게임 규칙의 중심. 카드 목록과 타입, 전투 처리, 원정 상태 전이를 담당합니다.</p></div>
+        <div class="folder-row"><div class="folder-label"><code>apps/web/src</code></div><p>React 화면과 브라우저 동작. UI 컴포넌트, 인증, 로컬 진행 저장, 효과음, 타이머가 있습니다.</p></div>
+        <div class="folder-row"><div class="folder-label"><code>apps/leaderboard-api/src</code></div><p>운영 랭킹 API. Entra 토큰 검증, 입력 검사, Cosmos DB 읽기·쓰기를 담당하는 Azure Functions입니다.</p></div>
+        <div class="folder-row"><div class="folder-label"><code>apps/api/src</code></div><p>Express 기반 게임 진행 API 골격. 현재 React 진행 저장 흐름은 이 서버를 호출하지 않고 localStorage를 사용합니다.</p></div>
+        <div class="folder-row"><div class="folder-label"><code>apps/web/public</code></div><p>카드·영웅 이미지와 배경 음악, 효과음 등 브라우저가 직접 불러오는 정적 자산입니다.</p></div>
+        <div class="folder-row"><div class="folder-label"><code>scripts/</code> · <code>docs/</code></div><p>Azure 배포와 릴리스 패키징 스크립트, 설정·문제 해결 안내 문서가 있습니다.</p></div>
+      </div>
+    </section>
+
+    <section id="game" data-reveal>
+      <div class="section-heading"><h2>3. 게임 플레이 흐름</h2><p>화면은 입력을 받고, 엔진은 규칙에 맞는 새 상태를 만들어 냅니다.</p></div>
+      <div class="steps">
+        <article class="step"><h3>원정 만들기</h3><p>시드와 시작 덱을 정하고 3개 페이즈, 총 12전의 지도 상태를 만듭니다.</p></article>
+        <article class="step"><h3>카드 전투</h3><p>React가 액션을 전달하고 game-core가 마나, 카드 효과, 양쪽 하수인 공격을 판정합니다.</p></article>
+        <article class="step"><h3>승리와 보상</h3><p>전투가 끝나면 승리 화면, 카드 보상 선택, 다음 전투 지도로 순서대로 이동합니다.</p></article>
+        <article class="step"><h3>원정 완료</h3><p>3페이즈 보스를 이기면 원정이 끝납니다. 전투 승리 기록은 랭킹 API로 전송됩니다.</p></article>
+      </div>
+    </section>
+
+    <section id="rules" data-reveal>
+      <div class="section-heading"><h2>4. 엔진이 처리하는 규칙</h2><p>전투 화면에서 버튼을 눌러도 결과를 임의로 바꾸지 않고 엔진의 규칙을 통과해야 합니다.</p></div>
+      <div class="grid-3">
+        <article class="card"><h3>원정 구성</h3><p>페이즈마다 일반전 3회 뒤 보스전 1회가 이어집니다. 일반 적은 목록에서 선택되고, 페이즈 보스는 정해진 순서로 등장합니다.</p></article>
+        <article class="card"><h3>마나와 카드</h3><p>각 전투는 플레이어 마나 5로 시작하고 최대치는 10입니다. 턴 종료 시 현재 턴 구간에 따라 1·2·3 마나가 회복됩니다. 카드 비용을 낼 때 현재 마나가 줄어듭니다.</p></article>
+        <article class="card"><h3>손패와 덱</h3><p>덱은 섞여 진행됩니다. 손패가 넘칠 때는 새로 뽑은 카드 중 버릴 카드를 직접 선택합니다. 버림 더미를 다 쓰면 원래 덱을 다시 섞어 채웁니다.</p></article>
+        <article class="card"><h3>하수인 전투</h3><p>하수인은 소환한 턴에는 공격하지 못하고, 한 턴에 한 번 공격합니다. 맞은 하수인도 자기 공격력만큼 반격 피해를 줍니다.</p></article>
+        <article class="card"><h3>적 AI와 보스</h3><p>적은 성격별 덱과 전술로 카드를 선택하고 하수인으로 공격합니다. 보스는 카드 행동 뒤 3턴마다 광역 피해 패턴을 사용합니다.</p></article>
+        <article class="card"><h3>연출과 시간</h3><p>적의 행동은 순서대로 재생되며 행동 사이에 간격이 있습니다. 플레이어 턴에는 제한 시간이 있고, 메뉴나 숨겨진 브라우저 탭에서는 멈춥니다.</p></article>
+      </div>
+    </section>
+
+    <section id="auth" data-reveal>
+      <div class="section-heading"><h2>5. 로그인과 API 인증</h2><p>로그인한 브라우저라고 API가 자동으로 신뢰하지 않습니다. 랭킹 API가 Entra 액세스 토큰을 직접 검증합니다.</p></div>
+      <div class="grid-2">
+        <article class="card"><h3>브라우저 로그인</h3><ol><li>MSAL이 Entra 로그인 화면을 엽니다.</li><li>랭킹 호출 시 <code>api://&lt;SPA Client ID&gt;/leaderboard.access</code> 범위의 액세스 토큰을 요청합니다.</li><li>브라우저는 토큰을 <code>X-Leaderboard-Access-Token</code> 헤더로 API에 전달합니다.</li></ol></article>
+        <article class="card"><h3>API에서 확인</h3><ol><li>서버는 Entra 서명 키로 토큰 서명을 검증합니다.</li><li>테넌트, 발급자, 대상 API, 만료, <code>leaderboard.access</code> 범위를 확인합니다.</li><li>기록할 직원 ID와 이름은 요청 본문이 아니라 검증된 토큰에서 가져옵니다.</li></ol></article>
+      </div>
+      <div class="callout"><p>프런트엔드의 <code>VITE_ENTRA_TENANT_ID</code>와 <code>VITE_ENTRA_CLIENT_ID</code>는 공개 식별자입니다. Cosmos 키 같은 비밀값은 브라우저 번들에 두지 않고 Azure API 설정에만 둡니다.</p></div>
+    </section>
+
+    <section id="data" data-reveal>
+      <div class="section-heading"><h2>6. 저장 데이터와 범위</h2><p>서로 다른 데이터를 서로 다른 위치에 저장합니다.</p></div>
+      <div class="grid-2">
+        <article class="card current"><span class="tag">현재 사용 중</span><h3>원정 저장 · localStorage</h3><p>사용자별 브라우저 저장 공간에 원정 상태를 기록합니다. 같은 계정이라도 브라우저나 PC가 바뀌면 이어하기 데이터가 공유되지 않습니다.</p><p><code>apps/web/src/game/localRunStorage.ts</code></p></article>
+        <article class="card current"><span class="tag">현재 사용 중</span><h3>랭킹 · Cosmos DB</h3><p>직원별 최고 완료 전투 수와 기록 시각을 저장합니다. 랭킹 조회 API는 완료 전투 수 순으로 상위 10명을 반환합니다.</p><p><code>apps/leaderboard-api/src/leaderboard/cosmosLeaderboardRepository.ts</code></p></article>
+        <article class="card planned"><span class="tag">현재 게임 흐름과 미연결</span><h3>별도 Express API · <code>apps/api</code></h3><p>서버에 원정 진행을 저장하는 방향으로 확장할 수 있는 별도 API 패키지입니다. 현재 게임은 이 API로 저장하지 않으며, Static Web Apps 배포 스크립트도 이 API를 배포하지 않습니다.</p></article>
+        <article class="card"><span class="tag">운영 호스팅</span><h3>Static Web Apps</h3><p>React 빌드 파일과 <code>apps/leaderboard-api</code> 관리형 Functions API를 제공합니다. 랭킹 데이터만 Cosmos DB와 통신합니다.</p><p><a href="https://mango-stone-0631f0d00.5.azurestaticapps.net" target="_blank" rel="noreferrer">현재 운영 주소</a></p></article>
+      </div>
+    </section>
+
+    <section id="paths" data-reveal>
+      <div class="section-heading"><h2>7. 기능을 고칠 때 찾을 곳</h2><p>요청한 기능이 어떤 층에 속하는지 보고 시작 파일을 찾으세요.</p></div>
+      <div class="grid-2">
+        <article class="card"><h3>카드 효과·마나·전투 규칙</h3><p><code>packages/game-core/src/catalog.ts</code> 카드 정의</p><p><code>packages/game-core/src/engine.ts</code> 규칙 실행</p></article>
+        <article class="card"><h3>화면·버튼·모달</h3><p><code>apps/web/src/App.tsx</code> 화면 흐름과 연결</p><p><code>apps/web/src/components/</code> 실제 UI 조각</p></article>
+        <article class="card"><h3>로그인·로컬 원정 저장</h3><p><code>apps/web/src/auth/</code> MSAL 설정과 인증 상태</p><p><code>apps/web/src/game/localRunStorage.ts</code> 브라우저 저장</p></article>
+        <article class="card"><h3>랭킹·Cosmos 연결</h3><p><code>apps/leaderboard-api/src/functions/leaderboard.ts</code> HTTP 엔드포인트</p><p><code>apps/leaderboard-api/src/auth/entraBearer.ts</code> 토큰 검증</p></article>
+      </div>
+    </section>
+
+    <section id="build" data-reveal>
+      <div class="section-heading"><h2>8. 실행과 배포</h2><p>저장소 루트에서 실행하는 명령입니다.</p></div>
+      <div class="grid-2">
+        <article class="card"><h3>브라우저에서 개발</h3><p><code>npm install</code> 후 <code>.env</code>에 Entra Tenant ID와 Client ID를 설정하고 <code>npm run dev</code>를 실행합니다. 기본 개발 주소는 <code>http://localhost:5173</code>이며, 일반 게임 진행은 Cosmos 연결 없이 브라우저에서 테스트할 수 있습니다.</p></article>
+        <article class="card"><h3>검증과 Azure 배포</h3><p><code>npm run build</code>는 공통 엔진, API 패키지, 웹 앱을 빌드합니다. <code>npm run deploy:swa</code>는 웹 파일과 독립 의존성을 포함한 랭킹 Functions API를 Static Web Apps에 배포합니다.</p></article>
+      </div>
+      <div class="callout"><p>현재 사용자 원정 진행은 localStorage 저장이므로, 랭킹에 기록된 최고 진행도와 이어하기 데이터는 별개입니다. 랭킹은 서버에 공유되지만 원정 덱·현재 전투 상태는 서버로 올라가지 않습니다.</p></div>
+    </section>
+
+    <footer class="footer"><strong>MANGO STONE · 프로젝트 구조 안내</strong><p>이 문서는 현재 저장소 코드와 배포 구조를 바탕으로 작성했습니다. 코드가 바뀌면 설명도 함께 갱신해야 합니다.</p></footer>
+  </main>
+
+  <script>
+    var dropdown = document.getElementById('vizMenuDropdown');
+    var toggle = document.querySelector('.viz-menu-toggle');
+    var savedTheme = localStorage.getItem('viz-theme');
+    var currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    function applyTheme(theme) {
+      document.documentElement.classList.remove('theme-dark', 'theme-light');
+      document.documentElement.classList.add('theme-' + theme);
+      document.getElementById('themeIcon').textContent = theme === 'dark' ? '🌙' : '☀️';
+      document.getElementById('themeLabel').textContent = theme === 'dark' ? '어두운 테마' : '밝은 테마';
+      localStorage.setItem('viz-theme', theme);
+      currentTheme = theme;
+    }
+    function cycleTheme() { applyTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+    function toggleMenu() {
+      dropdown.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', dropdown.classList.contains('open') ? 'true' : 'false');
+    }
+    async function downloadImage() {
+      if (typeof htmlToImage === 'undefined') { window.print(); return; }
+      var menu = document.querySelector('.viz-menu');
+      menu.style.display = 'none';
+      try {
+        var imageUrl = await htmlToImage.toPng(document.getElementById('main-content'), { pixelRatio: 2, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() });
+        var link = document.createElement('a');
+        link.href = imageUrl; link.download = 'ashen-expedition-game-architecture.png'; link.click();
+      } catch (error) {
+        console.error('PNG export failed.', error);
+        window.print();
+      } finally { menu.style.display = ''; }
+    }
+    applyTheme(currentTheme);
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.viz-menu')) {
+        dropdown.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        dropdown.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+    function animateCounters() {
+      document.querySelectorAll('[data-count]').forEach(function(element) {
+        if (element.dataset.counted) return;
+        element.dataset.counted = 'true';
+        var target = Number(element.dataset.count);
+        var start = performance.now();
+        function tick(now) {
+          var progress = Math.min((now - start) / 700, 1);
+          element.textContent = String(Math.round(target * progress));
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+    var counterObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) { if (entry.isIntersecting) { animateCounters(); counterObserver.disconnect(); } });
+    }, { threshold: .3 });
+    var firstMetric = document.querySelector('[data-count]');
+    if (firstMetric) counterObserver.observe(firstMetric);
+  </script>
+</body>
+</html>

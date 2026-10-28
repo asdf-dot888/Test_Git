@@ -102,7 +102,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
     <>
     <main className="game-shell">
       <header className="game-topbar">
-        <a className="brand-mark" href="#battle" aria-label="잿빛 원정 홈"><span aria-hidden="true">✦</span> 잿빛 원정</a>
+        <a className="brand-mark" href="#battle" aria-label="망고스톤 홈"><span aria-hidden="true">✦</span> 망고스톤</a>
         <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span><span className={`turn-timer${turnTimer.remainingSeconds <= 5 ? " is-critical" : ""}${turnTimer.visible ? "" : " is-hidden"}`} aria-label={`남은 시간 ${turnTimer.remainingSeconds}초`} aria-live="off" aria-hidden={!turnTimer.visible}>{turnTimer.text}</span></div>
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>

@@ -15,6 +15,7 @@ describe("GameGuideModal", () => {
 
     const dialog = screen.getByRole("dialog", { name: "게임 방법" });
     expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(screen.getByText("MANGO STONE")).toBeTruthy();
     expect(dialog.textContent).toContain("일반 전투 3회 후 보스 전투 1회");
     expect(dialog.textContent).toContain("전투는 마나 5/10으로 시작합니다");
     expect(dialog.textContent).toContain("2~3턴에 1, 4~6턴에 2, 7턴부터 3씩");

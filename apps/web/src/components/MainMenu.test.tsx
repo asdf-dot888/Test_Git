@@ -13,6 +13,8 @@ describe("MainMenu", () => {
     render(<MainMenu canContinue={false} onStart={onStart} onContinue={onContinue} onLeaderboard={onLeaderboard} onAudioSettings={onAudioSettings} />);
 
     const menuButtons = within(screen.getByRole("main").querySelector(".menu-card")!).getAllByRole("button");
+    expect(screen.getByRole("heading", { name: "망고스톤" })).toBeTruthy();
+    expect(screen.getByText("MANGO STONE")).toBeTruthy();
     expect(menuButtons.map((button) => button.textContent)).toEqual(["새 원정 시작", "게임 방법", "랭킹"]);
     fireEvent.click(screen.getByRole("button", { name: "음향 설정" }));
     expect(onAudioSettings).toHaveBeenCalledOnce();

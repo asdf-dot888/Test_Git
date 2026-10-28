@@ -24,6 +24,8 @@ describe("GameBoard", () => {
     );
 
     expect(markup).toContain("class=\"hero-panel hero-enemy\"");
+    expect(markup).toContain("망고스톤 홈");
+    expect(markup).toContain("> 망고스톤</a>");
     expect(markup).toContain("aria-label=\"잿빛 방랑자 영웅\"");
     expect(markup.match(/class="lane-slot/g)).toHaveLength(10);
     expect(markup).toContain("마나");

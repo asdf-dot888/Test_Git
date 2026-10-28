@@ -21,7 +21,7 @@ export function LeaderboardModal({ open, state, records, errorMessage, onClose, 
     <div className="leaderboard-backdrop">
       <section className="leaderboard-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title">
         <header className="leaderboard-header">
-          <span className="eyebrow">ASHEN EXPEDITION</span>
+          <span className="eyebrow">MANGO STONE</span>
           <button className="menu-secondary" type="button" onClick={onClose}>닫기</button>
         </header>
         <h2 id="leaderboard-title">랭킹</h2>

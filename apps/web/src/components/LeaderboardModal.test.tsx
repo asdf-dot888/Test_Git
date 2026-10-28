@@ -23,6 +23,7 @@ describe("LeaderboardModal", () => {
   it("shows loading, empty, and retryable error states in an accessible dialog", () => {
     const onRetry = vi.fn();
     const { rerender } = render(<LeaderboardModal open state="loading" records={[]} onClose={vi.fn()} onRetry={onRetry} />);
+    expect(screen.getByText("MANGO STONE")).toBeTruthy();
     expect(screen.getByRole("dialog", { name: "랭킹" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("불러오는 중");
 

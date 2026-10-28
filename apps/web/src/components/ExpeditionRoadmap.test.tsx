@@ -38,6 +38,7 @@ describe("ExpeditionRoadmap", () => {
     const { container } = render(<ExpeditionRoadmap run={run} onSelectEncounter={vi.fn()} onMainMenu={vi.fn()} onLeaderboard={vi.fn()} onAudioSettings={vi.fn()} />);
 
     expect(screen.getByText("PHASE 1").textContent).toBe("PHASE 1");
+    expect(screen.getByText("MANGO STONE")).toBeTruthy();
     expect(container.querySelectorAll(".expedition-roadmap__node")).toHaveLength(4);
     expect(container.querySelectorAll(".expedition-roadmap__node.is-boss")).toHaveLength(1);
     expect(Array.from(container.querySelectorAll(".expedition-roadmap__node img")).every((image) => /^\/art\/enemies\/.+\.png$/.test(image.getAttribute("src") ?? ""))).toBe(true);

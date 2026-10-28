@@ -13,7 +13,7 @@ export function GameGuideModal({ open, onClose }: GameGuideModalProps): ReactEle
     <div className="game-guide-backdrop">
       <section className="game-guide-panel" role="dialog" aria-modal="true" aria-labelledby="game-guide-title">
         <header className="game-guide-header">
-          <span className="eyebrow">ASHEN EXPEDITION</span>
+          <span className="eyebrow">MANGO STONE</span>
           <button className="menu-secondary" type="button" onClick={onClose}>닫기</button>
         </header>
         <h2 id="game-guide-title">게임 방법</h2>
