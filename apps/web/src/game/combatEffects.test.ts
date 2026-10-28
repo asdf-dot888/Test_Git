@@ -33,8 +33,8 @@ describe("collectCombatEffectEvents", () => {
     const events = collectEnemyActionEffects(before, after, { type: "attack", cardId: "ash-wolf", attackerId: "enemy-wolf", targetId: "player-guard" }, 50);
 
     expect(events).toHaveLength(2);
-    expect(events[0]).toMatchObject({ id: 50, assetCardId: "ash-wolf", effectKind: "attack", source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 } });
-    expect(events[1]).toMatchObject({ id: 51, assetCardId: "crypt-guard", effectKind: "attack", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } });
+    expect(events[0]).toMatchObject({ id: 50, assetCardId: "ash-wolf", effectKind: "attack", source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 }, damageTarget: "minion" });
+    expect(events[1]).toMatchObject({ id: 51, assetCardId: "crypt-guard", effectKind: "attack", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 }, damageTarget: "minion" });
 
     const bothDie = withBattle(before, (state) => {
       state.battle!.enemyBoard = [];
@@ -64,6 +64,7 @@ describe("collectCombatEffectEvents", () => {
       ["summon", "mire-witch", ["summon"]],
       ["summon", "mire-witch", ["summon"]],
     ]);
+    expect(events.every((event) => !("damageTarget" in event))).toBe(true);
   });
 
   it("plays summon cues for spells and enemy summons", () => {
@@ -120,7 +121,7 @@ describe("collectCombatEffectEvents", () => {
     });
     const events = collectCombatEffectEvents(before, before, { type: "attack", attackerId: "wolf", targetId: "guard" }, 12);
 
-    expect(events).toEqual([{ id: 12, assetCardId: "ash-wolf", effectKind: "attack", soundCues: ["minion-attack", "damage"], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } }]);
+    expect(events).toEqual([{ id: 12, assetCardId: "ash-wolf", effectKind: "attack", soundCues: ["minion-attack", "damage"], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 }, damageTarget: "minion" }]);
   });
 
   it("creates one event for each enemy minion attack during its turn", () => {
@@ -159,11 +160,32 @@ describe("collectCombatEffectEvents", () => {
     const spell = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "lance", targetId: "target" }, 4);
     expect(spell).toHaveLength(1);
     expect(spell[0]).toMatchObject({ assetCardId: "soul-lance", effectKind: "damage", source: { kind: "hand", side: "player", slot: 0, instanceId: "lance" }, target: { kind: "minion", side: "enemy", slot: 0 } });
+    expect(spell[0]?.damageTarget).toBe("minion");
     expect(spell[0]?.soundCues).toEqual(["spell", "damage"]);
 
     const after = withBattle(before, (state) => { state.battle!.playerHero.health -= 3; });
     const impact = collectCombatEffectEvents(before, after, { type: "end-turn" }, 9);
-    expect(impact[0]).toMatchObject({ assetCardId: null, effectKind: "impact", soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } });
+    expect(impact[0]).toMatchObject({ assetCardId: null, effectKind: "impact", soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" }, damageTarget: "hero" });
+  });
+
+  it("classifies direct spell, enemy attack, and Assassin hero-power damage by target", () => {
+    const spellBefore = withBattle(createRun(431), (state) => {
+      state.battle!.hand = [{ instanceId: "bolt", cardId: "shadow-bolt" }];
+    });
+    const heroSpell = collectCombatEffectEvents(spellBefore, spellBefore, { type: "cast-spell", instanceId: "bolt" }, 1);
+    expect(heroSpell[0]?.damageTarget).toBe("hero");
+
+    const enemyBefore = withBattle(createRun(432), (state) => {
+      state.battle!.enemyBoard = [{ instanceId: "enemy", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    });
+    const enemyHit = collectEnemyActionEffects(enemyBefore, enemyBefore, { type: "attack", cardId: "bone-rat", attackerId: "enemy", targetId: "player-hero" }, 2);
+    expect(enemyHit[0]?.damageTarget).toBe("hero");
+
+    const assassin = withBattle(createRun(433, "assassin"), (state) => {
+      state.battle!.enemyBoard = [{ instanceId: "target", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    });
+    expect(collectCombatEffectEvents(assassin, assassin, { type: "use-hero-power", targetId: "target" }, 3)[0]?.damageTarget).toBe("minion");
+    expect(collectCombatEffectEvents(assassin, assassin, { type: "use-hero-power", targetId: "enemy-hero" }, 4)[0]?.damageTarget).toBe("hero");
   });
 
   it("maps Soul Bargain discard and temporary mana to existing combat visuals", () => {
@@ -215,9 +237,13 @@ describe("collectCombatEffectEvents", () => {
     expect(events.map((event) => event.effectKind)).toEqual(["summon", "damage", "impact", "attack", "attack"]);
     expect(events[0]).toMatchObject({ assetCardId: "cinder-imp", source: { kind: "hand", side: "enemy", slot: 1, instanceId: "secret-card" }, target: { kind: "minion", side: "enemy", slot: 0 } });
     expect(events[1]).toMatchObject({ assetCardId: "soul-lance", source: { kind: "hand", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 }, soundCues: ["spell", "damage"] });
+    expect(events[1]?.damageTarget).toBe("minion");
     expect(events[2]).toMatchObject({ areaImpact: true, bossArea: true, effectKind: "impact", soundCues: ["damage"] });
+    expect(events[2]).not.toHaveProperty("damageTarget");
     expect(events[3]).toMatchObject({ assetCardId: "bone-rat", source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 } });
     expect(events[4]).toMatchObject({ assetCardId: "crypt-guard", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } });
+    expect(events[3]?.damageTarget).toBe("minion");
+    expect(events[4]?.damageTarget).toBe("minion");
   });
 
   it("does not create an area impact when the enemy turn has no boss-area record", () => {
