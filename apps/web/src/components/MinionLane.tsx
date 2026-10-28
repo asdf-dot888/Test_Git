@@ -22,6 +22,11 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
       {Array.from({ length: gameConstants.maxBoard }, (_, index) => {
         const minion = minions[index];
         const attackUnavailable = Boolean(minion && side === "player" && (minion.summonedTurn >= turnNumber || minion.hasAttacked));
+        const isSelectingAttacker = targetMode === "attack" && selectedAttackerId === null;
+        const targetable = !disabled
+          && targetMode !== "none"
+          && targetSide === side
+          && !(isSelectingAttacker && attackUnavailable);
         return (
           <div
             className={`lane-slot${minion ? " is-occupied" : ""}`}
@@ -40,13 +45,13 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
               <MinionCard
                 minion={minion}
                 selected={selectedAttackerId === minion.instanceId}
-                targetable={targetMode !== "none" && targetSide === side}
+                targetable={targetable}
                 disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side)}
                 draggable={side === "player" && !disabled}
                 intentTarget={intentTargetIds.includes(minion.instanceId)}
-                exhausted={attackUnavailable}
+                exhausted={attackUnavailable && !targetable}
                 onSelect={() => {
-                  if (side === "player" && targetMode === "none" && (minion.summonedTurn >= turnNumber || minion.hasAttacked)) return;
+                  if (side === "player" && (targetMode === "none" || isSelectingAttacker) && (minion.summonedTurn >= turnNumber || minion.hasAttacked)) return;
                   onSelectTarget(minion.instanceId);
                 }}
               />

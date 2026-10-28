@@ -34,15 +34,27 @@ describe("MinionLane drag and click", () => {
     expect((newCard as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("keeps an exhausted friendly minion selectable as a friendly spell target", () => {
+  it("shows an exhausted friendly minion normally while keeping its spell target highlight", () => {
     const onSelectTarget = vi.fn();
     const exhausted = { instanceId: "spent-unit", cardId: "ash-wolf", owner: "player" as const, attack: 2, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: true };
     const { container } = render(<MinionLane {...base} side="player" minions={[exhausted]} targetMode="spell" targetSide="player" onSelectTarget={onSelectTarget} />);
     const card = container.querySelector<HTMLButtonElement>(".minion-card");
     if (!card) throw new Error("Expected the exhausted minion card.");
-    expect(card.classList.contains("is-exhausted")).toBe(true);
+    expect(card.classList.contains("is-exhausted")).toBe(false);
+    expect(card.classList.contains("is-targetable")).toBe(true);
+    expect(card.disabled).toBe(false);
     fireEvent.click(card);
     expect(onSelectTarget).toHaveBeenCalledWith("spent-unit");
+  });
+
+  it("keeps an exhausted minion gray when it is not an actionable target", () => {
+    const exhausted = { instanceId: "spent-unit", cardId: "ash-wolf", owner: "player" as const, attack: 2, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: true };
+    const { container } = render(<MinionLane {...base} side="player" minions={[exhausted]} targetMode="spell" targetSide="enemy" />);
+    const card = container.querySelector<HTMLButtonElement>(".minion-card");
+    if (!card) throw new Error("Expected the exhausted minion card.");
+    expect(card.classList.contains("is-exhausted")).toBe(true);
+    expect(card.classList.contains("is-targetable")).toBe(false);
+    expect(card.disabled).toBe(true);
   });
 
   it("does not select an exhausted friendly minion for an attack", () => {
@@ -51,6 +63,18 @@ describe("MinionLane drag and click", () => {
     const { container } = render(<MinionLane {...base} side="player" minions={[exhausted]} onSelectTarget={onSelectTarget} />);
     const card = container.querySelector<HTMLButtonElement>(".minion-card");
     if (!card) throw new Error("Expected the exhausted minion card.");
+    fireEvent.click(card);
+    expect(onSelectTarget).not.toHaveBeenCalled();
+  });
+
+  it("keeps exhausted minions gray and ignores clicks while choosing an attacker", () => {
+    const onSelectTarget = vi.fn();
+    const exhausted = { instanceId: "spent-unit", cardId: "ash-wolf", owner: "player" as const, attack: 2, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: true };
+    const { container } = render(<MinionLane {...base} side="player" minions={[exhausted]} targetMode="attack" targetSide="player" onSelectTarget={onSelectTarget} />);
+    const card = container.querySelector<HTMLButtonElement>(".minion-card");
+    if (!card) throw new Error("Expected the exhausted minion card.");
+    expect(card.classList.contains("is-exhausted")).toBe(true);
+    expect(card.classList.contains("is-targetable")).toBe(false);
     fireEvent.click(card);
     expect(onSelectTarget).not.toHaveBeenCalled();
   });
