@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { HeroState, PlayerSide } from "@board-game/game-core";
 import { readDragPayload, type DropTarget } from "./dragInteractions.js";
 
@@ -9,11 +10,12 @@ interface HeroPanelProps {
   targetable: boolean;
   armor?: number;
   intentTarget?: boolean;
+  heroPowerControl?: ReactNode;
   onSelectTarget(targetId: string): void;
   onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, onSelectTarget, onDropTarget }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, heroPowerControl, onSelectTarget, onDropTarget }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
     <section
@@ -42,6 +44,7 @@ export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, int
         <div className="health-track" aria-hidden="true">
           <span style={{ width: `${Math.max(0, Math.min(100, (hero.health / hero.maxHealth) * 100))}%` }} />
         </div>
+        {isPlayer && heroPowerControl}
       </div>
     </section>
   );

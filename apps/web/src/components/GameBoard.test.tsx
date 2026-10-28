@@ -138,7 +138,11 @@ describe("GameBoard", () => {
     const markup = renderToStaticMarkup(<GameBoard run={demonist} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
     expect(markup).toContain("영혼 조각 4/6");
     expect(markup).toContain("hero-power-button");
+    expect(markup).toContain("영혼 조각 3");
     expect(markup).toContain("방어도 3");
+    const heroPanel = markup.slice(markup.indexOf('class="hero-panel hero-player'), markup.indexOf("</section>", markup.indexOf('class="hero-panel hero-player')));
+    expect(heroPanel).toContain("hero-power-button");
+    expect(markup.indexOf('class="hero-panel hero-player')).toBeLessThan(markup.indexOf('class="player-toolbar"'));
   });
 
   it("uses the selected class portrait and keeps the legacy hero portrait", () => {
