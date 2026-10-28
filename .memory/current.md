@@ -1,17 +1,17 @@
 # Current Context
 
 ## Active Plan
-None — all planned work is complete.
+None. Minion Attack Effects is complete.
 
 ## Active Phase
-None — all planned phases are complete.
+None.
 
 ## Active Task
-None — all planned tasks are complete.
+None.
 
 ## Status
-- Plan `2026-10-28-six-minion-field-limit` is complete.
-- T01 is implemented, validated, and committed.
+- Minion Attack Effects completed. T01 committed as `b6e836e`; T02 committed as `c588b73`.
+- Validation passed for component tests, combat event tests, and production build.
 
 ## Next Step
-No pending task remains in this plan.
+Wait for the next requested task.
