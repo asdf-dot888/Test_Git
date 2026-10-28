@@ -542,8 +542,7 @@ function selectEnemySpellTarget(effect: SpellEffect, battle: BattleState): strin
   return undefined;
 }
 
-function isEnemyCardPlayable(card: CardDefinition, battle: BattleState): boolean {
-  if (card.cost > battle.enemyMana.current) return false;
+function isEnemyCardTargetPlayable(card: CardDefinition, battle: BattleState): boolean {
   if (card.kind === "minion") return battle.enemyBoard.length < MAX_BOARD;
   return (card.spellEffects ?? []).every((effect) => {
     if (effect.kind === "summon") return battle.enemyBoard.length < MAX_BOARD;
@@ -553,6 +552,36 @@ function isEnemyCardPlayable(card: CardDefinition, battle: BattleState): boolean
     if (effect.kind === "heal" && effect.target === "playerMinion") return battle.enemyBoard.some((minion) => minion.health < minion.maxHealth);
     return true;
   });
+}
+
+function getSoulBargainFollowUps(card: CardDefinition, battle: BattleState): CardDefinition[] {
+  if (card.id !== "soul-bargain") return [];
+  const otherCards = battle.enemyHand
+    .filter((instance) => instance.cardId !== card.id)
+    .map((instance) => getCard(instance.cardId));
+  if (otherCards.length < 2) return [];
+
+  const manaAfterCost = battle.enemyMana.current - card.cost;
+  const projectedBattle: BattleState = {
+    ...battle,
+    enemyMana: {
+      ...battle.enemyMana,
+      current: manaAfterCost + 3,
+      temporary: battle.enemyMana.temporary + 3,
+    },
+  };
+  return otherCards.filter((candidate) => candidate.id !== "soul-bargain"
+    && candidate.cost > manaAfterCost
+    && candidate.cost <= manaAfterCost + 3
+    && isEnemyCardTargetPlayable(candidate, projectedBattle));
+}
+
+function isEnemyCardPlayable(card: CardDefinition, battle: BattleState): boolean {
+  if (card.cost > battle.enemyMana.current) return false;
+  if (card.spellEffects?.some((effect) => effect.kind === "discardRandom")) {
+    return getSoulBargainFollowUps(card, battle).length >= 2;
+  }
+  return isEnemyCardTargetPlayable(card, battle);
 }
 
 function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyDefinition): number {
@@ -588,6 +617,19 @@ function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyD
     } else if (effect.kind === "summon") score += 30 + effect.count * 8;
     else if (effect.kind === "buff") score += 20 + Math.max(0, ...ownBoard.map((minion) => minion.attack)) * 2;
     else if (effect.kind === "draw") score += 15 + effect.count * 4;
+  }
+  if (card.id === "soul-bargain") {
+    const projectedBattle: BattleState = {
+      ...battle,
+      enemyMana: {
+        ...battle.enemyMana,
+        current: battle.enemyMana.current - card.cost + 3,
+        temporary: battle.enemyMana.temporary + 3,
+      },
+    };
+    const bestFollowUp = Math.max(0, ...getSoulBargainFollowUps(card, battle)
+      .map((followUp) => scoreEnemyCard(followUp, projectedBattle, enemy)));
+    score = Math.max(score, bestFollowUp + 1);
   }
   const profile = enemy.tactics.profile;
   if ((profile === "aggressor" || profile === "hunter") && (card.kind === "minion" || effects.some((effect) => effect.kind === "damage"))) score += 16;

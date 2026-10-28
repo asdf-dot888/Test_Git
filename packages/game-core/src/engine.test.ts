@@ -253,14 +253,18 @@ describe("seeded run setup and random helpers", () => {
     for (const card of deck) counts.set(card.cardId, (counts.get(card.cardId) ?? 0) + 1);
     expect([...counts.values()].every((count) => count <= 2)).toBe(true);
     expect(deck.some((card) => card.cardId === "mana-spring")).toBe(false);
+    let sawSoulBargain = false;
     for (let seed = 1; seed <= 20; seed += 1) {
       const generated = createRun(seed).battle!.enemyStarterDeck;
       expect(generated).toHaveLength(30);
+      sawSoulBargain ||= generated.some((card) => card.cardId === "soul-bargain");
       expect(generated.some((card) => card.cardId === "mana-spring")).toBe(false);
       const generatedCounts = new Map<string, number>();
       for (const card of generated) generatedCounts.set(card.cardId, (generatedCounts.get(card.cardId) ?? 0) + 1);
       expect([...generatedCounts.values()].every((count) => count <= 2)).toBe(true);
     }
+    expect(sawSoulBargain).toBe(true);
+    expect(STARTER_DECK_CARD_IDS).not.toContain("soul-bargain");
     expect(first.battle?.enemyDrawPile).toHaveLength(27);
     expect(first.battle?.rngState).toBe(second.battle?.rngState);
   });
@@ -938,16 +942,64 @@ describe("player actions and battle rules", () => {
     const battle = activeBattle(run);
     const bargain = instance("enemy-bargain", "soul-bargain");
     const candidate = instance("enemy-discard-candidate", "eclipse");
-    battle.enemyMana = { current: 1, max: 10, temporary: 0 };
+    battle.enemyMana = { current: 6, max: 10, temporary: 0 };
     battle.enemyHand = [bargain, candidate];
     battle.enemyStarterDeck = Array.from({ length: 30 }, (_, index) => instance(`enemy-high-${index}`, "eclipse"));
     battle.enemyDrawPile = [];
 
     const resolution = resolveEnemyTurnWithPlayback(run);
-    expect(resolution.run.battle?.enemyDiscardPile).toContainEqual(candidate);
-    expect(resolution.run.battle?.discardPile).not.toContainEqual(candidate);
+    expect(resolution.run.battle?.enemyDiscardPile.some(({ cardId }) => cardId === "eclipse")).toBe(true);
+    expect(resolution.run.battle?.discardPile.some(({ cardId }) => cardId === "eclipse")).toBe(false);
     const spellStep = resolution.steps.find((step) => step.action.type === "cast-spell" && step.action.cardId === "soul-bargain");
-    expect(spellStep?.presentationRun.battle?.enemyMana).toEqual({ current: 3, max: 10, temporary: 3 });
+    expect(spellStep?.presentationRun.battle?.enemyMana).toEqual({ current: 8, max: 10, temporary: 3 });
+    expect(resolution.run.battle?.enemyMana).toEqual({ current: 0, max: 10, temporary: 0 });
+  });
+
+  it("offers neutral Soul Bargain to all classes without adding it to starting decks", () => {
+    expect(CARD_BY_ID.get("soul-bargain")).toMatchObject({ kind: "spell", cost: 1, rewardTier: "normal" });
+    expect(CARD_BY_ID.get("soul-bargain")).not.toHaveProperty("classId");
+    expect(CARD_BY_ID.get("soul-bargain")).not.toHaveProperty("playerOnly");
+    for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
+      const offered = Array.from({ length: 80 }, (_, index) => index + 1)
+        .some((seed) => winCurrentBattle(createRun(seed, playerClass)).pendingReward?.choices.includes("soul-bargain"));
+      expect(offered).toBe(true);
+    }
+  });
+
+  it("holds Soul Bargain when no beneficial follow-up exists after the random discard", () => {
+    const run = asEnemyTurn(createRun(507));
+    const battle = activeBattle(run);
+    battle.enemyMana = { current: 3, max: 10, temporary: 0 };
+    battle.enemyHand = [
+      instance("enemy-bargain", "soul-bargain"),
+      instance("enemy-cheap-a", "ash-wolf"),
+      instance("enemy-cheap-b", "crypt-guard"),
+    ];
+    battle.enemyStarterDeck = Array.from({ length: 30 }, (_, index) => instance(`enemy-high-${index}`, "eclipse"));
+    battle.enemyDrawPile = [];
+
+    const resolution = resolveEnemyTurnWithPlayback(run);
+    expect(resolution.steps.some((step) => step.action.type === "cast-spell" && step.action.cardId === "soul-bargain")).toBe(false);
+  });
+
+  it("casts Soul Bargain before its enabled follow-up and records both actions in order", () => {
+    const run = asEnemyTurn(createRun(508));
+    const battle = activeBattle(run);
+    battle.enemyMana = { current: 3, max: 10, temporary: 0 };
+    battle.enemyHand = [
+      instance("enemy-bargain", "soul-bargain"),
+      instance("enemy-meteor-a", "meteor-shard"),
+      instance("enemy-meteor-b", "meteor-shard"),
+    ];
+    battle.enemyStarterDeck = Array.from({ length: 30 }, (_, index) => instance(`enemy-high-${index}`, "eclipse"));
+    battle.enemyDrawPile = [];
+
+    const resolution = resolveEnemyTurnWithPlayback(run);
+    const cardActions = resolution.steps.flatMap(({ action }) => action.type === "cast-spell" ? [action.cardId] : []);
+    expect(cardActions).toEqual(["soul-bargain", "meteor-shard"]);
+    const bargainStep = resolution.steps.find((step) => step.action.type === "cast-spell" && step.action.cardId === "soul-bargain");
+    expect(bargainStep?.presentationRun.battle?.enemyMana).toEqual({ current: 5, max: 10, temporary: 3 });
+    expect(resolution.run.battle?.playerHero.health).toBe(25);
     expect(resolution.run.battle?.enemyMana).toEqual({ current: 0, max: 10, temporary: 0 });
   });
 
