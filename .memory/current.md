@@ -7,10 +7,10 @@
 [P01 Combat Feedback](./phases/2026-10-29-combat-impact/P01-combat-feedback/phase.md)
 
 ## Active Task
-[T04 Phase-Specific Boss Area Sequence](./phases/2026-10-29-combat-impact/P01-combat-feedback/T04-boss-area-sequence.md)
+None — the current plan is complete.
 
 ## Status
-- T01, T02, and T03 are complete and validated.
+- T01, T02, T03, and T04 are complete and validated. Plan: complete.
 
 ## Next Step
-Read T04's blueprint, then implement the phase-specific boss-area warning, cast, and impact sequence.
+No active task. Select or plan the next feature when ready.

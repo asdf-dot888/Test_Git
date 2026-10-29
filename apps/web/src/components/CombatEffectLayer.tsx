@@ -19,6 +19,10 @@ interface EffectGeometry {
   target: Point;
 }
 
+type BossAreaStage = "warning" | "cast" | "impact";
+
+const BOSS_STAGE_DURATION_MS: Record<BossAreaStage, number> = { warning: 1_250, cast: 1_200, impact: 900 };
+
 const boardShakeOwners = new WeakMap<HTMLElement, Map<string, Set<number>>>();
 
 function retainBoardShake(board: HTMLElement, className: string, eventId: number): void {
@@ -93,6 +97,10 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   const remainingMs = useRef<number | null>(null);
   const deadline = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
+  const bossRemainingMs = useRef<number | null>(null);
+  const bossDeadline = useRef<number | null>(null);
+  const bossTimeout = useRef<number | null>(null);
+  const [bossStage, setBossStage] = useState<BossAreaStage | null>(event.bossArea ? "warning" : null);
   const shakeRemainingMs = useRef<number | null>(null);
   const shakeDeadline = useRef<number | null>(null);
   const shakeTimeout = useRef<number | null>(null);
@@ -116,6 +124,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
 
   useEffect(() => {
     if (completeRef.current) return;
+    if (event.bossArea) return;
     const motionScale = event.slowMotion ? 2 : 1;
     const baseDuration = Math.max(1_400, 1_010 + (profile?.durationMs ?? 390));
     if (remainingMs.current === null) remainingMs.current = (baseDuration + Math.min(index, 8) * 120) * motionScale;
@@ -145,7 +154,43 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         deadline.current = null;
       }
     };
-  }, [event.id, event.slowMotion, index, paused, profile?.durationMs]);
+  }, [event.bossArea, event.id, event.slowMotion, index, paused, profile?.durationMs]);
+
+  useEffect(() => {
+    if (!event.bossArea || !bossStage || completeRef.current) return;
+    const duration = BOSS_STAGE_DURATION_MS[bossStage] * (event.slowMotion ? 2 : 1);
+    if (bossRemainingMs.current === null) bossRemainingMs.current = duration;
+    if (paused) {
+      if (bossTimeout.current !== null) window.clearTimeout(bossTimeout.current);
+      bossTimeout.current = null;
+      if (bossDeadline.current !== null) {
+        bossRemainingMs.current = Math.max(0, bossDeadline.current - Date.now());
+        bossDeadline.current = null;
+      }
+      return;
+    }
+    bossDeadline.current = Date.now() + bossRemainingMs.current;
+    bossTimeout.current = window.setTimeout(() => {
+      bossTimeout.current = null;
+      bossDeadline.current = null;
+      bossRemainingMs.current = null;
+      if (bossStage === "warning") setBossStage("cast");
+      else if (bossStage === "cast") setBossStage("impact");
+      else {
+        if (completeRef.current) return;
+        completeRef.current = true;
+        onCompleteRef.current(event.id);
+      }
+    }, bossRemainingMs.current);
+    return () => {
+      if (bossTimeout.current !== null) window.clearTimeout(bossTimeout.current);
+      bossTimeout.current = null;
+      if (bossDeadline.current !== null) {
+        bossRemainingMs.current = Math.max(0, bossDeadline.current - Date.now());
+        bossDeadline.current = null;
+      }
+    };
+  }, [bossStage, event.bossArea, event.id, event.slowMotion, paused]);
 
   const impactTier = event.damage
     ? event.damage.retaliation ? "light" : combatImpactTier(event.damage.amount)
@@ -154,7 +199,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   const isArmorBlock = event.damage?.outcome === "armor-block";
   const hasHit = !event.damage || event.damage.outcome === "hit";
   const shakeClass = event.areaImpact
-    ? "is-shaking"
+    ? event.bossArea ? bossStage === "impact" ? "is-boss-area-impact" : null : "is-shaking"
     : hasHit && event.damageTarget
       ? impactTier === "heavy" ? "is-hit-shaking-heavy" : impactTier === "medium" ? "is-hit-shaking-medium" : "is-hit-shaking"
       : null;
@@ -166,7 +211,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     retainBoardShake(board, shakeClass, event.id);
     return () => {
       releaseBoardShake(board, shakeClass, event.id);
-      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
+      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-boss-area-impact") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
         board.style.animationPlayState = "";
       }
     };
@@ -176,8 +221,8 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     if (!shakeClass) return;
     const board = document.querySelector<HTMLElement>(".battle-board");
     if (!board) return;
-    const shakeDuration = event.areaImpact ? 500 : impactTier === "heavy" ? 1_000 : impactTier === "medium" ? 700 : 500;
-    if (shakeRemainingMs.current === null) shakeRemainingMs.current = (event.areaImpact ? 500 : 930 + shakeDuration) + Math.min(index, 8) * 120;
+    const shakeDuration = event.bossArea ? 900 : event.areaImpact ? 500 : impactTier === "heavy" ? 1_000 : impactTier === "medium" ? 700 : 500;
+    if (shakeRemainingMs.current === null) shakeRemainingMs.current = (event.bossArea ? 900 : event.areaImpact ? 500 : 930 + shakeDuration) + Math.min(index, 8) * 120;
     board.style.animationPlayState = paused ? "paused" : "running";
     if (paused) {
       if (shakeTimeout.current !== null) window.clearTimeout(shakeTimeout.current);
@@ -194,7 +239,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
       shakeDeadline.current = null;
       shakeRemainingMs.current = 0;
       releaseBoardShake(board, shakeClass, event.id);
-      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
+      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-boss-area-impact") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
         board.style.animationPlayState = "";
       }
     }, shakeRemainingMs.current);
@@ -206,19 +251,28 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         shakeDeadline.current = null;
       }
     };
-  }, [event.areaImpact, event.damageTarget, event.id, index, impactTier, paused, shakeClass]);
+  }, [event.areaImpact, event.bossArea, event.damageTarget, event.id, index, impactTier, paused, shakeClass]);
 
   useEffect(() => {
-    if (!event.bossArea) return;
+    if (!event.bossArea || !bossStage) return;
     const board = document.querySelector<HTMLElement>(".battle-board");
     if (!board) return;
-    board.classList.add("is-boss-area-warning");
-    board.style.setProperty("--boss-warning-play-state", paused ? "paused" : "running");
+    board.dataset.bossStage = bossStage;
+    board.dataset.bossPhase = event.bossPhase === 1 || event.bossPhase === 2 || event.bossPhase === 3 ? String(event.bossPhase) : "fallback";
+    if (bossStage === "warning") {
+      board.classList.add("is-boss-area-warning");
+      board.style.setProperty("--boss-warning-play-state", paused ? "paused" : "running");
+    } else {
+      board.classList.remove("is-boss-area-warning");
+      board.style.removeProperty("--boss-warning-play-state");
+    }
     return () => {
       board.classList.remove("is-boss-area-warning");
       board.style.removeProperty("--boss-warning-play-state");
+      delete board.dataset.bossStage;
+      delete board.dataset.bossPhase;
     };
-  }, [event.bossArea, event.id, paused]);
+  }, [bossStage, event.bossArea, event.bossPhase, event.id, paused]);
 
   if (!geometry) return null;
   const motionScale = event.slowMotion ? 2 : 1;
@@ -232,11 +286,13 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     animationPlayState: paused ? "paused" as const : "running" as const,
   } as CSSProperties;
   const boardBounds = event.areaImpact ? document.querySelector<HTMLElement>(".battle-board")?.getBoundingClientRect() : undefined;
-  const areaWidth = Math.min(window.innerWidth * 0.64, 520);
-  const areaHeight = Math.min(window.innerHeight * 0.35, 220);
+  const areaWidth = Math.min(window.innerWidth * (event.bossArea ? 0.78 : 0.64), event.bossArea ? 760 : 520);
+  const areaHeight = Math.min(window.innerHeight * (event.bossArea ? 0.5 : 0.35), event.bossArea ? 340 : 220);
+  const bossImpactDelay = BOSS_STAGE_DURATION_MS.warning + BOSS_STAGE_DURATION_MS.cast;
+  const impactDelay = (delay + (event.bossArea ? bossImpactDelay : 930)) * motionScale;
   const impactStyle = event.areaImpact && boardBounds
-    ? { left: boardBounds.left + (boardBounds.width - areaWidth) / 2, top: boardBounds.top + (boardBounds.height - areaHeight) / 2, animationDelay: `${(delay + 930) * motionScale}ms` }
-    : { left: geometry.target.x, top: geometry.target.y, animationDelay: `${(delay + 930) * motionScale}ms` };
+    ? { left: boardBounds.left + (boardBounds.width - areaWidth) / 2, top: boardBounds.top + (boardBounds.height - areaHeight) / 2, animationDelay: `${impactDelay}ms`, ...(event.bossArea ? { animationDuration: `${BOSS_STAGE_DURATION_MS.impact * motionScale}ms` } : {}) }
+    : { left: geometry.target.x, top: geometry.target.y, animationDelay: `${impactDelay}ms` };
   const isCardSource = event.source.kind === "hand" || event.source.kind === "minion";
   const cardArt = isCardSource && event.assetCardId ? `/art/cards/${event.assetCardId}.png` : null;
   const isMinionAttack = event.effectKind === "attack" && event.source.kind === "minion" && cardArt !== null;
@@ -244,6 +300,15 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     "--card-accent": profile?.accent ?? "#f4c66e",
     "--profile-duration": `${profile?.durationMs ?? 930}ms`,
   } as CSSProperties;
+  const bossBoardBounds = event.bossArea ? document.querySelector<HTMLElement>(".battle-board")?.getBoundingClientRect() : undefined;
+  const bossSequenceStyle = bossBoardBounds ? {
+    left: bossBoardBounds.left,
+    top: bossBoardBounds.top,
+    width: bossBoardBounds.width,
+    height: bossBoardBounds.height,
+    animationPlayState: paused ? "paused" as const : "running" as const,
+    "--boss-sequence-play-state": paused ? "paused" : "running",
+  } : undefined;
   const visualClass = profile ? ` motion-${profile.motionClass} profile-${event.assetCardId}` : "";
   const slowClass = event.slowMotion ? " is-slow-motion" : "";
   const hitClass = event.damageTarget === "minion" ? " is-minion-hit" : event.damageTarget === "hero" ? " is-hero-hit" : "";
@@ -270,7 +335,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
       onAnimationEnd={finish}
       aria-hidden="true"
     />
-    {cardArt && !isMinionAttack ? <>
+    {!event.bossArea && cardArt && !isMinionAttack ? <>
       <span
         className={`combat-effect-sprite combat-effect-card-frame effect-${event.effectKind}${visualClass}${slowClass}`}
         data-effect-card={event.assetCardId}
@@ -278,7 +343,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         style={{ ...profileStyle, ...style }}
         aria-hidden="true"
       ><img src={cardArt} alt="" />{profile && <span className="combat-effect-particles" data-particles={profile.particles} />}</span>
-    </> : isMinionAttack && cardArt ? <>
+    </> : !event.bossArea && isMinionAttack && cardArt ? <>
       <img
         className={`combat-effect-sprite combat-effect-minion-portrait${slowClass}`}
         data-effect-card={event.assetCardId}
@@ -294,13 +359,20 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         style={{ ...profileStyle, ...style, "--effect-angle": `${Math.atan2(geometry.target.y - geometry.source.y, geometry.target.x - geometry.source.x) * 180 / Math.PI}deg` } as CSSProperties}
         aria-hidden="true"
       />
-    </> : <img
+    </> : !event.bossArea ? <img
       className={`combat-effect-sprite combat-effect-impact-art${slowClass}`}
       data-effect-card="impact"
       data-effect-kind={event.effectKind}
       src="/art/effects/impact.png"
       alt=""
       style={{ ...profileStyle, ...style }}
+    /> : null}
+    {event.bossArea && bossStage && bossStage !== "warning" && <span
+      className="boss-area-sequence"
+      data-boss-phase={event.bossPhase === 1 || event.bossPhase === 2 || event.bossPhase === 3 ? event.bossPhase : "fallback"}
+      data-boss-stage={bossStage}
+      style={bossSequenceStyle}
+      aria-hidden="true"
     />}
     {isMiss && <span className="combat-effect-miss-fragments" style={{ ...targetStyle, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /><i /></span>}
     {isArmorBlock && <span className="combat-effect-armor-spark" style={{ ...targetStyle, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /></span>}
@@ -328,7 +400,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
       return <span
         key={`${event.id}-death-${deathIndex}`}
         className={`combat-effect-death${slowClass}`}
-        style={{ left: point.x, top: point.y, animationDelay: `${delay * motionScale}ms`, animationPlayState: paused ? "paused" : "running" }}
+        style={{ left: point.x, top: point.y, animationDelay: `${(delay + (event.bossArea ? bossImpactDelay : 0)) * motionScale}ms`, animationPlayState: paused ? "paused" : "running" }}
         aria-hidden="true"
       ><i /><i /><i /><i /><b /></span>;
     })}

@@ -207,7 +207,7 @@ describe("CombatEffectLayer", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.querySelector(".battle-board")?.classList.contains("is-boss-area-warning")).toBe(true);
     expect(document.body.querySelector(".combat-effect-death")?.querySelectorAll("i")).toHaveLength(4);
-    expect(document.body.querySelector(".combat-effect-minion-portrait")?.getAttribute("style")).toContain("--card-accent");
+    expect(document.body.querySelector(".combat-effect-minion-portrait")).toBeNull();
   });
 
   it("positions fallback anchors across all six field slots", async () => {
@@ -235,5 +235,77 @@ describe("CombatEffectLayer", () => {
     expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(false);
     await act(async () => { await vi.advanceTimersByTimeAsync(900); });
     expect(onComplete).toHaveBeenCalledWith(16);
+  });
+
+  it("sequences boss warning, phase casting, and full-board impact before completing once", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const onComplete = vi.fn();
+    const event = { id: 41, assetCardId: null, effectKind: "impact" as const, areaImpact: true, bossArea: true, bossPhase: 1 as const, soundCues: ["damage" as const], source: { kind: "hero" as const, side: "enemy" as const }, target: { kind: "hero" as const, side: "player" as const } };
+    render(<div className="battle-board"><CombatEffectLayer events={[event]} onComplete={onComplete} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const board = document.querySelector<HTMLElement>(".battle-board")!;
+    expect(board.dataset.bossStage).toBe("warning");
+    expect(document.body.querySelector(".boss-area-sequence")).toBeNull();
+    expect(board.classList.contains("is-boss-area-impact")).toBe(false);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_250); });
+    expect(board.dataset.bossStage).toBe("cast");
+    expect(document.body.querySelector(".boss-area-sequence")?.getAttribute("data-boss-phase")).toBe("1");
+    expect(document.body.querySelector(".boss-area-sequence")?.getAttribute("data-boss-stage")).toBe("cast");
+    expect(board.classList.contains("is-boss-area-impact")).toBe(false);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_200); });
+    expect(board.dataset.bossStage).toBe("impact");
+    expect(document.body.querySelector(".boss-area-sequence")?.getAttribute("data-boss-stage")).toBe("impact");
+    expect(board.classList.contains("is-boss-area-impact")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(899); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it.each([1, 2, 3] as const)("selects phase %i cast and uses a generic fallback for missing phase", async (phase) => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const base = { id: 50 + phase, assetCardId: null, effectKind: "impact" as const, areaImpact: true, bossArea: true, soundCues: [], source: { kind: "hero" as const, side: "enemy" as const }, target: { kind: "hero" as const, side: "player" as const } };
+    const view = render(<div className="battle-board"><CombatEffectLayer events={[{ ...base, bossPhase: phase }]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_250); });
+    expect(document.body.querySelector(".boss-area-sequence")?.getAttribute("data-boss-phase")).toBe(String(phase));
+    view.unmount();
+    render(<div className="battle-board"><CombatEffectLayer events={[{ ...base, id: 60 + phase }]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_250); });
+    expect(document.body.querySelector(".boss-area-sequence")?.getAttribute("data-boss-phase")).toBe("fallback");
+  });
+
+  it("pauses and resumes the current boss stage and clears timers and classes on unmount", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const event = { id: 70, assetCardId: null, effectKind: "impact" as const, areaImpact: true, bossArea: true, bossPhase: 2 as const, soundCues: [], source: { kind: "hero" as const, side: "enemy" as const }, target: { kind: "hero" as const, side: "player" as const } };
+    const view = render(<div className="battle-board"><CombatEffectLayer events={[event]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    view.rerender(<div className="battle-board"><CombatEffectLayer events={[event]} paused onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(document.querySelector<HTMLElement>(".battle-board")?.dataset.bossStage).toBe("warning");
+    view.rerender(<div className="battle-board"><CombatEffectLayer events={[event]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(749); });
+    expect(document.querySelector<HTMLElement>(".battle-board")?.dataset.bossStage).toBe("warning");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(document.querySelector<HTMLElement>(".battle-board")?.dataset.bossStage).toBe("cast");
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    view.rerender(<div className="battle-board"><CombatEffectLayer events={[event]} paused onComplete={vi.fn()} /></div>);
+    expect(document.body.querySelector<HTMLElement>(".boss-area-sequence")?.style.getPropertyValue("--boss-sequence-play-state")).toBe("paused");
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(document.querySelector<HTMLElement>(".battle-board")?.dataset.bossStage).toBe("cast");
+    view.rerender(<div className="battle-board"><CombatEffectLayer events={[event]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(799); });
+    expect(document.querySelector<HTMLElement>(".battle-board")?.dataset.bossStage).toBe("cast");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(document.querySelector<HTMLElement>(".battle-board")?.dataset.bossStage).toBe("impact");
+    view.unmount();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

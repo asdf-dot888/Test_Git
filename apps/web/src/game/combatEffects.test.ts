@@ -321,6 +321,14 @@ describe("collectCombatEffectEvents", () => {
     expect(collectCombatEffectEvents(before, after, { type: "end-turn" }, 1)).toEqual([]);
   });
 
+  it.each([1, 2, 3] as const)("records boss phase %i for the themed casting effect", (phase) => {
+    const before = withBattle(createRun(47 + phase), (state) => { state.phase = phase; });
+    const after = withBattle(before, (state) => {
+      state.battle!.enemyTurnEvents = [{ type: "boss-area", damage: 1, targetMinionIds: [], targetHeroId: "player" }];
+    });
+    expect(collectCombatEffectEvents(before, after, { type: "end-turn" }, 200)[0]?.bossPhase).toBe(phase);
+  });
+
   it("marks every player minion killed by the boss area strike for the death effect", () => {
     const run = createRun(46);
     const before = withBattle(run, (state) => {

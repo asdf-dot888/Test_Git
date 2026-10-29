@@ -1,6 +1,6 @@
 # Task: T04 Phase-Specific Boss Area Sequence
 
-## Status: in_progress
+## Status: done
 
 ## Goal
 Turn the boss-area warning into a clear ordered sequence: warning, phase-themed cast, then a large field-wide impact with strong flash and shake. Preserve boss damage values and per-target event playback.
@@ -60,11 +60,11 @@ Turn the boss-area warning into a clear ordered sequence: warning, phase-themed 
 - Assert boss-area stays the large visual/sound override when its per-target amount is 1.
 
 ## Acceptance Criteria
-- [ ] Boss attacks visibly warn, cast using the phase motif, then impact the full board in order.
-- [ ] Phase visuals match cursed forest, demon, and ancient dragon themes on desktop and mobile.
-- [ ] Boss area remains substantially larger and heavier than an ordinary 1-damage hit.
-- [ ] Enemy playback waits until the sequence ends and resumes correctly after pauses.
-- [ ] Gameplay rules and damage results do not change.
+- [x] Boss attacks visibly warn, cast using the phase motif, then impact the full board in order.
+- [x] Phase visuals match cursed forest, demon, and ancient dragon themes on desktop and mobile.
+- [x] Boss area remains substantially larger and heavier than an ordinary 1-damage hit.
+- [x] Enemy playback waits until the sequence ends and resumes correctly after pauses.
+- [x] Gameplay rules and damage results do not change.
 
 ## Validation
 - `npm.cmd test -- apps/web/src/components/CombatEffectLayer.test.tsx apps/web/src/game/combatEffects.test.ts` — run after implementation.
@@ -83,7 +83,7 @@ Task: T04-boss-area-sequence
 ```
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
+- [x] Implementation complete
+- [x] Validation passed: 60 related tests, targeted ESLint, and web production build.
 - commit: pending
 

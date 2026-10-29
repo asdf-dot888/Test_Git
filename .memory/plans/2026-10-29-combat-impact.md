@@ -8,7 +8,10 @@ Source decision: [2026-10-29-combat-impact-polish](../decisions/2026-10-29-comba
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | Add per-target damage outcomes, scale combat visuals and audio, and sequence phase-themed boss area attacks. | [P01](../phases/2026-10-29-combat-impact/P01-combat-feedback/phase.md) |
+| P01 | `done` | Add per-target damage outcomes, scale combat visuals and audio, and sequence phase-themed boss area attacks. | [P01](../phases/2026-10-29-combat-impact/P01-combat-feedback/phase.md) |
+
+## Status
+Complete. P01's four tasks are implemented and validated.
 
 ## Scope and constraints
 - Damage tiers use damage reaching health after armor absorption and before the remaining-health cap: 1–2 light, 3–4 medium, 5+ heavy. For a fully absorbed positive hit, show armor block feedback. For a zero random roll, show a miss.
