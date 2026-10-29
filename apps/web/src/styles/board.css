@@ -710,6 +710,31 @@
 .card-details-kind { color: #c9bda8; font-size: 12px; }
 .card-details-stats { color: #f1c66f; font-size: 13px; }
 .card-details-dialog p { width: 100%; margin: 4px 0 0; color: #e0d5c4; font-size: 14px; line-height: 1.55; white-space: normal; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  body { overflow-x: clip; }
+  .discard-picker, .menu-screen, .victory-screen-overlay, .dialog-backdrop, .game-guide-backdrop, .leaderboard-backdrop, .card-details-backdrop { overscroll-behavior: contain; }
+  .discard-dialog { width: min(100%, 760px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+  .discard-options { max-height: none; overflow: visible; }
+  .run-screen { min-height: 100dvh; padding: 12px; }
+  .reward-screen { width: min(100%, 820px); max-height: calc(100dvh - 24px); margin: auto; padding: 38px 16px 20px; overflow-y: auto; }
+  .reward-options { grid-template-columns: 1fr; max-height: none; overflow: visible; }
+  .reward-card { height: auto; min-height: 0; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto; align-content: start; gap: 5px 10px; }
+  .reward-card-inspection > .reward-card { height: auto; }
+  .reward-art { grid-column: 1; grid-row: 1 / span 5; align-self: center; width: 76px; height: 112px; }
+  .reward-art img { object-fit: contain; }
+  .reward-card .reward-name, .reward-card .card-kind, .reward-card .reward-stats, .reward-card .reward-description { grid-column: 2; min-width: 0; overflow-wrap: anywhere; }
+  .reward-card .reward-description { grid-row: auto; line-height: 1.5; }
+  .victory-screen-overlay { max-height: 100dvh; overflow-y: auto; }
+  .victory-screen-overlay .victory-card { margin-block: auto; }
+  .card-details-backdrop { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  .card-details-dialog { width: min(100%, 420px); max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px); min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .card-details-art { object-fit: contain; }
+  .dialog-backdrop { max-height: 100dvh; overflow-y: auto; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  .dialog-backdrop > section { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px); overflow-y: auto; }
+  .game-guide-backdrop, .leaderboard-backdrop { overflow-y: auto; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+}
+
 @media (max-width: 600px) {
   .card-details-dialog { width: min(100%, 420px); padding: 16px; }
   .card-details-art { width: min(72vw, 250px); max-height: 36dvh; }
