@@ -1,4 +1,4 @@
-export type MusicKind = "normal" | "boss";
+export type MusicKind = "menu" | "normal" | "boss";
 export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "turn-start" | "turn-end" | "summon" | "timer-warning"
   | "impact-light" | "impact-medium" | "impact-heavy" | "impact-armor-block" | "impact-hero-melee" | "impact-boss-area";
 
@@ -17,6 +17,7 @@ export interface AudioController {
 }
 
 const MUSIC_SOURCES: Record<MusicKind, string> = {
+  menu: "/audio/bgm/menu.wav",
   normal: "/audio/bgm/normal.ogg",
   boss: "/audio/bgm/boss.ogg",
 };

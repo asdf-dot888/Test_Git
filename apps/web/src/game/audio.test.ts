@@ -87,6 +87,21 @@ function setup() {
 afterEach(() => vi.useRealTimers());
 
 describe("createAudioController", () => {
+  it("loops menu music and does not restart the same track", async () => {
+    const { controller, players } = setup();
+    controller.playMusic("menu");
+    await Promise.resolve();
+    const music = players[0]!;
+    music.currentTime = 7;
+    controller.playMusic("menu");
+
+    expect(music.src).toBe("/audio/bgm/menu.wav");
+    expect(music.loop).toBe(true);
+    expect(music.playCount).toBe(1);
+    expect(music.currentTime).toBe(7);
+    controller.dispose();
+  });
+
   it("loops the selected local theme and does not restart the same track", async () => {
     const { controller, players } = setup();
     controller.playMusic("normal");
