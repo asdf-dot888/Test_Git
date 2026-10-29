@@ -19,7 +19,7 @@ function makeRun(statuses: Array<"pending" | "active" | "complete"> = ["active",
 }
 
 describe("ExpeditionRoadmap", () => {
-  it("has a public image for every phase encounter and class card", () => {
+  it("has a public image for every phase encounter and catalog card", () => {
     const componentDirectory = dirname(fileURLToPath(import.meta.url));
     const enemyArtDirectory = resolve(componentDirectory, "../../public/art/enemies");
     const cardArtDirectory = resolve(componentDirectory, "../../public/art/cards");
@@ -28,7 +28,7 @@ describe("ExpeditionRoadmap", () => {
     for (const enemy of [...phaseEnemies, ...BOSSES]) {
       expect(existsSync(resolve(enemyArtDirectory, `${enemy.artKey}.png`)), enemy.artKey).toBe(true);
     }
-    for (const card of CARD_CATALOG.filter((entry) => entry.classId)) {
+    for (const card of CARD_CATALOG) {
       expect(existsSync(resolve(cardArtDirectory, `${card.artKey}.png`)), card.artKey).toBe(true);
     }
   });
