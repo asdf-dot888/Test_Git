@@ -1,16 +1,16 @@
 # Current Context
 
 ## Active Plan
-[Mobile Card UX, Opening Hand Redraw, and Victory Presentation](./plans/2026-10-29-mobile-card-ux-opening-redraw-victory.md)
+[Opening Hand Redraw Icon](./plans/2026-10-29-opening-hand-redraw-icon.md)
 
 ## Active Phase
-[P01 Mobile and Battle Polish](./phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/phase.md)
+[P01 Redraw Control](./phases/2026-10-29-opening-hand-redraw-icon/P01-redraw-control/phase.md)
 
 ## Active Task
 None — all tasks in the active plan are complete.
 
 ## Status
-- T01 through T07 are complete.
+- T01 is complete.
 
 ## Next Step
 No remaining task in this plan.

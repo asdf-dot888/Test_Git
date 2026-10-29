@@ -10,15 +10,12 @@ interface HandPanelProps {
   disabled: boolean;
   canSelectCard(instance: CardInstance): boolean;
   onSelectCard(instanceId: string): void;
-  redrawAvailable?: boolean;
-  redrawDisabled?: boolean;
-  onRedraw?(): void;
 }
 
-export function HandPanel({ cards, selectedCardInstanceId, currentMana, boardSize, disabled, canSelectCard, onSelectCard, redrawAvailable = false, redrawDisabled = false, onRedraw = () => undefined }: HandPanelProps) {
+export function HandPanel({ cards, selectedCardInstanceId, currentMana, boardSize, disabled, canSelectCard, onSelectCard }: HandPanelProps) {
   return (
     <section className="hand-panel" aria-label={`내 손패 ${cards.length}장`}>
-      <div className="hand-heading"><h2>손패</h2>{redrawAvailable && <button className="opening-hand-redraw-button" type="button" disabled={redrawDisabled} onClick={onRedraw}>시작 손패 다시 뽑기</button>}<span>{cards.length} / 10</span></div>
+      <div className="hand-heading"><h2>손패</h2><span>{cards.length} / 10</span></div>
       <div className="hand-cards">
         {cards.slice(0, 10).map((instance, index) => (
           <CardView

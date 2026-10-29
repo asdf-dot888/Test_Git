@@ -125,10 +125,21 @@
 .board-divider span { position: absolute; left: 50%; top: 50%; padding: 0 12px; color: #6c4d2a; background: #b9a27e; font-size: 14px; transform: translate(-50%, -50%); }
 .player-controls { position: relative; width: min(calc(100% - 32px), 1800px); min-width: 0; min-height: 0; margin: 0 auto; padding-bottom: 8px; }
 .player-toolbar { min-height: 42px; display: grid; grid-template-columns: minmax(110px, 1fr) auto auto; align-items: center; gap: 9px; }
-.deck-counts { display: flex; gap: 18px; color: var(--muted); font-size: 11px; }
-.deck-counts span { display: flex; gap: 6px; align-items: center; }
+.deck-counts { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 11px; }
+.deck-counts > span { display: flex; gap: 6px; align-items: center; }
 .deck-counts i { color: var(--gold); font-style: normal; }
 .deck-counts b { color: var(--ink); }
+.opening-hand-redraw-control { position: relative; z-index: 10; flex: 0 0 auto; display: inline-flex; align-items: center; }
+.opening-hand-redraw-button { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; color: #ffe49a; border: 1px solid #f0c86e; border-radius: 50%; background: radial-gradient(circle at 34% 25%, #7e622b, #34271a 72%); box-shadow: 0 0 15px rgb(245 191 75 / 40%), inset 0 1px rgb(255 240 187 / 30%); cursor: pointer; touch-action: manipulation; user-select: none; -webkit-touch-callout: none; }
+.opening-hand-redraw-button > span { display: block; font-size: 24px; line-height: 1; transform: translateY(-1px); }
+.opening-hand-redraw-button:disabled { opacity: .48; cursor: not-allowed; filter: saturate(.55); }
+.opening-hand-redraw-button:focus-visible { outline: 3px solid #ffe7a1; outline-offset: 3px; box-shadow: 0 0 20px rgb(255 204 77 / 72%); }
+.opening-hand-redraw-tooltip { position: absolute; z-index: 12; left: 0; bottom: calc(100% + 8px); width: max-content; max-width: min(230px, calc(100vw - 28px)); padding: 8px 10px; color: #fff0ce; border: 1px solid rgb(239 195 105 / 80%); border-radius: 8px; background: linear-gradient(145deg, #342b21f7, #171719fa); box-shadow: 0 8px 24px #000b, 0 0 14px rgb(218 165 65 / 22%); font-size: 11px; font-weight: 650; line-height: 1.45; white-space: normal; opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity .14s ease, transform .14s ease, visibility .14s; pointer-events: none; }
+.opening-hand-redraw-control:focus-within .opening-hand-redraw-tooltip, .opening-hand-redraw-control.is-tooltip-visible .opening-hand-redraw-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
+@media (hover: hover) and (pointer: fine) {
+  .opening-hand-redraw-control:hover .opening-hand-redraw-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
+  .opening-hand-redraw-button:hover:not(:disabled) { border-color: #fff0a9; background: radial-gradient(circle at 34% 25%, #a48137, #44321e 72%); box-shadow: 0 0 22px rgb(255 207 89 / 72%), inset 0 1px rgb(255 240 187 / 38%); transform: rotate(-18deg) scale(1.06); }
+}
 .mana-display { justify-self: center; display: grid; grid-template-columns: auto auto; gap: 3px 9px; align-items: baseline; padding: 7px 13px; border: 1px solid var(--line); border-radius: 9px; background: #1e1d1f; }
 .mana-label { color: var(--muted); font-size: 10px; }
 .mana-display strong { color: var(--gold-bright); font-size: 16px; }
@@ -168,9 +179,6 @@
 .hand-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; color: var(--muted); }
 .hand-heading h2 { margin: 0; color: #e9dfce; font-size: 12px; }
 .hand-heading span { font-size: 10px; }
-.opening-hand-redraw-button { margin-left: auto; min-height: 26px; padding: 2px 9px; color: #f3d29c; border: 1px solid rgb(218 167 93 / 65%); border-radius: 6px; background: linear-gradient(180deg, #47372b, #302720); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
-.opening-hand-redraw-button:hover:not(:disabled) { border-color: #f1bd70; box-shadow: 0 0 12px rgb(220 153 67 / 28%); }
-.opening-hand-redraw-button:disabled { opacity: .5; cursor: not-allowed; }
 .hand-cards { display: flex; flex-flow: row nowrap; align-items: stretch; gap: 6px; min-height: 0; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 3px 5px; scrollbar-color: #806343 #242225; scrollbar-width: thin; touch-action: pan-x; }
 .game-card { position: relative; flex: 0 0 clamp(96px, 8vw, 122px); min-width: 0; min-height: 168px; padding: 4px; display: grid; grid-template-rows: auto auto auto; justify-items: center; align-content: start; gap: 2px; color: var(--ink); text-align: center; border: 2px solid rgb(219 187 129 / 58%); border-radius: 10px; background: linear-gradient(155deg, #4e443d, #29272a 55%, #1e1d20); box-shadow: 0 4px 12px rgb(0 0 0 / 36%), inset 0 0 0 2px rgb(19 16 14 / 55%); cursor: pointer; transition: transform .14s ease, opacity .14s ease; }
 .game-card:hover:not(:disabled) { z-index: 2; transform: translateY(-5px); }

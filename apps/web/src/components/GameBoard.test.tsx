@@ -9,10 +9,20 @@ describe("GameBoard", () => {
     const renderBoard = (actionsDisabled: boolean) => renderToStaticMarkup(
       <GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} actionsDisabled={actionsDisabled} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} onRedrawOpeningHand={vi.fn()} />,
     );
-    expect(renderBoard(false)).toContain("시작 손패 다시 뽑기");
-    expect(renderBoard(true)).toContain('class="opening-hand-redraw-button" type="button" disabled=""');
+    const availableMarkup = renderBoard(false);
+    const deckCountsIndex = availableMarkup.indexOf('class="deck-counts"');
+    const discardCountIndex = availableMarkup.indexOf("버림");
+    const redrawIndex = availableMarkup.indexOf('class="opening-hand-redraw-control"');
+    const handHeadingIndex = availableMarkup.indexOf('class="hand-heading"');
+    expect(redrawIndex).toBeGreaterThan(deckCountsIndex);
+    expect(redrawIndex).toBeGreaterThan(discardCountIndex);
+    expect(redrawIndex).toBeLessThan(handHeadingIndex);
+    expect(availableMarkup).toContain('aria-label="시작 손패 다시 뽑기"');
+    expect(availableMarkup).toContain("손패를 1회 다시 뽑습니다");
+    expect(availableMarkup).not.toContain(">시작 손패 다시 뽑기</button>");
+    expect(renderBoard(true)).toContain('class="opening-hand-redraw-button" type="button" aria-label="시작 손패 다시 뽑기" aria-describedby="opening-hand-redraw-tooltip" disabled=""');
     run.openingHandRedrawAvailable = false;
-    expect(renderBoard(false)).not.toContain("시작 손패 다시 뽑기");
+    expect(renderBoard(false)).not.toContain('class="opening-hand-redraw-control"');
   });
 
   it("renders both heroes, two six-slot lanes, mana, hand, and turn control", () => {

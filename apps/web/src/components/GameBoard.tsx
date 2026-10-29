@@ -14,6 +14,7 @@ import { TargetPicker } from "./TargetPicker.js";
 import { TurnControls } from "./TurnControls.js";
 import { HeroPowerControl } from "./HeroPowerControl.js";
 import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
+import { OpeningHandRedrawControl } from "./OpeningHandRedrawControl.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
 
 export interface GameBoardProps {
@@ -162,11 +163,12 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
           <div className="deck-counts" aria-label={`덱 ${battle.drawPile.length}장, 버린 카드 ${battle.discardPile.length}장`}>
             <span><i aria-hidden="true">▤</i> 덱 <b>{battle.drawPile.length}</b></span>
             <span><i aria-hidden="true">▧</i> 버림 <b>{battle.discardPile.length}</b></span>
+            {run.openingHandRedrawAvailable === true && <OpeningHandRedrawControl disabled={actionsDisabled} onRedraw={onRedrawOpeningHand} />}
           </div>
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
           <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled} /></div>
         </div>
-        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} redrawAvailable={run.openingHandRedrawAvailable === true} redrawDisabled={actionsDisabled} onRedraw={onRedrawOpeningHand} />
+        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />
       </footer>
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
       {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}
