@@ -1,4 +1,5 @@
 import { CARD_BY_ID, type RewardState } from "@board-game/game-core";
+import { CardInspection } from "./CardInspection.js";
 
 interface RewardScreenProps {
   reward: RewardState;
@@ -20,14 +21,16 @@ export function RewardScreen({ reward, disabled = false, onChoose, onSkip, selec
           {reward.choices.map((cardId) => {
             const card = CARD_BY_ID.get(cardId);
             if (!card) return null;
-            return <button className={`reward-card card-${card.kind}${selectedCardId === cardId ? " is-selected" : ""}`} type="button" key={cardId} disabled={disabled || Boolean(selectedCardId)} aria-pressed={selectedCardId === cardId} onClick={() => onChoose(cardId)}>
-              <span className="card-cost">{card.cost}</span>
-              <span className="reward-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
-              <strong className="reward-name">{card.name}</strong>
-              <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
-              {card.minion && <span className="reward-stats">공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}
-              <small className="reward-description">{card.description}</small>
-            </button>;
+            return <CardInspection card={card} className="reward-card-inspection" key={cardId}>
+              <button className={`reward-card card-${card.kind}${selectedCardId === cardId ? " is-selected" : ""}`} type="button" disabled={disabled || Boolean(selectedCardId)} aria-pressed={selectedCardId === cardId} onClick={() => onChoose(cardId)}>
+                <span className="card-cost">{card.cost}</span>
+                <span className="reward-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
+                <strong className="reward-name">{card.name}</strong>
+                <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
+                {card.minion && <span className="reward-stats">공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}
+                <small className="reward-description">{card.description}</small>
+              </button>
+            </CardInspection>;
           })}
           {reward.choices.length === 0 && <p className="empty-reward">추가할 수 있는 카드가 없습니다.</p>}
         </div>

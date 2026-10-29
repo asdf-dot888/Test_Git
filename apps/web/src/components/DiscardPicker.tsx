@@ -1,5 +1,6 @@
 import type { CardInstance } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
+import { CardInspection } from "./CardInspection.js";
 
 interface DiscardPickerProps {
   cards: CardInstance[];
@@ -24,11 +25,14 @@ export function DiscardPicker({ cards, disabled, onDiscard, title = "새 카드�
         <div className="discard-options">
           {cards.map((card) => {
             const definition = CARD_BY_ID.get(card.cardId);
-            return <button key={card.instanceId} type="button" disabled={disabled} onClick={() => onDiscard(card.instanceId)}>
+            const button = <button className="discard-card" type="button" disabled={disabled} onClick={() => onDiscard(card.instanceId)}>
               <span className="card-cost">{definition?.cost ?? "?"}</span>
               <strong>{definition?.name ?? "알 수 없는 카드"}</strong>
               <span>{definition?.kind === "minion" ? "하수인" : "주문"}</span>
             </button>;
+            return definition
+              ? <CardInspection card={definition} className="discard-card-inspection" key={card.instanceId}>{button}</CardInspection>
+              : <div className="discard-card-inspection" key={card.instanceId}>{button}</div>;
           })}
         </div>
       </div>

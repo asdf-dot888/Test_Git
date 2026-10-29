@@ -660,6 +660,27 @@
   .leaderboard-submit-notice { right: 10px; bottom: 10px; width: calc(100vw - 20px); }
 }
 .dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(5, 5, 5, .76); }
+.card-inspection-target { position: relative; min-width: 0; }
+.hand-card-inspection { flex: 0 0 clamp(96px, 8vw, 122px); }
+.hand-card-inspection > .game-card { width: 100%; min-width: 100%; flex: 1 1 auto; }
+.reward-card-inspection { width: 100%; min-width: 0; }
+.reward-card-inspection > .reward-card { width: 100%; height: 100%; }
+.discard-card-inspection { min-width: 0; }
+.discard-card-inspection > .discard-card { width: 100%; height: 100%; }
+.hand-card-inspection > button:disabled, .reward-card-inspection > button:disabled, .discard-card-inspection > button:disabled { pointer-events: none; }
+.card-details-backdrop { position: fixed; z-index: 90; inset: 0; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); display: grid; place-items: center; overflow: auto; background: rgb(5 5 7 / 78%); backdrop-filter: blur(7px); }
+.card-details-dialog { position: relative; width: min(100%, 420px); max-height: 100%; padding: 20px; display: grid; justify-items: center; gap: 8px; overflow-y: auto; color: #e9dfce; border: 1px solid rgb(221 177 103 / 72%); border-radius: 16px; background: linear-gradient(150deg, #302925, #19191c 74%); box-shadow: 0 24px 80px #000d, inset 0 1px rgb(255 255 255 / 6%); text-align: center; }
+.card-details-dialog .dialog-close { position: sticky; top: 0; justify-self: end; margin: -8px -8px -34px 0; }
+.card-details-art { width: min(100%, 280px); max-height: 42dvh; aspect-ratio: 1; object-fit: cover; border: 1px solid rgb(238 219 179 / 54%); border-radius: 10px; background: #282526; }
+.card-details-dialog h2 { margin: 4px 34px 0; color: #fff1d5; font-size: 22px; }
+.card-details-kind { color: #c9bda8; font-size: 12px; }
+.card-details-stats { color: #f1c66f; font-size: 13px; }
+.card-details-dialog p { width: 100%; margin: 4px 0 0; color: #e0d5c4; font-size: 14px; line-height: 1.55; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .card-details-dialog { width: min(100%, 420px); padding: 16px; }
+  .card-details-art { width: min(72vw, 250px); max-height: 36dvh; }
+  .card-details-dialog p { font-size: 13px; }
+}
 .abandon-dialog { width: min(100%, 500px); }
 .abandon-dialog h2 { margin: 14px 0; font-size: clamp(20px, 4vw, 28px); }
 .abandon-dialog p { color: #c7bba6; line-height: 1.6; }

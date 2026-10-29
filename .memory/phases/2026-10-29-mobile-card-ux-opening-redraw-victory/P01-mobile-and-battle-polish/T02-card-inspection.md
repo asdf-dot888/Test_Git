@@ -1,6 +1,6 @@
 # Task: T02 Card Inspection on Desktop and Touch Devices
 
-## Status: pending
+## Status: done
 
 ## Goal
 Let players inspect complete card details without accidentally playing, choosing, or discarding a card, including when a hand card is disabled.
@@ -64,6 +64,6 @@ Task: T02-card-inspection
 ```
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed
+- commit: included in the T02 commit

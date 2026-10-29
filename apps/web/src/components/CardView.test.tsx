@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CARD_BY_ID } from "@board-game/game-core";
 import { CardView } from "./CardView.js";
@@ -22,7 +22,7 @@ describe("CardView", () => {
     expect(container.textContent).toContain("잿빛 늑대");
     expect(container.textContent).toContain("공격");
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(button);
     expect(onSelect).toHaveBeenCalledOnce();
     expect(document.querySelector(".game-card-hover-preview")).toBeNull();
 
@@ -46,10 +46,11 @@ describe("CardView", () => {
       x: 40, y: 400, top: 400, left: 40, right: 136, bottom: 556, width: 96, height: 156, toJSON: () => ({}),
     } as DOMRect);
     const definition = CARD_BY_ID.get("ash-wolf")!;
-    render(<CardView instance={{ instanceId: "wolf-hover", cardId: "ash-wolf" }} selected={false} disabled={false} onSelect={vi.fn()} />);
+    const { container } = render(<CardView instance={{ instanceId: "wolf-hover", cardId: "ash-wolf" }} selected={false} disabled={false} onSelect={vi.fn()} />);
     const button = screen.getByRole("button");
 
-    fireEvent.mouseEnter(button);
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: () => ({ matches: true }) });
+    fireEvent.mouseEnter(container.querySelector(".hand-card-inspection")!);
 
     const preview = document.querySelector<HTMLElement>(".game-card-hover-preview");
     expect(preview).not.toBeNull();
@@ -65,8 +66,30 @@ describe("CardView", () => {
     expect(preview?.textContent).toContain(`공격 ${definition.minion!.attack} · 체력 ${definition.minion!.maxHealth}`);
     expect(preview?.querySelector("button")).toBeNull();
 
-    fireEvent.mouseLeave(button);
+    fireEvent.mouseLeave(container.querySelector(".hand-card-inspection")!);
     expect(document.querySelector(".game-card-hover-preview")).toBeNull();
+  });
+
+  it("keeps hover inspection available for a disabled hand card", () => {
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: () => ({ matches: true }) });
+    const { container } = render(<CardView instance={{ instanceId: "disabled-bolt", cardId: "shadow-bolt" }} selected={false} disabled onSelect={vi.fn()} />);
+    fireEvent.mouseEnter(container.querySelector(".hand-card-inspection")!);
+
+    expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
+    expect(document.querySelector(".game-card-hover-preview")?.textContent).toContain(CARD_BY_ID.get("shadow-bolt")!.description);
+  });
+
+  it("opens full details for a disabled hand card after a touch long press", () => {
+    vi.useFakeTimers();
+    const onSelect = vi.fn();
+    const { container } = render(<CardView instance={{ instanceId: "disabled-bolt-touch", cardId: "shadow-bolt" }} selected={false} disabled onSelect={onSelect} />);
+    const target = container.querySelector(".hand-card-inspection")!;
+    fireEvent.touchStart(target, { touches: [{ clientX: 20, clientY: 30 }] });
+    act(() => vi.advanceTimersByTime(500));
+    expect(screen.getByRole("dialog").textContent).toContain(CARD_BY_ID.get("shadow-bolt")!.description);
+    fireEvent.touchEnd(target, { touches: [] });
+    fireEvent.click(container.querySelector(".game-card")!);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it("shows a spell's full description in the hover preview without minion stats", () => {
