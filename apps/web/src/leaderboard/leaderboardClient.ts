@@ -48,7 +48,7 @@ async function requestJson(
     response = await fetcher(path, {
       method: payload ? "POST" : "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "X-Leaderboard-Access-Token": token,
         ...(payload ? { "Content-Type": "application/json" } : {}),
       },
       ...(payload ? { body: JSON.stringify(payload) } : {}),

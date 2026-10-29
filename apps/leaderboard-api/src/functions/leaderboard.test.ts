@@ -14,11 +14,11 @@ const record: LeaderboardRecord = {
   schemaVersion: 1,
 };
 
-function request(options: { method?: string; authorization?: string; body?: string } = {}) {
+function request(options: { method?: string; accessToken?: string; body?: string } = {}) {
   return new Request("https://game.example/api/leaderboard", {
     method: options.method ?? "GET",
     headers: {
-      ...(options.authorization ? { authorization: options.authorization } : {}),
+      ...(options.accessToken ? { "x-leaderboard-access-token": options.accessToken } : {}),
       ...(options.body === undefined ? {} : { "content-type": "application/json" }),
     },
     ...(options.body === undefined ? {} : { body: options.body }),
@@ -51,22 +51,22 @@ describe("Static Web Apps leaderboard function handlers", () => {
     const rows = Array.from({ length: 12 }, (_, index) => ({ ...record, userId: `user-${index}` }));
     const repo = repository({ getTopTen: vi.fn(async () => rows) });
     const { get } = handlers(repo);
-    const response = await get(request({ authorization: "Bearer valid-token" }));
+    const response = await get(request({ accessToken: "valid-token" }));
     expect(response.status).toBe(200);
     expect(response.jsonBody).toEqual({ items: rows.slice(0, 10) });
   });
 
-  it("requires a bearer token before calling the repository", async () => {
+  it("requires an access token before calling the repository", async () => {
     const { get, repo } = handlers();
     const response = await get(request());
     expect(response.status).toBe(401);
-    expect(response.jsonBody).toMatchObject({ error: { code: "UNAUTHENTICATED" } });
+    expect(response.jsonBody).toMatchObject({ error: { code: "MISSING_ACCESS_TOKEN" } });
     expect(repo.getTopTen).not.toHaveBeenCalled();
   });
 
   it("returns 503 while auth settings are missing", async () => {
     const { get } = handlers(repository(), { isConfigured: () => false });
-    const response = await get(request({ authorization: "Bearer valid-token" }));
+    const response = await get(request({ accessToken: "valid-token" }));
     expect(response.status).toBe(503);
     expect(response.jsonBody).toMatchObject({ error: { code: "API_NOT_CONFIGURED" } });
   });
@@ -75,7 +75,7 @@ describe("Static Web Apps leaderboard function handlers", () => {
     const { get } = handlers(repository(), {
       verifyToken: vi.fn(async () => { throw new EntraTokenError(403, "INSUFFICIENT_SCOPE", "This company account cannot access the API."); }),
     });
-    const response = await get(request({ authorization: "Bearer valid-token" }));
+    const response = await get(request({ accessToken: "valid-token" }));
     expect(response.status).toBe(403);
     expect(response.jsonBody).toMatchObject({ error: { code: "INSUFFICIENT_SCOPE" } });
   });
@@ -85,7 +85,7 @@ describe("Static Web Apps leaderboard function handlers", () => {
     const { post } = handlers(repo);
     const response = await post(request({
       method: "POST",
-      authorization: "Bearer valid-token",
+      accessToken: "valid-token",
       body: JSON.stringify({ completedBattles: 4, userId: "forged", displayName: "Forged" }),
     }));
     expect(response.status).toBe(400);
@@ -98,7 +98,7 @@ describe("Static Web Apps leaderboard function handlers", () => {
     const { post } = handlers(repo);
     const response = await post(request({
       method: "POST",
-      authorization: "Bearer valid-token",
+      accessToken: "valid-token",
       body: JSON.stringify({ completedBattles: 8 }),
     }));
     expect(response.status).toBe(200);
@@ -114,15 +114,15 @@ describe("Static Web Apps leaderboard function handlers", () => {
   it("returns a generic unavailable error if repository work fails", async () => {
     const repo = repository({ getTopTen: vi.fn(async () => { throw new Error("private backend detail"); }) });
     const { get } = handlers(repo);
-    const response = await get(request({ authorization: "Bearer valid-token" }));
+    const response = await get(request({ accessToken: "valid-token" }));
     expect(response.status).toBe(503);
     expect(JSON.stringify(response.jsonBody)).not.toContain("private backend detail");
   });
 
   it("rejects invalid JSON and invalid progress values", async () => {
     const { post } = handlers();
-    const invalidJson = await post(request({ method: "POST", authorization: "Bearer valid-token", body: "{" }));
-    const invalidCount = await post(request({ method: "POST", authorization: "Bearer valid-token", body: JSON.stringify({ completedBattles: 13 }) }));
+    const invalidJson = await post(request({ method: "POST", accessToken: "valid-token", body: "{" }));
+    const invalidCount = await post(request({ method: "POST", accessToken: "valid-token", body: JSON.stringify({ completedBattles: 13 }) }));
     expect(invalidJson.status).toBe(400);
     expect(invalidCount.status).toBe(400);
   });

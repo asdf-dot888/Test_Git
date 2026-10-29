@@ -16,14 +16,14 @@ export function createLeaderboardHandlers(dependencies: LeaderboardHandlerDepend
 
   const authenticate = async (request: HttpRequest) => {
     if (!isConfigured()) return { response: errorResponse("API_NOT_CONFIGURED", "The leaderboard API is not configured.", 503) };
-    const authorization = request.headers.get("authorization");
-    const match = authorization?.match(/^Bearer ([A-Za-z0-9._~-]+)$/i);
-    if (!match) {
-      console.warn(`[leaderboard-auth] rejected: ${authorization ? "malformed_bearer_header" : "missing_bearer_header"}`);
-      return { response: errorResponse("UNAUTHENTICATED", "A valid company access token is required.", 401) };
+    const accessToken = request.headers.get("x-leaderboard-access-token");
+    if (!accessToken || !/^[A-Za-z0-9._~-]+$/.test(accessToken)) {
+      const code = accessToken ? "INVALID_ACCESS_TOKEN" : "MISSING_ACCESS_TOKEN";
+      console.warn(`[leaderboard-auth] rejected: ${accessToken ? "malformed_access_token_header" : "missing_access_token_header"}`);
+      return { response: errorResponse(code, "A valid company access token is required.", 401) };
     }
     try {
-      return { principal: await dependencies.verifyToken(match[1]!) };
+      return { principal: await dependencies.verifyToken(accessToken) };
     } catch (error) {
       if (error instanceof EntraTokenError) {
         console.warn(`[leaderboard-auth] rejected: ${error.code}`);

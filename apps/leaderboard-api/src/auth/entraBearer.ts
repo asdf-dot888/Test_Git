@@ -31,7 +31,7 @@ export function createEntraTokenVerifier(
     try {
       tokenVersion = decodeJwt(accessToken).ver;
     } catch {
-      throw new EntraTokenError(401, "UNAUTHENTICATED", "A valid company access token is required.");
+      throw new EntraTokenError(401, "INVALID_ACCESS_TOKEN", "A valid company access token is required.");
     }
     const isV1Token = tokenVersion === "1.0";
     const issuer = isV1Token ? v1Issuer : v2Issuer;
@@ -58,12 +58,12 @@ export function createEntraTokenVerifier(
         ? error.claim
         : "none";
       console.warn(`[leaderboard-auth] JWT verification failed: ${joseCode}; claim=${failedClaim}`);
-      throw new EntraTokenError(401, "UNAUTHENTICATED", "A valid company access token is required.");
+      throw new EntraTokenError(401, "ACCESS_TOKEN_REJECTED", "A valid company access token is required.");
     }
 
     const tokenTenant = payload.tid;
     const objectId = payload.oid;
-    const displayName = payload.name;
+    const displayName = payload.name ?? payload.preferred_username ?? payload.upn;
     const scopes = typeof payload.scp === "string" ? payload.scp.split(/\s+/).filter(Boolean) : [];
 
     if (tokenTenant !== options.tenantId) {
@@ -76,7 +76,7 @@ export function createEntraTokenVerifier(
         typeof displayName === "string" && displayName.trim().length > 0 ? null : "name",
       ].filter((claim): claim is string => claim !== null);
       console.warn(`[leaderboard-auth] required identity claim missing: ${missingClaims.join(",")}`);
-      throw new EntraTokenError(401, "UNAUTHENTICATED", "A valid company access token is required.");
+      throw new EntraTokenError(401, "IDENTITY_CLAIM_MISSING", "A valid company access token is required.");
     }
     if (!scopes.includes("leaderboard.access")) {
       throw new EntraTokenError(403, "INSUFFICIENT_SCOPE", "This company account cannot access the API.");

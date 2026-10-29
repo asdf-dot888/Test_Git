@@ -18,7 +18,7 @@ describe("leaderboardClient", () => {
 
     expect(fetcher).toHaveBeenCalledWith("/api/leaderboard", {
       method: "GET",
-      headers: { Authorization: "Bearer secret-access-token" },
+      headers: { "X-Leaderboard-Access-Token": "secret-access-token" },
     });
   });
 
@@ -29,7 +29,7 @@ describe("leaderboardClient", () => {
 
     expect(fetcher).toHaveBeenCalledWith("/api/leaderboard/progress", {
       method: "POST",
-      headers: { Authorization: "Bearer access-token", "Content-Type": "application/json" },
+      headers: { "X-Leaderboard-Access-Token": "access-token", "Content-Type": "application/json" },
       body: JSON.stringify({ completedBattles: 5 }),
     });
   });
