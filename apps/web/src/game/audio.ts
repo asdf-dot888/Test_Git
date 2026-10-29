@@ -1,5 +1,6 @@
 export type MusicKind = "normal" | "boss";
-export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "turn-start" | "turn-end" | "summon" | "timer-warning";
+export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "turn-start" | "turn-end" | "summon" | "timer-warning"
+  | "impact-light" | "impact-medium" | "impact-heavy" | "impact-armor-block" | "impact-hero-melee" | "impact-boss-area";
 
 export interface AudioSettings {
   musicVolume: number;
@@ -31,6 +32,12 @@ const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start">, string> = {
   "turn-end": "/audio/sfx/attack.ogg",
   summon: "/audio/sfx/spell.ogg",
   "timer-warning": "/audio/sfx/timer-warning.ogg",
+  "impact-light": "/audio/sfx/impact-light.ogg",
+  "impact-medium": "/audio/sfx/impact-medium.ogg",
+  "impact-heavy": "/audio/sfx/impact-heavy.ogg",
+  "impact-armor-block": "/audio/sfx/impact-armor-block.ogg",
+  "impact-hero-melee": "/audio/sfx/impact-hero-melee.ogg",
+  "impact-boss-area": "/audio/sfx/impact-boss-area.ogg",
 };
 
 const CROSSFADE_DURATION_MS = 400;

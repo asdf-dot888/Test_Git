@@ -141,6 +141,12 @@ describe("createAudioController", () => {
     controller.playEffect("heal");
     controller.playEffect("damage");
     controller.playEffect("death");
+    controller.playEffect("impact-light");
+    controller.playEffect("impact-medium");
+    controller.playEffect("impact-heavy");
+    controller.playEffect("impact-armor-block");
+    controller.playEffect("impact-hero-melee");
+    controller.playEffect("impact-boss-area");
 
     expect(players.map((player) => player.src)).toEqual([
       "/audio/sfx/attack.ogg",
@@ -150,6 +156,12 @@ describe("createAudioController", () => {
       "/audio/sfx/heal.ogg",
       "/audio/sfx/damage.ogg",
       "/audio/sfx/death.ogg",
+      "/audio/sfx/impact-light.ogg",
+      "/audio/sfx/impact-medium.ogg",
+      "/audio/sfx/impact-heavy.ogg",
+      "/audio/sfx/impact-armor-block.ogg",
+      "/audio/sfx/impact-hero-melee.ogg",
+      "/audio/sfx/impact-boss-area.ogg",
     ]);
     expect(players.every((player) => player.volume === 0.72)).toBe(true);
     expect(players.every((player) => !player.paused)).toBe(true);

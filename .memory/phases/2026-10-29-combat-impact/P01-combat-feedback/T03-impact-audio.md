@@ -1,6 +1,6 @@
 # Task: T03 Tiered Combat Sound Assets and Routing
 
-## Status: in_progress
+## Status: done
 
 ## Goal
 Provide distinct light, medium, heavy, armor-block, direct minion-to-hero, and boss-area hit sounds by processing the game's existing attack and damage clips. Route each combat event to one matching sound while honoring the current effects-volume and mute settings.
@@ -75,10 +75,10 @@ Provide distinct light, medium, heavy, armor-block, direct minion-to-hero, and b
 - Run the generator twice; verify outputs decode and meet duration/peak limits.
 
 ## Acceptance Criteria
-- [ ] Six separate sound clips are derived from existing attack/damage sounds and reproducible with the script.
-- [ ] Event routing plays the intended impact sound plus any required spell/death cues.
-- [ ] Effects volume and mute apply to every new sound.
-- [ ] Misses do not play hit sounds; armor blocks and retaliation use dedicated small sounds.
+- [x] Six separate sound clips are derived from existing attack/damage sounds and reproducible with the script.
+- [x] Event routing plays the intended impact sound plus any required spell/death cues.
+- [x] Effects volume and mute apply to every new sound through the existing controller.
+- [x] Misses do not play hit sounds; armor blocks and retaliation use dedicated small sounds.
 
 ## Validation
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-combat-impact-audio.ps1` — run after implementation; requires FFmpeg already installed.
@@ -98,7 +98,8 @@ Task: T03-impact-audio
 ```
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
+- [x] Implementation complete
+- [x] Validation passed: 48 related tests, targeted ESLint, web production build, and two identical generator runs.
+- Generated OGG files decode successfully, are at most 1.50s, and peak between -3.6 dBFS and -10.2 dBFS.
 - commit: pending
 

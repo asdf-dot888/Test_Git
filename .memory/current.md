@@ -7,10 +7,10 @@
 [P01 Combat Feedback](./phases/2026-10-29-combat-impact/P01-combat-feedback/phase.md)
 
 ## Active Task
-[T03 Tiered Combat Sound Assets and Routing](./phases/2026-10-29-combat-impact/P01-combat-feedback/T03-impact-audio.md)
+[T04 Phase-Specific Boss Area Sequence](./phases/2026-10-29-combat-impact/P01-combat-feedback/T04-boss-area-sequence.md)
 
 ## Status
-- T01 and T02 are complete and validated.
+- T01, T02, and T03 are complete and validated.
 
 ## Next Step
-Read T03's blueprint, then generate derived impact sound assets and route combat outcomes through the existing audio controller.
+Read T04's blueprint, then implement the phase-specific boss-area warning, cast, and impact sequence.

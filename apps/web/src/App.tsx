@@ -23,6 +23,7 @@ import { createAudioController, type AudioController, type AudioSettings } from 
 import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord } from "./leaderboard/leaderboardClient.js";
+import { combatEventSounds } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
 
 function secureSeed(): number {
@@ -142,7 +143,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     for (const event of session.combatEffects) {
       if (playedAudioEventIds.current.has(event.id)) continue;
       playedAudioEventIds.current.add(event.id);
-      for (const cue of event.soundCues) audioController.playEffect(cue);
+      for (const cue of combatEventSounds(event)) audioController.playEffect(cue);
     }
   }, [audioController, session.combatEffects]);
 

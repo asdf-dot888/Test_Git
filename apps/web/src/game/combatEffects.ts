@@ -22,6 +22,30 @@ export function combatImpactTier(amount: number): CombatImpactTier | null {
   return "heavy";
 }
 
+/** Selects the single dedicated impact sound for a resolved combat event. */
+export function combatImpactSounds(event: CombatEffectEvent): SoundEffectKind[] {
+  if (event.bossArea) {
+    return ["impact-boss-area", ...(event.affectedTargets?.some(({ damage }) => damage.outcome === "armor-block") ? ["impact-armor-block" as const] : [])];
+  }
+  const damage = event.damage;
+  if (!damage || damage.outcome === "miss") return [];
+  if (damage.outcome === "armor-block") return ["impact-armor-block"];
+  if (event.source.kind === "minion" && event.target.kind === "hero") return ["impact-hero-melee"];
+  if (damage.retaliation) return ["impact-light"];
+  const tier = combatImpactTier(damage.amount);
+  return tier ? [`impact-${tier}`] : [];
+}
+
+/** Preserves cast/death cues, replacing generic damage with its resolved impact sound. */
+export function combatEventSounds(event: CombatEffectEvent): SoundEffectKind[] {
+  const impacts = combatImpactSounds(event);
+  const suppressGenericDamage = impacts.length > 0 || event.damage?.outcome === "miss";
+  return [
+    ...event.soundCues.filter((cue) => cue !== "damage" || !suppressGenericDamage),
+    ...impacts,
+  ];
+}
+
 export interface CombatDamageInfo {
   /** Damage after armor, before clamping to the target's remaining health. */
   amount: number;

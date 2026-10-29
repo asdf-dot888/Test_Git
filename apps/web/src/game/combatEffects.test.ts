@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
-import { CARD_COMBAT_VISUAL_PROFILES, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects } from "./combatEffects.js";
+import { CARD_COMBAT_VISUAL_PROFILES, combatEventSounds, combatImpactSounds, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
 function withBattle(run: RunState, update: (run: RunState) => void): RunState {
   const next = structuredClone(run);
@@ -338,5 +338,49 @@ describe("collectCombatEffectEvents", () => {
       soundCues: ["damage", "death"],
       deathAnchors: [{ kind: "minion", side: "player", slot: 0 }, { kind: "minion", side: "player", slot: 1 }],
     });
+  });
+});
+
+describe("combatImpactSounds", () => {
+  const event = (overrides: Partial<CombatEffectEvent> = {}): CombatEffectEvent => ({
+    id: 1,
+    assetCardId: null,
+    effectKind: "impact",
+    soundCues: ["damage"],
+    source: { kind: "hero", side: "enemy" },
+    target: { kind: "hero", side: "player" },
+    damage: { amount: 3, armorBlocked: 0, outcome: "hit", retaliation: false },
+    ...overrides,
+  });
+
+  it("maps tiers, retaliation, armor blocks, misses, and direct minion hero hits", () => {
+    expect(combatImpactSounds(event({ damage: { amount: 2, armorBlocked: 0, outcome: "hit", retaliation: false } }))).toEqual(["impact-light"]);
+    expect(combatImpactSounds(event({ damage: { amount: 4, armorBlocked: 0, outcome: "hit", retaliation: false } }))).toEqual(["impact-medium"]);
+    expect(combatImpactSounds(event({ damage: { amount: 7, armorBlocked: 0, outcome: "hit", retaliation: false } }))).toEqual(["impact-heavy"]);
+    expect(combatImpactSounds(event({ damage: { amount: 7, armorBlocked: 0, outcome: "hit", retaliation: true } }))).toEqual(["impact-light"]);
+    expect(combatImpactSounds(event({ damage: { amount: 0, armorBlocked: 3, outcome: "armor-block", retaliation: false } }))).toEqual(["impact-armor-block"]);
+    expect(combatImpactSounds(event({ damage: { amount: 0, armorBlocked: 0, outcome: "miss", retaliation: false } }))).toEqual([]);
+    expect(combatImpactSounds(event({ source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "hero", side: "player" } }))).toEqual(["impact-hero-melee"]);
+    expect(combatImpactSounds(event({ damage: { amount: 0, armorBlocked: 0, outcome: "hit", retaliation: false } }))).toEqual([]);
+  });
+
+  it("plays one boss-area cue and adds a block cue only when an area target blocks damage", () => {
+    const area = event({
+      bossArea: true,
+      affectedTargets: [{
+        target: { kind: "hero", side: "player" },
+        damage: { amount: 0, armorBlocked: 2, outcome: "armor-block", retaliation: false },
+      }],
+    });
+    expect(combatImpactSounds(area)).toEqual(["impact-boss-area", "impact-armor-block"]);
+    expect(combatImpactSounds(event({ bossArea: true, affectedTargets: [] }))).toEqual(["impact-boss-area"]);
+  });
+
+  it("keeps spell and death cues while replacing generic hit audio and silencing misses", () => {
+    expect(combatEventSounds(event({ soundCues: ["spell", "damage", "death"] }))).toEqual(["spell", "death", "impact-medium"]);
+    expect(combatEventSounds(event({
+      soundCues: ["spell", "damage"],
+      damage: { amount: 0, armorBlocked: 0, outcome: "miss", retaliation: false },
+    }))).toEqual(["spell"]);
   });
 });
