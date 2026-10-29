@@ -36,7 +36,7 @@ class FakeAudioParam {
 class FakeGainNode {
   gain = new FakeAudioParam();
   connect(): void {}
-  disconnect(): void {}
+  disconnect = vi.fn();
 }
 
 class FakeOscillatorNode {
@@ -46,7 +46,7 @@ class FakeOscillatorNode {
   starts: number[] = [];
   stops: number[] = [];
   connect(): void {}
-  disconnect(): void {}
+  disconnect = vi.fn();
   start(at: number): void { this.starts.push(at); }
   stop(at: number): void { this.stops.push(at); }
 }
@@ -245,6 +245,53 @@ describe("createAudioController", () => {
     muted.playEffect("turn-start");
     expect(FakeAudioContext.instances).toHaveLength(0);
     muted.dispose();
+  });
+
+  it("synthesizes a short two-note hover sparkle and cleans its nodes after playback", () => {
+    FakeAudioContext.instances = [];
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const { controller, players } = setup();
+    controller.playEffect("ui-hover");
+
+    const context = FakeAudioContext.instances[0]!;
+    expect(players).toHaveLength(0);
+    expect(context.oscillators).toHaveLength(2);
+    expect(context.oscillators.map((oscillator) => oscillator.frequency.value)).toEqual([1046.5, 1568]);
+    expect(context.oscillators.every((oscillator) => oscillator.type === "triangle")).toBe(true);
+    expect(context.gains[0]?.gain.value).toBeCloseTo(0.72 * 0.22);
+    for (const oscillator of context.oscillators) oscillator.onended?.();
+    expect(context.gains[0]?.disconnect).toHaveBeenCalledOnce();
+    controller.dispose();
+  });
+
+  it("honors mute and effect volume, rate-limits hover only, and clears active nodes on dispose", async () => {
+    vi.useFakeTimers();
+    FakeAudioContext.instances = [];
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const { controller, players } = setup();
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: true });
+    controller.playEffect("ui-hover");
+    expect(FakeAudioContext.instances).toHaveLength(0);
+
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 0, muted: false });
+    controller.playEffect("ui-hover");
+    expect(FakeAudioContext.instances).toHaveLength(0);
+
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: false });
+    controller.playEffect("ui-hover");
+    controller.playEffect("ui-hover");
+    expect(FakeAudioContext.instances[0]?.oscillators).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(120);
+    controller.playEffect("ui-hover");
+    expect(FakeAudioContext.instances[0]?.oscillators).toHaveLength(4);
+
+    controller.playEffect("ui-click");
+    expect(players).toHaveLength(1);
+    expect(players[0]?.src).toBe("/audio/sfx/ui-click.ogg");
+    const context = FakeAudioContext.instances[0]!;
+    controller.dispose();
+    expect(context.oscillators.every((oscillator) => oscillator.stops.length > 0)).toBe(true);
+    expect(context.close).toHaveBeenCalledOnce();
   });
 
   it("clamps volumes, applies mute, and retries blocked music after unlock", async () => {

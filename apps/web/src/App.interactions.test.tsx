@@ -19,6 +19,55 @@ class FakeAudio {
   pause(): void { this.paused = true; }
 }
 
+class FakeAudioParam {
+  value = 0;
+  setValueAtTime(value: number): void { this.value = value; }
+  linearRampToValueAtTime(value: number): void { this.value = value; }
+  exponentialRampToValueAtTime(value: number): void { this.value = value; }
+}
+
+class FakeGainNode {
+  gain = new FakeAudioParam();
+  connect(): void {}
+  disconnect(): void {}
+}
+
+class FakeOscillatorNode {
+  type = "sine";
+  frequency = new FakeAudioParam();
+  onended: (() => void) | null = null;
+  connect(): void {}
+  disconnect(): void {}
+  start(): void {}
+  stop(): void {}
+}
+
+class FakeAudioContext {
+  static instances: FakeAudioContext[] = [];
+  currentTime = 0;
+  state: AudioContextState = "running";
+  destination = {} as AudioDestinationNode;
+  oscillators: FakeOscillatorNode[] = [];
+  close = vi.fn(async () => undefined);
+  resume = vi.fn(async () => undefined);
+  constructor() { FakeAudioContext.instances.push(this); }
+  createGain(): FakeGainNode { return new FakeGainNode(); }
+  createOscillator(): FakeOscillatorNode {
+    const oscillator = new FakeOscillatorNode();
+    this.oscillators.push(oscillator);
+    return oscillator;
+  }
+}
+
+function dispatchPointerOver(target: Element, pointerType: string, relatedTarget: EventTarget | null): void {
+  const event = new Event("pointerover", { bubbles: true });
+  Object.defineProperties(event, {
+    pointerType: { value: pointerType },
+    relatedTarget: { value: relatedTarget },
+  });
+  fireEvent(target, event);
+}
+
 function makeReadySync(run = createRun(14)): LocalRunController {
   return {
     status: "ready", etag: null, expiresAt: null, message: null, run, loaded: true, loadVersion: 1,
@@ -38,6 +87,7 @@ afterEach(() => {
   cleanup();
   window.localStorage.clear();
   vi.unstubAllGlobals();
+  FakeAudioContext.instances = [];
 });
 
 describe("game pointer and keyboard interactions", () => {
@@ -88,7 +138,7 @@ describe("game pointer and keyboard interactions", () => {
     expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toBe("3/3");
   });
 
-  it("plays one click per enabled pointer interaction and ignores disabled controls", async () => {
+  it("plays one click on activation, not pointerdown, and ignores decorative or disabled controls", async () => {
     const players: FakeAudio[] = [];
     vi.stubGlobal("Audio", class extends FakeAudio {
       constructor(src: string) { super(src); players.push(this); }
@@ -99,17 +149,61 @@ describe("game pointer and keyboard interactions", () => {
     await waitFor(() => expect(players.some((player) => player.src === "/audio/bgm/normal.ogg")).toBe(true));
 
     fireEvent.pointerDown(menuButton);
+    expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(0);
+    fireEvent.click(menuButton);
     expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(1);
+
+    const selectable = document.createElement("div");
+    selectable.setAttribute("role", "option");
+    document.body.append(selectable);
+    fireEvent.click(selectable);
+    expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(2);
+    selectable.remove();
 
     const disabled = document.createElement("button");
     disabled.disabled = true;
     document.body.append(disabled);
-    fireEvent.pointerDown(disabled);
-    expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(1);
+    fireEvent.click(disabled);
+    expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(2);
     disabled.remove();
 
-    fireEvent.click(menuButton);
+    const decorative = document.createElement("div");
+    document.body.append(decorative);
+    fireEvent.click(decorative);
+    expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(2);
+    decorative.remove();
     expect(screen.getByRole("dialog", { name: "게임 메뉴" })).toBeTruthy();
+  });
+
+  it("plays hover only when a mouse enters a different enabled interactive control", async () => {
+    const players: FakeAudio[] = [];
+    vi.stubGlobal("Audio", class extends FakeAudio {
+      constructor(src: string) { super(src); players.push(this); }
+    });
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    renderWithTestAuth(<GameSessionView sync={makeReadySync()} />);
+    enterActiveEncounter();
+    const menuButton = await screen.findByRole("button", { name: "메뉴" });
+    await waitFor(() => expect(players.some((player) => player.src === "/audio/bgm/normal.ogg")).toBe(true));
+    fireEvent.click(menuButton);
+    expect(players.filter((player) => player.src === "/audio/sfx/ui-click.ogg")).toHaveLength(1);
+
+    dispatchPointerOver(menuButton, "mouse", document.body);
+    const context = FakeAudioContext.instances[0]!;
+    expect(context.oscillators).toHaveLength(2);
+    const nested = document.createElement("span");
+    menuButton.append(nested);
+    dispatchPointerOver(nested, "mouse", menuButton);
+    expect(context.oscillators).toHaveLength(2);
+
+    dispatchPointerOver(menuButton, "touch", document.body);
+    expect(context.oscillators).toHaveLength(2);
+    const disabled = document.createElement("button");
+    disabled.disabled = true;
+    document.body.append(disabled);
+    dispatchPointerOver(disabled, "mouse", document.body);
+    expect(context.oscillators).toHaveLength(2);
+    disabled.remove();
   });
 
   it("limits game keyboard input to the Escape menu flow", async () => {
@@ -131,7 +225,7 @@ describe("game pointer and keyboard interactions", () => {
 
     fireEvent.pointerDown(settingsButton);
     fireEvent.click(settingsButton);
-    expect(screen.getByRole("dialog", { name: "오디오 설정" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "음향 설정" })).toBeTruthy();
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.getByRole("dialog", { name: "게임 메뉴" })).toBeTruthy());

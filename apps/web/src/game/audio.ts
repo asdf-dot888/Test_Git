@@ -1,5 +1,5 @@
 export type MusicKind = "menu" | "normal" | "boss";
-export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "turn-start" | "turn-end" | "summon" | "timer-warning"
+export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "ui-hover" | "turn-start" | "turn-end" | "summon" | "timer-warning"
   | "impact-light" | "impact-medium" | "impact-heavy" | "impact-armor-block" | "impact-hero-melee" | "impact-boss-area";
 
 export interface AudioSettings {
@@ -22,7 +22,7 @@ const MUSIC_SOURCES: Record<MusicKind, string> = {
   boss: "/audio/bgm/boss.ogg",
 };
 
-const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start">, string> = {
+const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start" | "ui-hover">, string> = {
   "hero-attack": "/audio/sfx/attack.ogg",
   "minion-attack": "/audio/sfx/attack.ogg",
   spell: "/audio/sfx/spell.ogg",
@@ -61,6 +61,8 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
   const timers = new Set<ReturnType<typeof setInterval>>();
   let audioContext: AudioContext | null = null;
   const turnCues = new Set<{ master: GainNode; oscillators: OscillatorNode[] }>();
+  const hoverCues = new Set<{ master: GainNode; oscillators: OscillatorNode[] }>();
+  let lastHoverAt = Number.NEGATIVE_INFINITY;
 
   function getAudioContext(): AudioContext | null {
     if (audioContext || typeof globalThis.AudioContext === "undefined") return audioContext;
@@ -104,6 +106,51 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
           if (cue.oscillators.length === 0) {
             master.disconnect();
             turnCues.delete(cue);
+          }
+        };
+        cue.oscillators.push(oscillator);
+        oscillator.start(start);
+        oscillator.stop(start + note.duration + 0.01);
+      }
+    } catch {
+      // Audio support is optional; a missing WebAudio implementation must not affect gameplay.
+    }
+  }
+
+  function playHoverCue(): void {
+    const now = Date.now();
+    if (disposed || effectVolume(0.22) === 0 || now - lastHoverAt < 120) return;
+    lastHoverAt = now;
+    const context = getAudioContext();
+    if (!context) return;
+    try {
+      const master = context.createGain();
+      master.gain.setValueAtTime(effectVolume(0.22), context.currentTime);
+      master.connect(context.destination);
+      const cue = { master, oscillators: [] as OscillatorNode[] };
+      hoverCues.add(cue);
+      const notes = [
+        { frequency: 1046.5, start: 0, duration: 0.075 },
+        { frequency: 1568, start: 0.045, duration: 0.11 },
+      ];
+      for (const note of notes) {
+        const oscillator = context.createOscillator();
+        const envelope = context.createGain();
+        const start = context.currentTime + note.start;
+        oscillator.type = "triangle";
+        oscillator.frequency.setValueAtTime(note.frequency, start);
+        envelope.gain.setValueAtTime(0.0001, start);
+        envelope.gain.linearRampToValueAtTime(0.32, start + 0.012);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, start + note.duration);
+        oscillator.connect(envelope);
+        envelope.connect(master);
+        oscillator.onended = () => {
+          oscillator.disconnect();
+          envelope.disconnect();
+          cue.oscillators = cue.oscillators.filter((active) => active !== oscillator);
+          if (cue.oscillators.length === 0) {
+            master.disconnect();
+            hoverCues.delete(cue);
           }
         };
         cue.oscillators.push(oscillator);
@@ -221,6 +268,10 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
         playTurnStartCue();
         return;
       }
+      if (kind === "ui-hover") {
+        playHoverCue();
+        return;
+      }
       const playerScale = clampVolume(volumeScale);
       let player: HTMLAudioElement;
       try {
@@ -251,6 +302,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       if (currentMusic && !fadingMusic.has(currentMusic)) currentMusic.volume = musicVolume();
       for (const [player, scale] of effectPlayers) player.volume = effectVolume(scale);
       for (const cue of turnCues) cue.master.gain.setValueAtTime(effectVolume(0.35), audioContext?.currentTime ?? 0);
+      for (const cue of hoverCues) cue.master.gain.setValueAtTime(effectVolume(0.22), audioContext?.currentTime ?? 0);
     },
 
     dispose() {
@@ -269,6 +321,14 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
         cue.master.disconnect();
       }
       turnCues.clear();
+      for (const cue of hoverCues) {
+        for (const oscillator of cue.oscillators) {
+          try { oscillator.stop(); } catch { /* Oscillator may already have stopped. */ }
+          oscillator.disconnect();
+        }
+        cue.master.disconnect();
+      }
+      hoverCues.clear();
       if (audioContext) void audioContext.close().catch(() => undefined);
       audioContext = null;
       effectPlayers.clear();

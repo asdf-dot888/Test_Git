@@ -26,6 +26,21 @@ import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord 
 import { combatEventSounds } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
 
+const INTERACTIVE_AUDIO_SELECTOR = "button, a[href], input, select, textarea, label[for], [role='button'], [role='option'], [data-pointer-interaction]";
+
+function closestInteractive(target: EventTarget | null): HTMLElement | null {
+  return target instanceof Element ? target.closest<HTMLElement>(INTERACTIVE_AUDIO_SELECTOR) : null;
+}
+
+function isAudioDisabled(control: HTMLElement): boolean {
+  let current: HTMLElement | null = control;
+  while (current) {
+    if (current.matches(":disabled") || current.getAttribute("aria-disabled") === "true") return true;
+    current = current.parentElement;
+  }
+  return false;
+}
+
 function secureSeed(): number {
   const seed = new Uint32Array(1);
   globalThis.crypto.getRandomValues(seed);
@@ -202,18 +217,31 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
   useEffect(() => {
     if (!audioController) return;
-    const onPointerDown = (event: PointerEvent) => {
+    const onPointerDown = () => {
       void audioController.unlock().then((started) => {
         if (started) setAutoplayHintVisible(false);
       });
-      if (!(event.target instanceof Element)) return;
-      const control = event.target.closest<HTMLElement>("button, a[href], input, select, textarea, label[for], [role='button'], [role='option'], [data-pointer-interaction]");
-      if (!control || control.matches(":disabled") || control.getAttribute("aria-disabled") === "true") return;
+    };
+    const onClick = (event: MouseEvent) => {
+      const control = closestInteractive(event.target);
+      if (!control || isAudioDisabled(control)) return;
       audioController.playEffect("ui-click");
     };
+    const onPointerOver = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const control = closestInteractive(event.target);
+      if (!control || isAudioDisabled(control)) return;
+      const previousControl = closestInteractive(event.relatedTarget);
+      if (previousControl === control) return;
+      audioController.playEffect("ui-hover");
+    };
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("pointerover", onPointerOver, true);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("pointerover", onPointerOver, true);
     };
   }, [audioController]);
 
