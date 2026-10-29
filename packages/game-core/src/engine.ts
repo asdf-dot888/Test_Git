@@ -955,7 +955,19 @@ export function playMinion(run: RunState, handInstanceId: string, slotIndex?: nu
   return consumeOpeningHandRedraw(triggerMinionEffect(made.run, made.minion));
 }
 
-export function castSpell(run: RunState, handInstanceId: string, targetId?: string): RunState {
+export interface ResolvedSpellEffect {
+  effectIndex: number;
+  kind: SpellEffect["kind"];
+  targetId: string | null;
+  amount?: number;
+}
+
+export interface SpellCastResolution {
+  run: RunState;
+  effects: ResolvedSpellEffect[];
+}
+
+export function castSpellWithResolution(run: RunState, handInstanceId: string, targetId?: string): SpellCastResolution {
   const next = cloneRun(run);
   const battle = ensureMana(next, 0);
   const handIndex = battle.hand.findIndex((instance) => instance.instanceId === handInstanceId);
@@ -983,11 +995,23 @@ export function castSpell(run: RunState, handInstanceId: string, targetId?: stri
   battle.discardPile.push(instance!);
   spendMana(battle, "player", card.cost);
   let current = next;
-  for (const effect of card.spellEffects) {
-    current = applySpellEffect(current, effect, targetId);
-    if (current.status !== "active") return consumeOpeningHandRedraw(current);
+  const effects: ResolvedSpellEffect[] = [];
+  for (const [effectIndex, effect] of card.spellEffects.entries()) {
+    const resolved: { amount?: number; transferredCardInstanceId?: string } = {};
+    current = applySpellEffect(current, effect, targetId, "player", false, resolved);
+    effects.push({
+      effectIndex,
+      kind: effect.kind,
+      targetId: targetId ?? null,
+      ...(resolved.amount !== undefined ? { amount: resolved.amount } : {}),
+    });
+    if (current.status !== "active") return { run: consumeOpeningHandRedraw(current), effects };
   }
-  return consumeOpeningHandRedraw(current);
+  return { run: consumeOpeningHandRedraw(current), effects };
+}
+
+export function castSpell(run: RunState, handInstanceId: string, targetId?: string): RunState {
+  return castSpellWithResolution(run, handInstanceId, targetId).run;
 }
 
 export function attackWithMinion(run: RunState, attackerId: string, targetId: string): RunState {

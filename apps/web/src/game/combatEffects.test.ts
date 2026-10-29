@@ -153,7 +153,9 @@ describe("collectCombatEffectEvents", () => {
     });
     const events = collectCombatEffectEvents(before, before, { type: "attack", attackerId: "wolf", targetId: "guard" }, 12);
 
-    expect(events).toEqual([{ id: 12, assetCardId: "ash-wolf", effectKind: "attack", soundCues: ["minion-attack", "damage"], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 }, damageTarget: "minion" }]);
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({ id: 12, assetCardId: "ash-wolf", effectKind: "attack", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 }, damageTarget: "minion", damage: { amount: 2, armorBlocked: 0, outcome: "hit", retaliation: false } });
+    expect(events[1]).toMatchObject({ id: 13, assetCardId: "crypt-guard", effectKind: "attack", source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 }, damageTarget: "minion", damage: { amount: 2, armorBlocked: 0, outcome: "hit", retaliation: true } });
   });
 
   it("creates one event for each enemy minion attack during its turn", () => {
@@ -193,11 +195,37 @@ describe("collectCombatEffectEvents", () => {
     expect(spell).toHaveLength(1);
     expect(spell[0]).toMatchObject({ assetCardId: "soul-lance", effectKind: "damage", source: { kind: "hand", side: "player", slot: 0, instanceId: "lance" }, target: { kind: "minion", side: "enemy", slot: 0 } });
     expect(spell[0]?.damageTarget).toBe("minion");
+    expect(spell[0]?.damage).toEqual({ amount: 3, armorBlocked: 0, outcome: "hit", retaliation: false });
     expect(spell[0]?.soundCues).toEqual(["spell", "damage"]);
 
     const after = withBattle(before, (state) => { state.battle!.playerHero.health -= 3; });
     const impact = collectCombatEffectEvents(before, after, { type: "end-turn" }, 9);
     expect(impact[0]).toMatchObject({ assetCardId: null, effectKind: "impact", soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" }, damageTarget: "hero" });
+    expect(impact[0]?.damage).toMatchObject({ amount: 3, armorBlocked: 0, outcome: "hit", retaliation: false });
+  });
+
+  it("keeps cleave damage independent for every affected target", () => {
+    const before = withBattle(createRun(430), (state) => {
+      state.battle!.hand = [{ instanceId: "cleave", cardId: "reaper-cleave" }];
+      state.battle!.enemyBoard = ["left", "center", "right"].map((instanceId) => ({ instanceId, cardId: "bone-rat", owner: "enemy" as const, attack: 1, health: 8, maxHealth: 8, summonedTurn: 0, hasAttacked: false }));
+    });
+    const [event] = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cleave", targetId: "center" }, 10);
+    expect(event?.damage).toMatchObject({ amount: 4, outcome: "hit" });
+    expect(event?.affectedTargets?.map(({ target, damage }) => [target, damage.amount])).toEqual([
+      [{ kind: "minion", side: "enemy", slot: 0 }, 2],
+      [{ kind: "minion", side: "enemy", slot: 1 }, 4],
+      [{ kind: "minion", side: "enemy", slot: 2 }, 2],
+    ]);
+  });
+
+  it("distinguishes a fully armor-blocked hero hit from health damage", () => {
+    const before = withBattle(createRun(430), (state) => {
+      state.battle!.playerArmor = 2;
+      state.battle!.enemyBoard = [{ instanceId: "enemy", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    });
+    const after = withBattle(before, (state) => { state.battle!.playerArmor = 1; });
+    const [event] = collectEnemyActionEffects(before, after, { type: "attack", cardId: "bone-rat", attackerId: "enemy", targetId: "player-hero" }, 1);
+    expect(event?.damage).toEqual({ amount: 0, armorBlocked: 1, outcome: "armor-block", retaliation: false });
   });
 
   it("classifies direct spell, enemy attack, and Assassin hero-power damage by target", () => {
@@ -212,6 +240,7 @@ describe("collectCombatEffectEvents", () => {
     });
     const enemyHit = collectEnemyActionEffects(enemyBefore, enemyBefore, { type: "attack", cardId: "bone-rat", attackerId: "enemy", targetId: "player-hero" }, 2);
     expect(enemyHit[0]?.damageTarget).toBe("hero");
+    expect(enemyHit[0]?.damage).toMatchObject({ amount: 1, armorBlocked: 0, outcome: "hit" });
 
     const assassin = withBattle(createRun(433, "assassin"), (state) => {
       state.battle!.enemyBoard = [{ instanceId: "target", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
@@ -270,7 +299,10 @@ describe("collectCombatEffectEvents", () => {
     expect(events[0]).toMatchObject({ assetCardId: "cinder-imp", source: { kind: "hand", side: "enemy", slot: 1, instanceId: "secret-card" }, target: { kind: "minion", side: "enemy", slot: 0 } });
     expect(events[1]).toMatchObject({ assetCardId: "soul-lance", source: { kind: "hand", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 }, soundCues: ["spell", "damage"] });
     expect(events[1]?.damageTarget).toBe("minion");
-    expect(events[2]).toMatchObject({ areaImpact: true, bossArea: true, effectKind: "impact", soundCues: ["damage"] });
+    expect(events[2]).toMatchObject({ areaImpact: true, bossArea: true, bossPhase: 1, effectKind: "impact", soundCues: ["damage"], affectedTargets: [
+      { target: { kind: "minion", side: "player", slot: 0 }, damage: { amount: 1, armorBlocked: 0, outcome: "hit", retaliation: false } },
+      { target: { kind: "hero", side: "player" }, damage: { amount: 1, armorBlocked: 0, outcome: "hit", retaliation: false } },
+    ] });
     expect(events[2]).not.toHaveProperty("damageTarget");
     expect(events[3]).toMatchObject({ assetCardId: "bone-rat", source: { kind: "minion", side: "enemy", slot: 0 }, target: { kind: "minion", side: "player", slot: 0 } });
     expect(events[4]).toMatchObject({ assetCardId: "crypt-guard", source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } });

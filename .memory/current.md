@@ -1,16 +1,16 @@
-# Current Context
+﻿# Current Context
 
 ## Active Plan
-[Opening Hand Redraw Icon](./plans/2026-10-29-opening-hand-redraw-icon.md)
+[Damage-Scaled Combat Impact and Boss Area Effects](./plans/2026-10-29-combat-impact.md)
 
 ## Active Phase
-[P01 Redraw Control](./phases/2026-10-29-opening-hand-redraw-icon/P01-redraw-control/phase.md)
+[P01 Combat Feedback](./phases/2026-10-29-combat-impact/P01-combat-feedback/phase.md)
 
 ## Active Task
-None — all tasks in the active plan are complete.
+[T02 Damage-Tier and Target-Specific Visuals](./phases/2026-10-29-combat-impact/P01-combat-feedback/T02-impact-visuals.md)
 
 ## Status
-- T01 is complete.
+- T01 is complete and validated.
 
 ## Next Step
-No remaining task in this plan.
+Read T02's blueprint, then implement damage-scaled impact visuals and target-specific feedback using T01's transient event metadata.

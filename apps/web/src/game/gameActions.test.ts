@@ -3,6 +3,24 @@ import { createRun } from "@board-game/game-core";
 import { initialGameSession, reduceGameAction } from "./gameActions.js";
 
 describe("reduceGameAction timer snapshots", () => {
+  it("passes the exact random spell roll into transient combat damage metadata", () => {
+    const run = createRun(549);
+    run.battle!.enemyHero.health = 30;
+    run.battle!.hand = [{ instanceId: "random-spell", cardId: "fate-shard" }];
+    const beforeHealth = run.battle!.enemyHero.health;
+    const session = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run }), {
+      type: "cast-spell", instanceId: "random-spell", targetId: "enemy-hero",
+    });
+
+    expect(session.combatEffects[0]?.damage).toMatchObject({
+      amount: beforeHealth - session.run!.battle!.enemyHero.health,
+      armorBlocked: 0,
+      outcome: beforeHealth === session.run!.battle!.enemyHero.health ? "miss" : "hit",
+      retaliation: false,
+    });
+    expect(session.run).not.toHaveProperty("spellResolution");
+  });
+
   it("keeps redraw available through selection and consumes it after the redraw or first action", () => {
     let session = reduceGameAction(initialGameSession, { type: "restore-run", run: createRun(543) });
     const openingHand = session.run!.battle!.hand;

@@ -4,7 +4,7 @@ import {
   advanceRun,
   attackAllReadyMinions,
   attackWithMinion,
-  castSpell,
+  castSpellWithResolution,
   chooseReward,
   chooseRewardAndDiscard,
   createRun,
@@ -19,6 +19,7 @@ import {
   useHeroPower,
   type PlayerClass,
   type RunState,
+  type ResolvedSpellEffect,
   type EnemyTurnPlaybackStep,
   type TurnTimerState,
 } from "@board-game/game-core";
@@ -118,9 +119,9 @@ function sessionForEnemyTurn(resolution: ReturnType<typeof endPlayerTurnWithPlay
   };
 }
 
-function sessionForAction(run: RunState, previous: GameSession, action: GameAction): GameSession {
+function sessionForAction(run: RunState, previous: GameSession, action: GameAction, spellResolution: readonly ResolvedSpellEffect[] = []): GameSession {
   if (!previous.run) return sessionForRun(run, previous);
-  const events = collectCombatEffectEvents(previous.run, run, action, previous.nextCombatEffectId);
+  const events = collectCombatEffectEvents(previous.run, run, action, previous.nextCombatEffectId, spellResolution);
   const nextRun = run.battle && Object.prototype.hasOwnProperty.call(run.battle, "enemyTurnEvents") ? structuredClone(run) : run;
   if (nextRun.battle?.enemyTurnEvents) delete nextRun.battle.enemyTurnEvents;
   const next = sessionForRun(nextRun, previous);
@@ -241,7 +242,10 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
   try {
     if (action.type === "redraw-opening-hand") return sessionForRun(redrawOpeningHand(session.run), session);
     if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId, action.slotIndex), session, action);
-    if (action.type === "cast-spell") return sessionForAction(castSpell(session.run, action.instanceId, action.targetId), session, action);
+    if (action.type === "cast-spell") {
+      const resolution = castSpellWithResolution(session.run, action.instanceId, action.targetId);
+      return sessionForAction(resolution.run, session, action, resolution.effects);
+    }
     if (action.type === "attack") return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
     if (action.type === "all-attack") {
       const next = sessionForAction(attackAllReadyMinions(session.run), session, action);

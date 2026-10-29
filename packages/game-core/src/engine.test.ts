@@ -17,6 +17,7 @@ import {
   attackAllReadyMinions,
   attackWithMinion,
   castSpell,
+  castSpellWithResolution,
   chooseReward,
   chooseRewardAndDiscard,
   createRun,
@@ -523,8 +524,11 @@ describe("random, cleave, and deck-theft spells", () => {
       battle.enemyBoard.push({ instanceId: `random-target-${seed}`, cardId: "ash-wolf", owner: "enemy", attack: 1, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false });
       battle.hand = [instance("random-spell", "fate-shard")];
       battle.rngState = seed;
+      const resolution = castSpellWithResolution(run, "random-spell", "enemy-hero");
       const cast = castSpell(run, "random-spell", "enemy-hero");
       const amount = 30 - cast.battle!.enemyHero.health;
+      expect(resolution.effects).toEqual([{ effectIndex: 0, kind: "randomDamage", targetId: "enemy-hero", amount }]);
+      expect(resolution.run).toEqual(cast);
       dealt.add(amount);
       expect(cast.battle?.enemyBoard).toHaveLength(1);
       expect(cast.battle?.playerMana.current).toBe(3);
