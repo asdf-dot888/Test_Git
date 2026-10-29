@@ -227,7 +227,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       if (disposed) return false;
       const context = getAudioContext();
       if (context?.state === "suspended") {
-        try { await context.resume(); } catch { /* Browser audio may remain unavailable. */ }
+        try { void context.resume().catch(() => undefined); } catch { /* Continue attempting media playback. */ }
       }
       if (!currentMusic) return false;
       if (!musicStarted) return attemptPlay(currentMusic, true);

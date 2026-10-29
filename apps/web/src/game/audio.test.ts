@@ -322,6 +322,30 @@ describe("createAudioController", () => {
     controller.dispose();
   });
 
+  it("requests blocked music playback synchronously during the first gesture", async () => {
+    FakeAudioContext.instances = [];
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const players: FakeAudio[] = [];
+    const controller = createAudioController((src) => {
+      const player = new FakeAudio(src);
+      if (src === "/audio/bgm/menu.wav") player.rejectPlayback = true;
+      players.push(player);
+      return player as unknown as HTMLAudioElement;
+    });
+    expect(await controller.playMusic("menu")).toBe(false);
+    const music = players[0]!;
+    controller.playEffect("turn-start");
+    const context = FakeAudioContext.instances[0]!;
+    context.state = "suspended";
+    music.rejectPlayback = false;
+
+    const unlock = controller.unlock();
+    expect(context.resume).toHaveBeenCalledOnce();
+    expect(music.playCount).toBe(2);
+    await expect(unlock).resolves.toBe(true);
+    controller.dispose();
+  });
+
   it("clears crossfade timers and stops every player on dispose", async () => {
     vi.useFakeTimers();
     const { controller, players } = setup();
