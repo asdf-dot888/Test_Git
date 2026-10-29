@@ -1398,10 +1398,11 @@ describe("enemy turns, rewards, and run progression", () => {
     finalBattle.playerBoard.push(minion({ instanceId: "final-victory-tap", attack: 10, summonedTurn: finalBattle.turnNumber - 1 }));
     const finalWon = attackWithMinion(finalRun, "final-victory-tap", finalBattle.enemyHero.id);
     expect(finalWon.status).toBe("victory");
-    expect(finalWon.battle).toBeNull();
+    expect(finalWon.battle?.status).toBe("playerWon");
     expect(finalWon.pendingVictoryAcknowledgement).toBe(true);
     const finalConfirmed = acknowledgeVictory(finalWon);
     expect(finalConfirmed.pendingVictoryAcknowledgement).toBe(false);
+    expect(finalConfirmed.battle).toBeNull();
     expect(skipReward(finalConfirmed).status).toBe("victory");
   });
   it("offers tier-matched rewards, adds only a chosen copy, and permits skipping", () => {

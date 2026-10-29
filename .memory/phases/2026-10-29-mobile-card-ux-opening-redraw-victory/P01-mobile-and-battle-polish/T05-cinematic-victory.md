@@ -1,6 +1,6 @@
 # Task: T05 Cinematic Lethal Attack and Victory
 
-## Status: pending
+## Status: done
 
 ## Goal
 Replace the abrupt victory transition with a visible half-speed final attack, an enemy-hero defeat effect, and a large half-speed victory reveal over the dimmed battle.
@@ -56,11 +56,11 @@ Replace the abrupt victory transition with a visible half-speed final attack, an
 - Provide a `prefers-reduced-motion` fallback with an immediate stable presentation; never block the confirmation callback if `animationend` fails to fire.
 
 ## Acceptance Criteria
-- [ ] The final strike is visible at half speed before the enemy defeat effect.
-- [ ] Enemy portrait cracks and collapses in red flame/black ash at half speed with slight shake.
-- [ ] A large victory title appears at half speed over the dim battlefield after the defeat effect.
-- [ ] Confirmation continues to the existing reward flow; refresh during an acknowledged-pending win cannot deadlock.
-- [ ] Nonlethal attack timing remains unchanged.
+- [x] The final strike is visible at half speed before the enemy defeat effect.
+- [x] Enemy portrait cracks and collapses in red flame/black ash at half speed with slight shake.
+- [x] A large victory title appears at half speed over the dim battlefield after the defeat effect.
+- [x] Confirmation continues to the existing reward flow; refresh during an acknowledged-pending win cannot deadlock.
+- [x] Nonlethal attack timing remains unchanged.
 
 ## Validation
 - `npm test -- apps/web/src/game/combatEffects.test.ts apps/web/src/components/CombatEffectLayer.test.tsx apps/web/src/App.outcome.test.tsx apps/web/src/components/VictoryScreen.test.tsx packages/game-core/src/engine.test.ts` — effect, acknowledgement, and normal/final victory tests pass; if a focused file is absent, put coverage in the closest existing suite.
@@ -79,6 +79,6 @@ Task: T05-cinematic-victory
 ```
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed
+- commit: `feat(game): stage a cinematic victory after lethal attacks`

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CARD_CATALOG, createRun, type RunState } from "@board-game/game-core";
+import { CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
 import { CARD_COMBAT_VISUAL_PROFILES, collectCombatEffectEvents, collectEnemyActionEffects } from "./combatEffects.js";
 
 function withBattle(run: RunState, update: (run: RunState) => void): RunState {
@@ -9,6 +9,38 @@ function withBattle(run: RunState, update: (run: RunState) => void): RunState {
 }
 
 describe("collectCombatEffectEvents", () => {
+  it("marks only the lethal player attack for slow motion", () => {
+    const run = createRun(38);
+    const before = withBattle(run, (state) => {
+      state.battle!.enemyHero.health = 2;
+      state.battle!.playerBoard = [{ instanceId: "lethal-attacker", cardId: "ash-wolf", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    });
+    const after = attackWithMinion(before, "lethal-attacker", "enemy");
+    const events = collectCombatEffectEvents(before, after, { type: "attack", attackerId: "lethal-attacker", targetId: "enemy" }, 1);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.slowMotion).toBe(true);
+
+    const ordinary = withBattle(before, (state) => { state.battle!.enemyHero.health = 3; });
+    const ordinaryEvents = collectCombatEffectEvents(ordinary, ordinary, { type: "attack", attackerId: "lethal-attacker", targetId: "enemy" }, 5);
+    expect(ordinaryEvents[0]?.slowMotion).toBeUndefined();
+  });
+
+  it("slows only the final lethal attacker in an all-attack sequence", () => {
+    const run = createRun(37);
+    const before = withBattle(run, (state) => {
+      state.battle!.enemyHero.health = 4;
+      state.battle!.playerBoard = [
+        { instanceId: "first-strike", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
+        { instanceId: "last-strike", cardId: "crypt-guard", owner: "player", attack: 3, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false },
+      ];
+    });
+    const after = attackAllReadyMinions(before);
+    const events = collectCombatEffectEvents(before, after, { type: "all-attack" }, 10);
+    expect(events).toHaveLength(2);
+    expect(events[0]?.slowMotion).toBeUndefined();
+    expect(events[1]?.slowMotion).toBe(true);
+  });
+
   it("assigns a stable distinct visual profile to every catalog card", () => {
     expect(Object.keys(CARD_COMBAT_VISUAL_PROFILES).sort()).toEqual(CARD_CATALOG.map((card) => card.id).sort());
     expect(new Set(Object.values(CARD_COMBAT_VISUAL_PROFILES).map((profile) => profile.accent)).size).toBe(CARD_CATALOG.length);

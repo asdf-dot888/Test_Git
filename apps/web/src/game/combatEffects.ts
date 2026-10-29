@@ -58,6 +58,7 @@ export interface CombatEffectEvent {
   areaImpact?: boolean;
   bossArea?: boolean;
   deathAnchors?: CombatAnchor[];
+  slowMotion?: boolean;
 }
 
 function slotOf<T extends { instanceId: string }>(items: readonly T[], instanceId: string): number {
@@ -313,6 +314,11 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     if (next.playerHero.health < previous.playerHero.health) {
       pushEvent(events, firstEventId, null, "impact", { kind: "hero", side: "enemy" }, { kind: "hero", side: "player" }, ["damage"], false, undefined, false, "hero");
     }
+  }
+  if ((action.type === "attack" || action.type === "all-attack")
+    && previousRun.battle?.enemyHero.health && nextRun.battle?.enemyHero.health === 0) {
+    const lethalAttack = [...events].reverse().find((event) => event.effectKind === "attack" && event.target.kind === "hero" && event.target.side === "enemy");
+    if (lethalAttack) lethalAttack.slowMotion = true;
   }
   return events;
 }

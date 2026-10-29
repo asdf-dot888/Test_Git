@@ -2,6 +2,7 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CombatEffectLayer } from "./CombatEffectLayer.js";
+import { CARD_COMBAT_VISUAL_PROFILES } from "../game/combatEffects.js";
 
 afterEach(() => {
   cleanup();
@@ -10,6 +11,23 @@ afterEach(() => {
 });
 
 describe("CombatEffectLayer", () => {
+  it("doubles the lethal attack timing and marks its visuals as slow motion", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const onComplete = vi.fn();
+    const duration = Math.max(1_400, 1_010 + CARD_COMBAT_VISUAL_PROFILES["ash-wolf"]!.durationMs) * 2;
+    render(<CombatEffectLayer events={[{ id: 6, assetCardId: "ash-wolf", effectKind: "attack", slowMotion: true, soundCues: [], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" } }]} onComplete={onComplete} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelector(".combat-effect-minion-portrait")?.classList.contains("is-slow-motion")).toBe(true);
+    expect(document.body.querySelector(".combat-effect-impact")?.classList.contains("is-slow-motion")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(duration - 1); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledWith(6);
+  });
+
   it("renders a single attacking portrait, themed trail, and impact for a minion attack", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));

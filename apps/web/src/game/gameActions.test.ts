@@ -56,6 +56,25 @@ describe("reduceGameAction timer snapshots", () => {
     expect(invalid.error).toBeTruthy();
   });
 
+  it("sequences a lethal attack through enemy defeat and victory reveal", () => {
+    const run = createRun(548);
+    run.battle!.enemyHero.health = 2;
+    run.battle!.playerBoard = [{ instanceId: "cinematic-attacker", cardId: "ash-wolf", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    let session = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run }), { type: "attack", attackerId: "cinematic-attacker", targetId: "enemy" });
+    const lethalEffect = session.combatEffects.find((event) => event.slowMotion);
+
+    expect(lethalEffect).toBeDefined();
+    expect(session.victoryPresentation).toBeNull();
+    expect(session.run?.battle?.status).toBe("playerWon");
+    session = reduceGameAction(session, { type: "clear-combat-effect", eventId: lethalEffect!.id });
+    expect(session.victoryPresentation).toBe("enemy-defeat");
+    session = reduceGameAction(session, { type: "enemy-defeat-effect-complete" });
+    expect(session.victoryPresentation).toBe("victory-reveal");
+
+    const restored = reduceGameAction(initialGameSession, { type: "restore-run", run: session.run! });
+    expect(restored.victoryPresentation).toBe("victory-reveal");
+  });
+
   it("updates and clears only the run timer without creating combat events", () => {
     const run = createRun(540);
     const session = reduceGameAction(initialGameSession, { type: "restore-run", run });

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CARD_BY_ID, ENEMY_BY_ID, type PlayerClass } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
+import { EnemyHeroDefeatEffect } from "./components/EnemyHeroDefeatEffect.js";
 import { GameBoard } from "./components/GameBoard.js";
 import { ExpeditionRoadmap } from "./components/ExpeditionRoadmap.js";
 import { MainMenu } from "./components/MainMenu.js";
@@ -93,7 +94,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   }, [audioController, dispatchGameAction]);
   const turnTimer = useTurnTimer({
     run: run ?? null,
-    paused: screen !== "game" || menuView !== "closed" || session.resolving || Boolean(playback) || session.combatEffects.length > 0,
+    paused: screen !== "game" || menuView !== "closed" || Boolean(run?.pendingVictoryAcknowledgement) || session.resolving || Boolean(playback) || session.combatEffects.length > 0,
     onTimerChange: (timer) => dispatch({ type: "set-turn-timer", timer }),
     onTimeout: () => dispatch({ type: "end-turn" }),
   });
@@ -462,6 +463,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </aside>
   ) : null;
   const audioSettingsModal = audioSettingsOpen ? <AudioSettingsModal settings={audioSettings} onSettingsChange={setAudioSettings} onClose={() => setAudioSettingsOpen(false)} /> : null;
+  const victoryPresentationActive = Boolean(run?.pendingVictoryAcknowledgement && (session.victoryPresentation || session.combatEffects.some((event) => event.slowMotion)));
 
   if (screen === "class-selection") {
     return <ClassSelectionScreen
@@ -483,7 +485,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </>;
   }
 
-  if (run.pendingVictoryAcknowledgement) {
+  if (run.pendingVictoryAcknowledgement && !victoryPresentationActive) {
     return <>
       <VictoryScreen disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={acknowledgeVictory} />
       {leaderboardSubmitNotice}
@@ -491,7 +493,11 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </>;
   }
 
-  if (run.pendingReward && rewardLimitKey && deckLimitPromptedKey !== rewardLimitKey) {
+  if (run.pendingVictoryAcknowledgement && !battle && session.victoryPresentation === "victory-reveal") {
+    return <VictoryScreen overlay disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={acknowledgeVictory} />;
+  }
+
+  if (!victoryPresentationActive && run.pendingReward && rewardLimitKey && deckLimitPromptedKey !== rewardLimitKey) {
     return <DeckLimitDialog
       disabled={sync.status !== "ready" && sync.status !== "saving"}
       onConfirm={() => setDeckLimitPromptedKey(rewardLimitKey)}
@@ -499,7 +505,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     />;
   }
 
-  if (run.pendingReward) {
+  if (!victoryPresentationActive && run.pendingReward) {
     if (session.selectedRewardCardId) {
       return <>
         <DiscardPicker
@@ -524,7 +530,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </>;
   }
 
-  if ((run.status === "victory" || run.status === "defeat") && !playbackStep) {
+  if (!victoryPresentationActive && (run.status === "victory" || run.status === "defeat") && !playbackStep) {
     const victory = run.status === "victory";
     return <main className={`run-screen ${victory ? "outcome-victory" : "outcome-defeat"}`}>
       <section className="run-card outcome-card" role="status">
@@ -538,7 +544,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </main>;
   }
 
-  if (screen === "map" || battle?.status === "playerWon") {
+  if (!victoryPresentationActive && (screen === "map" || battle?.status === "playerWon")) {
     return <>
       <ExpeditionRoadmap
         run={run}
@@ -573,7 +579,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           selectedAttackerId={session.selectedAttackerId}
           targetMode={session.targetMode}
           isResolving={session.resolving || Boolean(playback)}
-          actionsDisabled={sync.status !== "ready" && sync.status !== "saving"}
+          actionsDisabled={(sync.status !== "ready" && sync.status !== "saving") || Boolean(run.pendingVictoryAcknowledgement)}
           error={session.error}
           onSelectCard={selectCard}
           onSelectTarget={selectTarget}
@@ -587,6 +593,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onDropInteraction={handleDropInteraction}
           enemyIntentStep={playback?.stage === "intent" ? playbackStep ?? null : null}
         />
+      {session.victoryPresentation === "enemy-defeat" && <EnemyHeroDefeatEffect onComplete={() => dispatchGameAction({ type: "enemy-defeat-effect-complete" })} />}
+      {session.victoryPresentation === "victory-reveal" && <VictoryScreen overlay disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={acknowledgeVictory} />}
       {leaderboardSubmitNotice}
       <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}

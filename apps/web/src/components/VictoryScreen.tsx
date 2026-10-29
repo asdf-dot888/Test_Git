@@ -1,11 +1,12 @@
 export interface VictoryScreenProps {
   disabled?: boolean;
+  overlay?: boolean;
   onConfirm(): void;
 }
 
-export function VictoryScreen({ disabled = false, onConfirm }: VictoryScreenProps) {
+export function VictoryScreen({ disabled = false, overlay = false, onConfirm }: VictoryScreenProps) {
   return (
-    <main className="run-screen victory-screen">
+    <main className={`run-screen victory-screen${overlay ? " victory-screen-overlay" : ""}`}>
       <section className="run-card victory-card" role="dialog" aria-modal="true" aria-labelledby="victory-title">
         <span className="victory-light" aria-hidden="true" />
         <span className="eyebrow">BATTLE CLEARED</span>

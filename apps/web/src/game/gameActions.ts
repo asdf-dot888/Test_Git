@@ -40,6 +40,7 @@ export type GameAction =
   | { type: "attack"; attackerId: string; targetId: string }
   | { type: "all-attack" }
   | { type: "finish-all-attack" }
+  | { type: "enemy-defeat-effect-complete" }
   | { type: "fuse-minions"; firstMinionId: string; secondMinionId: string }
   | { type: "end-turn" }
   | { type: "discard-before-draw"; instanceId: string }
@@ -66,6 +67,7 @@ export interface GameSession {
   nextCombatEffectId: number;
   enemyTurnPlayback: { steps: EnemyTurnPlaybackStep[]; currentIndex: number; stage: "intent" | "effect" } | null;
   autoEndTurnAfterAllAttack: boolean;
+  victoryPresentation: "enemy-defeat" | "victory-reveal" | null;
 }
 
 export const initialGameSession: GameSession = {
@@ -81,6 +83,7 @@ export const initialGameSession: GameSession = {
   nextCombatEffectId: 1,
   enemyTurnPlayback: null,
   autoEndTurnAfterAllAttack: false,
+  victoryPresentation: null,
 };
 
 type InternalAction = GameAction | { type: "resolution-start" };
@@ -100,6 +103,7 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
     nextCombatEffectId: previous.nextCombatEffectId,
     enemyTurnPlayback: null,
     autoEndTurnAfterAllAttack: false,
+    victoryPresentation: null,
   };
 }
 
@@ -155,7 +159,18 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     return { ...session, run };
   }
   if (action.type === "clear-combat-effect") {
-    return { ...session, combatEffects: session.combatEffects.filter((event) => event.id !== action.eventId) };
+    const completed = session.combatEffects.find((event) => event.id === action.eventId);
+    const combatEffects = session.combatEffects.filter((event) => event.id !== action.eventId);
+    return {
+      ...session,
+      combatEffects,
+      ...(completed?.slowMotion && combatEffects.length === 0 && session.run?.pendingVictoryAcknowledgement
+        ? { victoryPresentation: "enemy-defeat" as const }
+        : {}),
+    };
+  }
+  if (action.type === "enemy-defeat-effect-complete") {
+    return session.victoryPresentation === "enemy-defeat" ? { ...session, victoryPresentation: "victory-reveal" } : session;
   }
   if (action.type === "clear-error") return { ...session, error: null };
   if (action.type === "clear-run") return { ...initialGameSession };
@@ -193,7 +208,10 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
   }
   if (session.enemyTurnPlayback) return session;
   if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass), session);
-  if (action.type === "restore-run") return sessionForRun(hydrateRunForCurrentBattle(action.run), session);
+  if (action.type === "restore-run") {
+    const run = hydrateRunForCurrentBattle(action.run);
+    return { ...sessionForRun(run, session), victoryPresentation: run.pendingVictoryAcknowledgement ? "victory-reveal" : null };
+  }
   if (action.type === "cancel-selection") {
     return { ...session, selectedCardInstanceId: null, selectedAttackerId: null, targetMode: "none", error: null };
   }

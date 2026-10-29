@@ -246,7 +246,6 @@ function finishVictory(run: RunState): RunState {
   const finalBoss = encounter.kind === "boss" && encounter.phase === 3;
   if (finalBoss) {
     next.status = "victory";
-    next.battle = null;
   }
   return next;
 }
@@ -1180,6 +1179,7 @@ export function acknowledgeVictory(run: RunState): RunState {
   }
   const next = cloneRun(run);
   next.pendingVictoryAcknowledgement = false;
+  if (next.status === "victory") next.battle = null;
   return next;
 }
 
