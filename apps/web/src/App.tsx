@@ -19,7 +19,7 @@ import { useGameSession } from "./game/useGameSession.js";
 import { useLocalRun, type LocalRunController } from "./game/useLocalRun.js";
 import { useTurnTimer } from "./game/useTurnTimer.js";
 import { useEnemyTurnPlayback } from "./game/useEnemyTurnPlayback.js";
-import { createAudioController, type AudioController, type AudioSettings } from "./game/audio.js";
+import { createAudioController, type AudioController, type AudioSettings, type MusicKind } from "./game/audio.js";
 import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord } from "./leaderboard/leaderboardClient.js";
@@ -64,6 +64,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => loadAudioSettings());
   const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
   const [audioController, setAudioController] = useState<AudioController | null>(null);
+  const [autoplayHintVisible, setAutoplayHintVisible] = useState(false);
   const appliedLoadVersion = useRef(0);
   const restoringSavedRun = useRef(false);
   const pendingReplacement = useRef(false);
@@ -86,6 +87,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     ? `${run.runId}:${run.pendingReward.encounterIndex}`
     : null;
   const enemyKind = battle ? ENEMY_BY_ID.get(battle.enemyId)?.kind : undefined;
+  const victoryPresentationActive = Boolean(run?.pendingVictoryAcknowledgement && (session.victoryPresentation || session.combatEffects.some((event) => event.slowMotion)));
+  const hasBattlePresentation = screen === "game" && Boolean(battle && (battle.status === "active" || victoryPresentationActive));
+  const musicKind: MusicKind = hasBattlePresentation ? (enemyKind === "boss" ? "boss" : "normal") : "menu";
   const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active"
     ? `${run.battle.battleId}:${run.battle.turnNumber}`
     : null;
@@ -134,9 +138,18 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   }, [audioController, audioSettings]);
 
   useEffect(() => {
-    if (!audioController) return;
-    audioController.playMusic(enemyKind === "boss" ? "boss" : "normal");
-  }, [audioController, enemyKind]);
+    if (!audioController || !auth.isAuthenticated || !syncLoaded) return;
+    let active = true;
+    void audioController.playMusic(musicKind).then((started) => {
+      if (!active) return;
+      const shouldShowHint = musicKind === "menu"
+        && !started
+        && !audioSettings.muted
+        && audioSettings.musicVolume > 0;
+      setAutoplayHintVisible(shouldShowHint);
+    });
+    return () => { active = false; };
+  }, [audioController, audioSettings.muted, audioSettings.musicVolume, auth.isAuthenticated, musicKind, syncLoaded]);
 
   useEffect(() => {
     if (!audioController) return;
@@ -190,7 +203,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   useEffect(() => {
     if (!audioController) return;
     const onPointerDown = (event: PointerEvent) => {
-      void audioController.unlock();
+      void audioController.unlock().then((started) => {
+        if (started) setAutoplayHintVisible(false);
+      });
       if (!(event.target instanceof Element)) return;
       const control = event.target.closest<HTMLElement>("button, a[href], input, select, textarea, label[for], [role='button'], [role='option'], [data-pointer-interaction]");
       if (!control || control.matches(":disabled") || control.getAttribute("aria-disabled") === "true") return;
@@ -464,8 +479,6 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     </aside>
   ) : null;
   const audioSettingsModal = audioSettingsOpen ? <AudioSettingsModal settings={audioSettings} onSettingsChange={setAudioSettings} onClose={() => setAudioSettingsOpen(false)} /> : null;
-  const victoryPresentationActive = Boolean(run?.pendingVictoryAcknowledgement && (session.victoryPresentation || session.combatEffects.some((event) => event.slowMotion)));
-
   if (screen === "class-selection") {
     return <ClassSelectionScreen
       disabled={sync.status !== "ready"}
@@ -477,7 +490,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
-      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} onLeaderboard={openLeaderboard} onAudioSettings={() => setAudioSettingsOpen(true)} />
+      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} showAutoplayHint={autoplayHintVisible} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} onLeaderboard={openLeaderboard} onAudioSettings={() => setAudioSettingsOpen(true)} />
       {audioSettingsModal}
       {leaderboardModal}
       {leaderboardSubmitNotice}
@@ -554,6 +567,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         onMainMenu={() => setScreen("menu")}
         onLeaderboard={openLeaderboard}
         onAudioSettings={() => setAudioSettingsOpen(true)}
+        showAutoplayHint={autoplayHintVisible}
       />
       {audioSettingsModal}
       {leaderboardModal}

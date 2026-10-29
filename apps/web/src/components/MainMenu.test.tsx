@@ -40,4 +40,11 @@ describe("MainMenu", () => {
     }
     expect(container.querySelector(".menu-card")).not.toBeNull();
   });
+
+  it("shows the autoplay hint beside the sound settings control only when requested", () => {
+    const { rerender, container } = render(<MainMenu canContinue={false} showAutoplayHint onStart={vi.fn()} onContinue={vi.fn()} onLeaderboard={vi.fn()} onAudioSettings={vi.fn()} />);
+    expect(container.querySelector(".menu-audio-autoplay-hint")?.textContent).toBe("화면을 눌러 음악 시작");
+    rerender(<MainMenu canContinue={false} showAutoplayHint={false} onStart={vi.fn()} onContinue={vi.fn()} onLeaderboard={vi.fn()} onAudioSettings={vi.fn()} />);
+    expect(container.querySelector(".menu-audio-autoplay-hint")).toBeNull();
+  });
 });

@@ -277,6 +277,10 @@
 .menu-audio-settings-button:hover:not(:disabled), .expedition-roadmap__audio-button:hover:not(:disabled) { border-color: #f5d88a; box-shadow: 0 0 22px rgb(230 188 100 / 46%); transform: translateY(-1px); }
 .menu-audio-settings-button:focus-visible, .expedition-roadmap__audio-button:focus-visible { outline: 3px solid #f1d18a; outline-offset: 3px; }
 .menu-audio-settings-button:disabled, .expedition-roadmap__audio-button:disabled { opacity: .55; cursor: not-allowed; }
+.audio-autoplay-hint { position: absolute; z-index: 5; top: 36px; max-width: min(260px, calc(100vw - 112px)); padding: 8px 11px; color: #fff0c5; border: 1px solid rgb(232 191 109 / 48%); border-radius: 9px; background: rgb(24 20 18 / 94%); box-shadow: 0 5px 18px rgb(0 0 0 / 38%), 0 0 14px rgb(220 169 79 / 20%); font-size: 12px; line-height: 1.35; text-align: center; pointer-events: none; animation: audio-hint-glow 2s ease-in-out infinite; }
+.menu-audio-autoplay-hint { right: 84px; }
+.expedition-roadmap__audio-autoplay-hint { top: 31px; right: 136px; }
+@keyframes audio-hint-glow { 50% { border-color: rgb(246 211 141 / 74%); box-shadow: 0 5px 18px rgb(0 0 0 / 38%), 0 0 20px rgb(220 169 79 / 38%); } }
 .menu-card { width: min(100%, 560px); padding-block: clamp(35px, 8vh, 78px); }
 .menu-emblem { display: block; margin-bottom: 13px; color: var(--gold-bright); font-size: 30px; }
 .menu-card h1 { margin: 12px 0; font-size: clamp(42px, 9vw, 68px); letter-spacing: .06em; }
@@ -748,6 +752,9 @@
   .menu-audio-settings-button { top: 12px; right: 12px; width: 42px; height: 42px; }
   .menu-audio-settings-button span, .expedition-roadmap__audio-button span { font-size: 21px; }
   .expedition-roadmap__audio-button { top: 12px; right: 62px; width: 42px; height: 42px; }
+  .audio-autoplay-hint { top: 17px; max-width: min(220px, calc(100vw - 100px)); padding: 7px 8px; font-size: 11px; }
+  .menu-audio-autoplay-hint { right: 60px; }
+  .expedition-roadmap__audio-autoplay-hint { right: 110px; }
   .expedition-roadmap__leaderboard-button { top: 12px; right: 12px; width: 42px; height: 42px; }
   .expedition-roadmap__leaderboard-button span { font-size: 23px; }
   .expedition-roadmap__header { padding-inline: 44px; }
@@ -807,3 +814,7 @@
 .abandon-dialog p { color: #c7bba6; line-height: 1.6; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 .dialog-actions button:disabled, .menu-primary:disabled, .menu-secondary:disabled { opacity: .55; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .audio-autoplay-hint { animation: none; }
+}

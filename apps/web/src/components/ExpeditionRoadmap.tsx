@@ -8,9 +8,10 @@ export interface ExpeditionRoadmapProps {
   onMainMenu: () => void;
   onLeaderboard: () => void;
   onAudioSettings: () => void;
+  showAutoplayHint?: boolean;
 }
 
-export function ExpeditionRoadmap({ run, disabled = false, onSelectEncounter, onMainMenu, onLeaderboard, onAudioSettings }: ExpeditionRoadmapProps): ReactElement {
+export function ExpeditionRoadmap({ run, disabled = false, onSelectEncounter, onMainMenu, onLeaderboard, onAudioSettings, showAutoplayHint = false }: ExpeditionRoadmapProps): ReactElement {
   const encounters = run.encounters;
   const activeIndex = encounters.findIndex((encounter) => encounter.status === "active");
   const targetIndex = activeIndex >= 0 ? activeIndex : encounters.findIndex((encounter) => encounter.status === "pending");
@@ -28,6 +29,7 @@ export function ExpeditionRoadmap({ run, disabled = false, onSelectEncounter, on
         <button className="expedition-roadmap__leaderboard-button" type="button" aria-label="랭킹" title="랭킹" disabled={disabled} onClick={onLeaderboard}>
           <span aria-hidden="true">♛</span>
         </button>
+        {showAutoplayHint && <span className="audio-autoplay-hint expedition-roadmap__audio-autoplay-hint" role="status">화면을 눌러 음악 시작</span>}
         <header className="expedition-roadmap__header">
           <span className="eyebrow">MANGO STONE</span>
           <h1 id="expedition-roadmap-title">원정 경로</h1>

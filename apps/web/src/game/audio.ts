@@ -9,8 +9,8 @@ export interface AudioSettings {
 }
 
 export interface AudioController {
-  unlock(): Promise<void>;
-  playMusic(kind: MusicKind): void;
+  unlock(): Promise<boolean>;
+  playMusic(kind: MusicKind): Promise<boolean>;
   playEffect(kind: SoundEffectKind, volumeScale?: number): void;
   setSettings(settings: AudioSettings): void;
   dispose(): void;
@@ -118,16 +118,18 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
   const musicVolume = () => settings.muted ? 0 : settings.musicVolume;
   const effectVolume = (scale = 1) => settings.muted ? 0 : clampVolume(settings.effectsVolume * scale);
 
-  function attemptPlay(audio: HTMLAudioElement, isCurrentMusic: boolean): Promise<void> {
+  function attemptPlay(audio: HTMLAudioElement, isCurrentMusic: boolean): Promise<boolean> {
     try {
       return Promise.resolve(audio.play()).then(() => {
         if (isCurrentMusic && currentMusic === audio) musicStarted = true;
+        return !isCurrentMusic || currentMusic === audio;
       }).catch(() => {
         if (isCurrentMusic && currentMusic === audio) musicStarted = false;
+        return false;
       });
     } catch {
       if (isCurrentMusic && currentMusic === audio) musicStarted = false;
-      return Promise.resolve();
+      return Promise.resolve(false);
     }
   }
 
@@ -175,29 +177,31 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
 
   return {
     async unlock() {
-      if (disposed) return;
+      if (disposed) return false;
       const context = getAudioContext();
       if (context?.state === "suspended") {
         try { await context.resume(); } catch { /* Browser audio may remain unavailable. */ }
       }
-      if (currentMusic && !musicStarted) await attemptPlay(currentMusic, true);
+      if (!currentMusic) return false;
+      if (!musicStarted) return attemptPlay(currentMusic, true);
+      return true;
     },
 
     playMusic(kind) {
-      if (disposed) return;
+      if (disposed) return Promise.resolve(false);
       if (currentMusicKind === kind && currentMusic) {
         if (!musicStarted) {
           currentMusic.volume = musicVolume();
-          void attemptPlay(currentMusic, true);
+          return attemptPlay(currentMusic, true);
         }
-        return;
+        return Promise.resolve(true);
       }
 
       let next: HTMLAudioElement;
       try {
         next = createAudio(MUSIC_SOURCES[kind]);
       } catch {
-        return;
+        return Promise.resolve(false);
       }
       const previous = currentMusic;
       currentMusic = next;
@@ -205,9 +209,10 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       musicStarted = false;
       next.loop = true;
       next.volume = previous ? 0 : musicVolume();
-      void attemptPlay(next, true);
+      const playback = attemptPlay(next, true);
       if (previous) fadeOut(previous);
       if (previous) fadeIn(next);
+      return playback;
     },
 
     playEffect(kind, volumeScale = 1) {

@@ -79,6 +79,11 @@ describe("ExpeditionRoadmap", () => {
     expect(onAudioSettings).toHaveBeenCalledOnce();
   });
 
+  it("shows the autoplay hint beside the sound settings control when requested", () => {
+    const { container } = render(<ExpeditionRoadmap run={makeRun()} showAutoplayHint onSelectEncounter={vi.fn()} onMainMenu={vi.fn()} onLeaderboard={vi.fn()} onAudioSettings={vi.fn()} />);
+    expect(container.querySelector(".expedition-roadmap__audio-autoplay-hint")?.textContent).toBe("화면을 눌러 음악 시작");
+  });
+
   it("keeps the run unchanged when returning to the main menu and respects disabled state", () => {
     const run = makeRun();
     const originalStatuses = run.encounters.map((encounter) => encounter.status);

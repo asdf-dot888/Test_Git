@@ -81,6 +81,37 @@ afterEach(() => {
 });
 
 describe("audio lifecycle under React StrictMode", () => {
+  it("does not attempt music while local run loading keeps the menu hidden", async () => {
+    const players: FakeAudio[] = [];
+    vi.stubGlobal("Audio", class extends FakeAudio {
+      constructor(src: string) { super(src); players.push(this); }
+    });
+    const sync = makeReadySync();
+    sync.loaded = false;
+    sync.status = "loading";
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+
+    await screen.findByRole("status");
+    await Promise.resolve();
+    expect(players.filter((player) => player.src.startsWith("/audio/bgm/"))).toHaveLength(0);
+  });
+
+  it("tries menu music after the authenticated menu loads and hides the hint after a successful gesture", async () => {
+    const players: FakeAudio[] = [];
+    vi.stubGlobal("Audio", class extends FakeAudio {
+      constructor(src: string) { super(src); players.push(this); }
+    });
+    renderWithTestAuth(<GameSessionView sync={makeReadySync()} />);
+
+    await waitFor(() => expect(players.some((player) => player.src === "/audio/bgm/menu.wav")).toBe(true));
+    expect(screen.getByText("화면을 눌러 음악 시작")).toBeTruthy();
+
+    FakeAudio.gestureUnlocked = true;
+    fireEvent.pointerDown(document);
+    await waitFor(() => expect(screen.queryByText("화면을 눌러 음악 시작")).toBeNull());
+    expect(players.find((player) => player.src === "/audio/bgm/menu.wav")?.paused).toBe(false);
+  });
+
   it("unlocks music, plays combat effects, and disposes the active players on unmount", async () => {
     const players: FakeAudio[] = [];
     vi.stubGlobal("Audio", class extends FakeAudio {

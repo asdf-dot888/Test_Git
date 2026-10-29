@@ -4,18 +4,20 @@ import { GameGuideModal } from "./GameGuideModal.js";
 interface MainMenuProps {
   canContinue: boolean;
   disabled?: boolean;
+  showAutoplayHint?: boolean;
   onStart(): void;
   onContinue(): void;
   onLeaderboard(): void;
   onAudioSettings(): void;
 }
 
-export function MainMenu({ canContinue, disabled = false, onStart, onContinue, onLeaderboard, onAudioSettings }: MainMenuProps) {
+export function MainMenu({ canContinue, disabled = false, showAutoplayHint = false, onStart, onContinue, onLeaderboard, onAudioSettings }: MainMenuProps) {
   const [guideOpen, setGuideOpen] = useState(false);
 
   return (
     <main className="menu-screen">
       <button className="menu-audio-settings-button" type="button" aria-label="음향 설정" title="음향 설정" disabled={disabled} onClick={onAudioSettings}><span aria-hidden="true">🔊</span></button>
+      {showAutoplayHint && <span className="audio-autoplay-hint menu-audio-autoplay-hint" role="status">화면을 눌러 음악 시작</span>}
       <div className="menu-card">
         <span className="menu-emblem" aria-hidden="true">✦</span>
         <span className="eyebrow">MANGO STONE</span>

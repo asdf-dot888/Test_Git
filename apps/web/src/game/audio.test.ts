@@ -255,11 +255,11 @@ describe("createAudioController", () => {
       players.push(player);
       return player as unknown as HTMLAudioElement;
     });
-    controller.playMusic("normal");
+    expect(await controller.playMusic("normal")).toBe(false);
     const music = players[0]!;
     await Promise.resolve();
     music.rejectPlayback = false;
-    await controller.unlock();
+    expect(await controller.unlock()).toBe(true);
     expect(music.playCount).toBe(2);
 
     controller.setSettings({ musicVolume: 4, effectsVolume: -1, muted: false });
