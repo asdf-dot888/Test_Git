@@ -1,6 +1,6 @@
 # Task: T03 One-Time Opening Hand Redraw
 
-## Status: pending
+## Status: done
 
 ## Goal
 Allow one full redraw of the opening three-card hand in the first encounter on desktop and mobile, and prevent reuse after an action or reload.
@@ -45,10 +45,10 @@ Allow one full redraw of the opening three-card hand in the first encounter on d
 - Verify saved API runs preserve both true and false, and old payloads load as false.
 
 ## Acceptance Criteria
-- [ ] Exactly one full redraw is possible at the start of the first encounter on both device classes.
-- [ ] A first gameplay action consumes an unused redraw; card selection alone does not.
-- [ ] Later encounters never offer redraw.
-- [ ] Local/API saved runs preserve eligibility and legacy runs remain loadable.
+- [x] Exactly one full redraw is possible at the start of the first encounter on both device classes.
+- [x] A first gameplay action consumes an unused redraw; card selection alone does not.
+- [x] Later encounters never offer redraw.
+- [x] Local/API saved runs preserve eligibility and legacy runs remain loadable.
 
 ## Validation
 - `npm test -- packages/game-core/src/engine.test.ts apps/web/src/game/gameActions.test.ts apps/web/src/components/GameBoard.test.tsx apps/api/src/routes/runRoutes.test.ts` — core, UI, and persistence cases pass.
@@ -67,6 +67,6 @@ Task: T03-opening-hand-redraw
 ```
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed
+- commit: `feat(game): allow one opening hand redraw per expedition`

@@ -7,10 +7,10 @@
 [P01 Mobile and Battle Polish](./phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/phase.md)
 
 ## Active Task
-[T03 One-Time Opening Hand Redraw](./phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/T03-opening-hand-redraw.md)
+[T04 All-Attack Auto End Turn](./phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/T04-all-attack-auto-end.md)
 
 ## Status
-- T01 and T02 are complete; T03 is ready to execute.
+- T01 through T03 are complete; T04 is ready to execute.
 
 ## Next Step
-Read T03's blueprint and implement the persistent one-time redraw for the first three-card hand.
+Read T04's blueprint and end the turn after all-attack effects finish when the enemy hero survives.

@@ -572,6 +572,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onDiscardCard={(instanceId) => dispatch({ type: "discard-before-draw", instanceId })}
           onCancelTarget={() => dispatch({ type: session.error ? "clear-error" : "cancel-selection" })}
           onEndTurn={() => dispatch({ type: "end-turn" })}
+          onRedrawOpeningHand={() => dispatch({ type: "redraw-opening-hand" })}
           onMenu={() => setMenuView("choices")}
           onUseHeroPower={activateHeroPower}
           onAllAttack={() => dispatch({ type: "all-attack" })}

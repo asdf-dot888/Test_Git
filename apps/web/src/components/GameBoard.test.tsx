@@ -4,6 +4,17 @@ import { CARD_BY_ID, createRun, gameConstants } from "@board-game/game-core";
 import { GameBoard } from "./GameBoard.js";
 
 describe("GameBoard", () => {
+  it("shows the opening hand redraw only while it remains available and disables it during resolution", () => {
+    const run = createRun(411);
+    const renderBoard = (actionsDisabled: boolean) => renderToStaticMarkup(
+      <GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} actionsDisabled={actionsDisabled} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} onRedrawOpeningHand={vi.fn()} />,
+    );
+    expect(renderBoard(false)).toContain("시작 손패 다시 뽑기");
+    expect(renderBoard(true)).toContain('class="opening-hand-redraw-button" type="button" disabled=""');
+    run.openingHandRedrawAvailable = false;
+    expect(renderBoard(false)).not.toContain("시작 손패 다시 뽑기");
+  });
+
   it("renders both heroes, two six-slot lanes, mana, hand, and turn control", () => {
     const markup = renderToStaticMarkup(
       <GameBoard

@@ -3,6 +3,21 @@ import { createRun } from "@board-game/game-core";
 import { initialGameSession, reduceGameAction } from "./gameActions.js";
 
 describe("reduceGameAction timer snapshots", () => {
+  it("keeps redraw available through selection and consumes it after the redraw or first action", () => {
+    let session = reduceGameAction(initialGameSession, { type: "restore-run", run: createRun(543) });
+    const openingHand = session.run!.battle!.hand;
+    session = reduceGameAction(session, { type: "select-card", instanceId: openingHand[0]!.instanceId });
+    expect(session.run?.openingHandRedrawAvailable).toBe(true);
+
+    session = reduceGameAction(session, { type: "redraw-opening-hand" });
+    expect(session.run?.openingHandRedrawAvailable).toBe(false);
+    expect(session.run?.battle?.hand).toHaveLength(3);
+
+    const actionRun = createRun(544);
+    const afterTurn = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run: actionRun }), { type: "end-turn" });
+    expect(afterTurn.run?.openingHandRedrawAvailable).toBe(false);
+  });
+
   it("updates and clears only the run timer without creating combat events", () => {
     const run = createRun(540);
     const session = reduceGameAction(initialGameSession, { type: "restore-run", run });

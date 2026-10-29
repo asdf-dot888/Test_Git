@@ -31,6 +31,11 @@ function cloneRun(run: RunState): RunState {
   return structuredClone(run);
 }
 
+function consumeOpeningHandRedraw(run: RunState): RunState {
+  if (run.openingHandRedrawAvailable) run.openingHandRedrawAvailable = false;
+  return run;
+}
+
 function getCard(cardId: string): CardDefinition {
   const card = CARD_BY_ID.get(cardId);
   if (!card) fail("CARD_NOT_FOUND", `Unknown card: ${cardId}`);
@@ -118,9 +123,10 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   const hasClassResources = Number.isInteger(battle.playerArmor) && Number.isInteger(battle.soulShards) && typeof battle.heroPowerUsed === "boolean";
   const hasTemporaryMana = Number.isInteger(battle.playerMana?.temporary) && Number.isInteger(battle.enemyMana?.temporary);
   const hasObsoleteCharge = Object.prototype.hasOwnProperty.call(battle, "pendingEnemyCharge");
-  if (hasEnemyZones && hasClassResources && hasTemporaryMana && !hasObsoleteCharge) return run;
+  if (hasEnemyZones && hasClassResources && hasTemporaryMana && !hasObsoleteCharge && run.openingHandRedrawAvailable !== undefined) return run;
 
   const next = cloneRun(run);
+  next.openingHandRedrawAvailable ??= false;
   const current = next.battle!;
   if (!hasEnemyZones) {
     const enemy = ENEMY_BY_ID.get(current.enemyId);
@@ -819,6 +825,7 @@ export function createRun(seed: number, playerClass: PlayerClass = "warrior"): R
     encounterInPhase: 0,
     completedBattles: 0,
     status: "active",
+    openingHandRedrawAvailable: true,
     playerClass,
     deck,
     starterDeck,
@@ -827,6 +834,23 @@ export function createRun(seed: number, playerClass: PlayerClass = "warrior"): R
     encounters,
   };
   return beginEncounter(run, 0, randomState);
+}
+
+export function redrawOpeningHand(run: RunState): RunState {
+  const battle = run.battle;
+  if (run.openingHandRedrawAvailable !== true || run.completedBattles !== 0 || run.encounterInPhase !== 0
+    || run.status !== "active" || !battle || battle.status !== "active" || battle.activeSide !== "player"
+    || battle.turnNumber !== 1 || battle.hand.length !== 3) {
+    fail("INVALID_ACTION", "The opening hand redraw is no longer available.");
+  }
+  const next = cloneRun(run);
+  const currentBattle = next.battle!;
+  const shuffled = shuffle([...currentBattle.hand, ...currentBattle.drawPile], currentBattle.rngState);
+  currentBattle.hand = shuffled.items.slice(0, 3);
+  currentBattle.drawPile = shuffled.items.slice(3);
+  currentBattle.rngState = shuffled.state;
+  next.openingHandRedrawAvailable = false;
+  return next;
 }
 
 export function useHeroPower(run: RunState, targetId?: string): RunState {
@@ -850,14 +874,14 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
   spendMana(battle, "player", 2);
   battle.heroPowerUsed = true;
   if (next.playerClass === "assassin") {
-    if (targetId === "enemy-hero") return dealDamageToEnemyHero(next, 2);
+    if (targetId === "enemy-hero") return consumeOpeningHandRedraw(dealDamageToEnemyHero(next, 2));
     const target = battle.enemyBoard.find((minion) => minion.instanceId === targetId)!;
     target.health -= 2;
-    return removeDeadMinions(next, "enemy");
+    return consumeOpeningHandRedraw(removeDeadMinions(next, "enemy"));
   }
   if (next.playerClass === "warrior") {
     battle.playerArmor += 2;
-    return next;
+    return consumeOpeningHandRedraw(next);
   }
 
   {
@@ -868,7 +892,7 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
     battle.soulShards -= 3;
     const summoned = createMinion(next, cardId, "player", battle.turnNumber);
     summoned.run.battle!.playerBoard.push(summoned.minion);
-    return summoned.run;
+    return consumeOpeningHandRedraw(summoned.run);
   }
 }
 
@@ -901,7 +925,7 @@ export function fuseMinions(run: RunState, firstMinionId: string, secondMinionId
   const made = createMinion(next, recipe.resultCardId, "player", battle.turnNumber, resultInstance);
   made.minion.hasAttacked = true;
   made.run.battle!.playerBoard.splice(insertionIndex, 0, made.minion);
-  return triggerMinionEffect(made.run, made.minion);
+  return consumeOpeningHandRedraw(triggerMinionEffect(made.run, made.minion));
 }
 
 export function startBattle(run: RunState, enemyId: string): RunState {
@@ -929,7 +953,7 @@ export function playMinion(run: RunState, handInstanceId: string, slotIndex?: nu
   spendMana(battle, "player", card.cost);
   const made = createMinion(next, card.id, "player", battle.turnNumber, instance);
   made.run.battle!.playerBoard.splice(insertionIndex, 0, made.minion);
-  return triggerMinionEffect(made.run, made.minion);
+  return consumeOpeningHandRedraw(triggerMinionEffect(made.run, made.minion));
 }
 
 export function castSpell(run: RunState, handInstanceId: string, targetId?: string): RunState {
@@ -962,9 +986,9 @@ export function castSpell(run: RunState, handInstanceId: string, targetId?: stri
   let current = next;
   for (const effect of card.spellEffects) {
     current = applySpellEffect(current, effect, targetId);
-    if (current.status !== "active") return current;
+    if (current.status !== "active") return consumeOpeningHandRedraw(current);
   }
-  return current;
+  return consumeOpeningHandRedraw(current);
 }
 
 export function attackWithMinion(run: RunState, attackerId: string, targetId: string): RunState {
@@ -982,11 +1006,11 @@ export function attackWithMinion(run: RunState, attackerId: string, targetId: st
     applyMinionCombatDamage(attacker, target);
     attacker.hasAttacked = true;
     const afterEnemyCleanup = removeDeadMinions(next, "enemy");
-    return removeDeadMinions(afterEnemyCleanup, "player");
+    return consumeOpeningHandRedraw(removeDeadMinions(afterEnemyCleanup, "player"));
   }
   if (targetId !== battle.enemyHero.id) fail("INVALID_TARGET", "The enemy hero is the only available target.");
   attacker.hasAttacked = true;
-  return dealDamageToEnemyHero(next, attacker.attack);
+  return consumeOpeningHandRedraw(dealDamageToEnemyHero(next, attacker.attack));
 }
 
 export function attackAllReadyMinions(run: RunState): RunState {
@@ -1095,6 +1119,7 @@ export function resolveEnemyTurn(run: RunState): RunState {
 export function endPlayerTurnWithPlayback(run: RunState): EnemyTurnResolution {
   const next = cloneRun(run);
   const battle = assertPlayerTurn(next);
+  consumeOpeningHandRedraw(next);
   battle.activeSide = "enemy";
   expireTemporaryMana(battle.playerMana);
   battle.enemyBoard = battle.enemyBoard.map((minion) => ({ ...minion, hasAttacked: false }));

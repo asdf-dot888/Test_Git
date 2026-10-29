@@ -160,6 +160,7 @@ export interface RunState {
   battle: BattleState | null;
   pendingReward: RewardState | null;
   pendingVictoryAcknowledgement?: boolean;
+  openingHandRedrawAvailable?: boolean;
   encounters: EncounterState[];
   turnTimer?: TurnTimerState;
 }

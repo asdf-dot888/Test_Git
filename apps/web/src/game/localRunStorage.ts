@@ -38,6 +38,7 @@ function isRunState(value: unknown): value is RunState {
     && (value.encounterInPhase === 0 || value.encounterInPhase === 1 || value.encounterInPhase === 2 || value.encounterInPhase === 3)
     && Number.isInteger(value.completedBattles)
     && (value.status === "active" || value.status === "victory" || value.status === "defeat")
+    && (value.openingHandRedrawAvailable === undefined || typeof value.openingHandRedrawAvailable === "boolean")
     && (value.playerClass === undefined || (typeof value.playerClass === "string" && PLAYER_CLASSES.has(value.playerClass)))
     && Array.isArray(value.deck)
     && Array.isArray(value.starterDeck)
@@ -77,6 +78,7 @@ export function createLocalRunStorage(storage: Storage): LocalRunStorage {
         return { status: "empty" };
       }
 
+      value.run.openingHandRedrawAvailable ??= false;
       return { status: "loaded", run: value.run };
     },
 

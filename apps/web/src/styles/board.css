@@ -166,6 +166,9 @@
 .hand-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; color: var(--muted); }
 .hand-heading h2 { margin: 0; color: #e9dfce; font-size: 12px; }
 .hand-heading span { font-size: 10px; }
+.opening-hand-redraw-button { margin-left: auto; min-height: 26px; padding: 2px 9px; color: #f3d29c; border: 1px solid rgb(218 167 93 / 65%); border-radius: 6px; background: linear-gradient(180deg, #47372b, #302720); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.opening-hand-redraw-button:hover:not(:disabled) { border-color: #f1bd70; box-shadow: 0 0 12px rgb(220 153 67 / 28%); }
+.opening-hand-redraw-button:disabled { opacity: .5; cursor: not-allowed; }
 .hand-cards { display: flex; flex-flow: row nowrap; align-items: stretch; gap: 6px; min-height: 0; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 3px 5px; scrollbar-color: #806343 #242225; scrollbar-width: thin; touch-action: pan-x; }
 .game-card { position: relative; flex: 0 0 clamp(96px, 8vw, 122px); min-width: 0; min-height: 168px; padding: 4px; display: grid; grid-template-rows: auto auto auto; justify-items: center; align-content: start; gap: 2px; color: var(--ink); text-align: center; border: 2px solid rgb(219 187 129 / 58%); border-radius: 10px; background: linear-gradient(155deg, #4e443d, #29272a 55%, #1e1d20); box-shadow: 0 4px 12px rgb(0 0 0 / 36%), inset 0 0 0 2px rgb(19 16 14 / 55%); cursor: pointer; transition: transform .14s ease, opacity .14s ease; }
 .game-card:hover:not(:disabled) { z-index: 2; transform: translateY(-5px); }

@@ -47,6 +47,17 @@ describe("account-scoped local run storage", () => {
     }
   });
 
+  it("loads an older local save without redraw eligibility as unavailable", () => {
+    const storage = createMemoryStorage();
+    const run = createRun(420);
+    delete run.openingHandRedrawAvailable;
+    storage.setItem("board-card-roguelike:run:v1:legacy-redraw", JSON.stringify({ schemaVersion: 1, userId: "legacy-redraw", savedAt: new Date().toISOString(), run }));
+
+    const loaded = createLocalRunStorage(storage).load("legacy-redraw");
+    expect(loaded.status).toBe("loaded");
+    if (loaded.status === "loaded") expect(loaded.run.openingHandRedrawAvailable).toBe(false);
+  });
+
   it("isolates runs by account and can clear only the selected account", () => {
     const runs = createLocalRunStorage(createMemoryStorage());
     const firstRun = createRun(11);

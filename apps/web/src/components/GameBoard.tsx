@@ -33,6 +33,7 @@ export interface GameBoardProps {
   onDiscardCard(instanceId: string): void;
   onCancelTarget(): void;
   onEndTurn(): void;
+  onRedrawOpeningHand?(): void;
   onMenu(): void;
   onUseHeroPower?(): void;
   onAllAttack?(): void;
@@ -55,7 +56,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const playerHeroArtKey = run.playerClass ?? "player";
@@ -165,7 +166,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
           <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled} /></div>
         </div>
-        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />
+        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} redrawAvailable={run.openingHandRedrawAvailable === true} redrawDisabled={actionsDisabled} onRedraw={onRedrawOpeningHand} />
       </footer>
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
       {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}

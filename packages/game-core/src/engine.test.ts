@@ -27,6 +27,7 @@ import {
   gameConstants,
   hydrateRunForCurrentBattle,
   playMinion,
+  redrawOpeningHand,
   resolveEnemyTurn,
   resolveEnemyTurnWithPlayback,
   skipReward,
@@ -331,6 +332,56 @@ describe("seeded run setup and random helpers", () => {
     expect(pickIndex(5, 9)).toEqual(firstPick);
     expect(firstPick.value).toBeGreaterThanOrEqual(0);
     expect(firstPick.value).toBeLessThan(5);
+  });
+});
+
+describe("one-time opening hand redraw", () => {
+  it("redraws exactly three cards deterministically without changing the deck or card IDs", () => {
+    const first = createRun(6041);
+    const second = createRun(6041);
+    const original = copyRun(first);
+    const allBefore = [...activeBattle(first).hand, ...activeBattle(first).drawPile].map(({ instanceId }) => instanceId).sort();
+    expect(first.openingHandRedrawAvailable).toBe(true);
+
+    const redrawn = redrawOpeningHand(first);
+    expect(redrawn).toEqual(redrawOpeningHand(second));
+    expect(activeBattle(redrawn).hand).toHaveLength(3);
+    expect(activeBattle(redrawn).drawPile).toHaveLength(27);
+    expect([...activeBattle(redrawn).hand, ...activeBattle(redrawn).drawPile].map(({ instanceId }) => instanceId).sort()).toEqual(allBefore);
+    expect(activeBattle(redrawn).rngState).not.toBe(activeBattle(first).rngState);
+    expect(redrawn.deck).toEqual(first.deck);
+    expect(redrawn.openingHandRedrawAvailable).toBe(false);
+    expect(first).toEqual(original);
+  });
+
+  it("rejects reuse, later encounters, and enemy turns without mutating the run", () => {
+    const used = redrawOpeningHand(createRun(6042));
+    const usedBefore = copyRun(used);
+    expect(() => redrawOpeningHand(used)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+    expect(used).toEqual(usedBefore);
+
+    const enemyTurn = copyRun(createRun(6043));
+    activeBattle(enemyTurn).activeSide = "enemy";
+    expect(() => redrawOpeningHand(enemyTurn)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+    expect(enemyTurn.openingHandRedrawAvailable).toBe(true);
+
+    const laterEncounter = copyRun(createRun(6046));
+    laterEncounter.completedBattles = 1;
+    laterEncounter.encounterInPhase = 1;
+    expect(() => redrawOpeningHand(laterEncounter)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+  });
+
+  it("consumes availability only after a successful gameplay action", () => {
+    const run = copyRun(createRun(6044));
+    const cheapMinion = CARD_CATALOG.find((card) => card.kind === "minion" && card.cost > 0 && card.cost <= activeBattle(run).playerMana.current)!;
+    activeBattle(run).hand = [instance("redraw-test-minion", cheapMinion.id)];
+    activeBattle(run).playerMana.current = 0;
+    expect(() => playMinion(run, "redraw-test-minion")).toThrowError(expect.objectContaining({ code: "INSUFFICIENT_MANA" }));
+    expect(run.openingHandRedrawAvailable).toBe(true);
+
+    activeBattle(run).playerMana.current = 10;
+    expect(playMinion(run, "redraw-test-minion").openingHandRedrawAvailable).toBe(false);
+    expect(endPlayerTurnWithPlayback(createRun(6045)).run.openingHandRedrawAvailable).toBe(false);
   });
 });
 
