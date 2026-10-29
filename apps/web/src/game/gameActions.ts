@@ -39,6 +39,7 @@ export type GameAction =
   | { type: "cast-spell"; instanceId: string; targetId?: string }
   | { type: "attack"; attackerId: string; targetId: string }
   | { type: "all-attack" }
+  | { type: "finish-all-attack" }
   | { type: "fuse-minions"; firstMinionId: string; secondMinionId: string }
   | { type: "end-turn" }
   | { type: "discard-before-draw"; instanceId: string }
@@ -64,6 +65,7 @@ export interface GameSession {
   combatEffects: CombatEffectEvent[];
   nextCombatEffectId: number;
   enemyTurnPlayback: { steps: EnemyTurnPlaybackStep[]; currentIndex: number; stage: "intent" | "effect" } | null;
+  autoEndTurnAfterAllAttack: boolean;
 }
 
 export const initialGameSession: GameSession = {
@@ -78,6 +80,7 @@ export const initialGameSession: GameSession = {
   combatEffects: [],
   nextCombatEffectId: 1,
   enemyTurnPlayback: null,
+  autoEndTurnAfterAllAttack: false,
 };
 
 type InternalAction = GameAction | { type: "resolution-start" };
@@ -96,6 +99,7 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
     combatEffects: [],
     nextCombatEffectId: previous.nextCombatEffectId,
     enemyTurnPlayback: null,
+    autoEndTurnAfterAllAttack: false,
   };
 }
 
@@ -179,6 +183,14 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
       combatEffects: [],
     };
   }
+  if (action.type === "finish-all-attack") {
+    const battle = session.run?.battle;
+    if (!session.autoEndTurnAfterAllAttack || session.combatEffects.length > 0 || session.resolving || session.enemyTurnPlayback
+      || !battle || battle.status !== "active" || battle.activeSide !== "player" || battle.enemyHero.health <= 0) {
+      return session.autoEndTurnAfterAllAttack ? { ...session, autoEndTurnAfterAllAttack: false } : session;
+    }
+    return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run!), { ...session, autoEndTurnAfterAllAttack: false });
+  }
   if (session.enemyTurnPlayback) return session;
   if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass), session);
   if (action.type === "restore-run") return sessionForRun(hydrateRunForCurrentBattle(action.run), session);
@@ -213,7 +225,11 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId, action.slotIndex), session, action);
     if (action.type === "cast-spell") return sessionForAction(castSpell(session.run, action.instanceId, action.targetId), session, action);
     if (action.type === "attack") return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
-    if (action.type === "all-attack") return sessionForAction(attackAllReadyMinions(session.run), session, action);
+    if (action.type === "all-attack") {
+      const next = sessionForAction(attackAllReadyMinions(session.run), session, action);
+      const battle = next.run?.battle;
+      return { ...next, autoEndTurnAfterAllAttack: Boolean(battle && battle.status === "active" && battle.enemyHero.health > 0) };
+    }
     if (action.type === "fuse-minions") return sessionForAction(fuseMinions(session.run, action.firstMinionId, action.secondMinionId), session, action);
     if (action.type === "use-hero-power") return sessionForAction(useHeroPower(session.run, action.targetId), session, action);
     if (action.type === "end-turn") return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run), session);

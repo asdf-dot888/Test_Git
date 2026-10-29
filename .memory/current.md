@@ -7,10 +7,10 @@
 [P01 Mobile and Battle Polish](./phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/phase.md)
 
 ## Active Task
-[T04 All-Attack Auto End Turn](./phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/T04-all-attack-auto-end.md)
+[T05 Cinematic Victory](./phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/T05-cinematic-victory.md)
 
 ## Status
-- T01 through T03 are complete; T04 is ready to execute.
+- T01 through T04 are complete; T05 is ready to execute.
 
 ## Next Step
-Read T04's blueprint and end the turn after all-attack effects finish when the enemy hero survives.
+Read T05's blueprint and sequence the half-speed lethal attack, enemy-hero defeat effect, and victory reveal.

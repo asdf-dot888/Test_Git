@@ -18,6 +18,44 @@ describe("reduceGameAction timer snapshots", () => {
     expect(afterTurn.run?.openingHandRedrawAvailable).toBe(false);
   });
 
+  it("waits for every all-attack effect before starting enemy playback", () => {
+    const run = createRun(545);
+    run.battle!.playerBoard = [{ instanceId: "all-attacker", cardId: "ash-wolf", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    run.battle!.enemyHand = [{ instanceId: "enemy-follow-up", cardId: "bone-rat" }];
+    let session = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run }), { type: "all-attack" });
+
+    expect(session.autoEndTurnAfterAllAttack).toBe(true);
+    expect(session.run?.battle?.activeSide).toBe("player");
+    expect(session.combatEffects.length).toBeGreaterThan(0);
+    expect(session.enemyTurnPlayback).toBeNull();
+
+    for (const event of [...session.combatEffects]) {
+      session = reduceGameAction(session, { type: "clear-combat-effect", eventId: event.id });
+    }
+    expect(session.autoEndTurnAfterAllAttack).toBe(true);
+    expect(session.enemyTurnPlayback).toBeNull();
+
+    session = reduceGameAction(session, { type: "finish-all-attack" });
+    expect(session.autoEndTurnAfterAllAttack).toBe(false);
+    expect(session.run?.battle?.activeSide).toBe("player");
+    expect(session.enemyTurnPlayback?.steps.length).toBeGreaterThan(0);
+  });
+
+  it("does not schedule auto-end for lethal or invalid all-attacks", () => {
+    const lethal = createRun(546);
+    lethal.battle!.enemyHero.health = 2;
+    lethal.battle!.playerBoard = [{ instanceId: "lethal-attacker", cardId: "ash-wolf", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    const lethalSession = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run: lethal }), { type: "all-attack" });
+    expect(lethalSession.autoEndTurnAfterAllAttack).toBe(false);
+    expect(lethalSession.run?.battle?.status).toBe("playerWon");
+    expect(reduceGameAction(lethalSession, { type: "finish-all-attack" }).enemyTurnPlayback).toBeNull();
+
+    const invalid = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run: createRun(547) }), { type: "all-attack" });
+    expect(invalid.autoEndTurnAfterAllAttack).toBe(false);
+    expect(invalid.run?.battle?.activeSide).toBe("player");
+    expect(invalid.error).toBeTruthy();
+  });
+
   it("updates and clears only the run timer without creating combat events", () => {
     const run = createRun(540);
     const session = reduceGameAction(initialGameSession, { type: "restore-run", run });

@@ -1,6 +1,6 @@
 # Task: T04 End Turn After All-Attack
 
-## Status: pending
+## Status: done
 
 ## Goal
 Make all-attack end the player's turn after every sequential attack effect has finished, except when those attacks defeat the enemy hero.
@@ -37,9 +37,9 @@ Make all-attack end the player's turn after every sequential attack effect has f
 - Assert invalid/empty all-attack never schedules an end turn.
 
 ## Acceptance Criteria
-- [ ] A surviving enemy hero causes one automatic end turn after the final attack animation.
-- [ ] A lethal attack skips enemy-turn playback and continues to victory.
-- [ ] Existing all-attack availability and behavior are unchanged on both devices.
+- [x] A surviving enemy hero causes one automatic end turn after the final attack animation.
+- [x] A lethal attack skips enemy-turn playback and continues to victory.
+- [x] Existing all-attack availability and behavior are unchanged on both devices.
 
 ## Validation
 - `npm test -- apps/web/src/game/gameActions.test.ts apps/web/src/components/GameBoard.test.tsx` — sequence and button tests pass.
@@ -58,6 +58,6 @@ Task: T04-all-attack-auto-end
 ```
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed
+- commit: `feat(game): end turn after all-attack resolves`
