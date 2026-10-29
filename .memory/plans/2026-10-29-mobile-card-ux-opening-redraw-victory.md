@@ -6,7 +6,7 @@ Remove broken art for every catalog card, make effects readable on mobile and wh
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | Fill card assets, implement card inspection and opening redraw, sequence auto-end and cinematic victory, then polish mobile layouts. | [P01](../phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/phase.md) |
+| P01 | `done` | Fill card assets, implement card inspection and opening redraw, sequence auto-end and cinematic victory, then polish mobile layouts. | [P01](../phases/2026-10-29-mobile-card-ux-opening-redraw-victory/P01-mobile-and-battle-polish/phase.md) |
 
 ## Dependencies
 - P01-T01 creates the art files and adds catalog art coverage.
@@ -25,3 +25,6 @@ Remove broken art for every catalog card, make effects readable on mobile and wh
 - Redraw availability is persisted so a refresh cannot grant a second redraw.
 - API save validation currently caps each battle board at five minions while the engine allows six; P01-T07 raises the persisted-state limit to six and covers rejection above that limit.
 - This plan contains blueprints only; implementation and validation happen during memory-execute.
+
+## Status
+- Complete: P01 tasks T01–T07 implemented and validated.

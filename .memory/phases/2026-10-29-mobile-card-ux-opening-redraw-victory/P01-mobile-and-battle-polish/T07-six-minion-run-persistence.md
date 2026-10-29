@@ -1,6 +1,6 @@
 # Task: T07 Six-Minion Run Persistence Limit
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -40,9 +40,9 @@ Make the API accept and persist battle snapshots with up to six minions on each 
 
 ## Acceptance Criteria
 
-- [ ] `PUT /api/run` accepts a state containing six minions on both boards simultaneously.
-- [ ] `PUT /api/run` rejects seven minions on either board with HTTP 400 before persistence.
-- [ ] Existing validation for minion fields and unrelated run fields is unchanged.
+- [x] `PUT /api/run` accepts a state containing six minions on both boards simultaneously.
+- [x] `PUT /api/run` rejects seven minions on either board with HTTP 400 before persistence.
+- [x] Existing validation for minion fields and unrelated run fields is unchanged.
 
 ## Validation
 
@@ -64,6 +64,6 @@ Task: T07-six-minion-run-persistence
 
 ## Progress
 
-- [ ] Implementation complete
-- [ ] Validation passed
-- commit: pending
+- [x] Implementation complete
+- [x] Validation passed
+- commit: `fix(api): accept six-minion battle snapshots`

@@ -139,6 +139,51 @@ describe("authenticated Run API", () => {
     expect(repository.save.mock.calls[0]?.[3].openingHandRedrawAvailable).toBe(true);
   });
 
+  it("accepts six minions on both boards and rejects seven before persistence", async () => {
+    const makeMinions = (owner: "player" | "enemy", count: number) => Array.from({ length: count }, (_, index) => ({
+      instanceId: `${owner}-${index}`,
+      cardId: "ash-wolf",
+      owner,
+      attack: 2,
+      health: 3,
+      maxHealth: 3,
+      summonedTurn: 1,
+      hasAttacked: false,
+    }));
+    const makeBattleRun = (playerCount: number, enemyCount: number) => {
+      const run = createRun(90 + playerCount + enemyCount);
+      run.battle!.playerBoard = makeMinions("player", playerCount);
+      run.battle!.enemyBoard = makeMinions("enemy", enemyCount);
+      return run;
+    };
+
+    await repository.create(userId, createRun(17), ownerId, instant);
+    const acceptedRun = makeBattleRun(6, 6);
+    const accepted = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run: acceptedRun }),
+    });
+    expect(accepted.status).toBe(200);
+    expect(repository.save.mock.calls[0]?.[3].battle?.playerBoard).toHaveLength(6);
+    expect(repository.save.mock.calls[0]?.[3].battle?.enemyBoard).toHaveLength(6);
+
+    for (const oversizedBoard of ["playerBoard", "enemyBoard"] as const) {
+      repository.record = null;
+      repository.save.mockClear();
+      await repository.create(userId, createRun(17), ownerId, instant);
+      const run = makeBattleRun(oversizedBoard === "playerBoard" ? 7 : 6, oversizedBoard === "enemyBoard" ? 7 : 6);
+      const rejected = await fetch(`${baseUrl}/api/run`, {
+        method: "PUT",
+        headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+        body: JSON.stringify({ run }),
+      });
+      expect(rejected.status).toBe(400);
+      await expect(rejected.json()).resolves.toMatchObject({ error: { code: "INVALID_BODY" } });
+      expect(repository.save).not.toHaveBeenCalled();
+    }
+  });
+
   it("defaults an omitted opening redraw field in legacy saves to unavailable", async () => {
     await repository.create(userId, createRun(17), ownerId, instant);
     const run = createRun(89);
