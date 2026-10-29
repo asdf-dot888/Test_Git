@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { gameConstants } from "@board-game/game-core";
-import { CARD_COMBAT_VISUAL_PROFILES, type CombatAnchor, type CombatEffectEvent } from "../game/combatEffects.js";
+import { CARD_COMBAT_VISUAL_PROFILES, combatImpactTier, type CombatAnchor, type CombatEffectEvent } from "../game/combatEffects.js";
 
 interface CombatEffectLayerProps {
   events: CombatEffectEvent[];
@@ -116,9 +116,9 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
 
   useEffect(() => {
     if (completeRef.current) return;
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const motionScale = event.slowMotion ? 2 : 1;
-    if (remainingMs.current === null) remainingMs.current = ((reducedMotion ? 220 : Math.max(1_400, 1_010 + (profile?.durationMs ?? 390))) + Math.min(index, 8) * 120) * motionScale;
+    const baseDuration = Math.max(1_400, 1_010 + (profile?.durationMs ?? 390));
+    if (remainingMs.current === null) remainingMs.current = (baseDuration + Math.min(index, 8) * 120) * motionScale;
     if (paused) {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -147,26 +147,37 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     };
   }, [event.id, event.slowMotion, index, paused, profile?.durationMs]);
 
-  const shakeClass = event.areaImpact ? "is-shaking" : event.damageTarget ? "is-hit-shaking" : null;
+  const impactTier = event.damage
+    ? event.damage.retaliation ? "light" : combatImpactTier(event.damage.amount)
+    : null;
+  const isMiss = event.damage?.outcome === "miss";
+  const isArmorBlock = event.damage?.outcome === "armor-block";
+  const hasHit = !event.damage || event.damage.outcome === "hit";
+  const shakeClass = event.areaImpact
+    ? "is-shaking"
+    : hasHit && event.damageTarget
+      ? impactTier === "heavy" ? "is-hit-shaking-heavy" : impactTier === "medium" ? "is-hit-shaking-medium" : "is-hit-shaking"
+      : null;
 
   useEffect(() => {
-    if (!shakeClass || (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)) return;
+    if (!shakeClass) return;
     const board = document.querySelector<HTMLElement>(".battle-board");
     if (!board) return;
     retainBoardShake(board, shakeClass, event.id);
     return () => {
       releaseBoardShake(board, shakeClass, event.id);
-      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-hit-shaking")) {
+      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
         board.style.animationPlayState = "";
       }
     };
   }, [event.areaImpact, event.damageTarget, event.id, shakeClass]);
 
   useEffect(() => {
-    if (!shakeClass || (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)) return;
+    if (!shakeClass) return;
     const board = document.querySelector<HTMLElement>(".battle-board");
     if (!board) return;
-    if (shakeRemainingMs.current === null) shakeRemainingMs.current = (event.areaImpact ? 500 : 1_430) + Math.min(index, 8) * 120;
+    const shakeDuration = event.areaImpact ? 500 : impactTier === "heavy" ? 1_000 : impactTier === "medium" ? 700 : 500;
+    if (shakeRemainingMs.current === null) shakeRemainingMs.current = (event.areaImpact ? 500 : 930 + shakeDuration) + Math.min(index, 8) * 120;
     board.style.animationPlayState = paused ? "paused" : "running";
     if (paused) {
       if (shakeTimeout.current !== null) window.clearTimeout(shakeTimeout.current);
@@ -183,7 +194,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
       shakeDeadline.current = null;
       shakeRemainingMs.current = 0;
       releaseBoardShake(board, shakeClass, event.id);
-      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-hit-shaking")) {
+      if (!board.classList.contains("is-shaking") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
         board.style.animationPlayState = "";
       }
     }, shakeRemainingMs.current);
@@ -195,7 +206,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         shakeDeadline.current = null;
       }
     };
-  }, [event.areaImpact, event.damageTarget, event.id, index, paused, shakeClass]);
+  }, [event.areaImpact, event.damageTarget, event.id, index, impactTier, paused, shakeClass]);
 
   useEffect(() => {
     if (!event.bossArea) return;
@@ -236,6 +247,8 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   const visualClass = profile ? ` motion-${profile.motionClass} profile-${event.assetCardId}` : "";
   const slowClass = event.slowMotion ? " is-slow-motion" : "";
   const hitClass = event.damageTarget === "minion" ? " is-minion-hit" : event.damageTarget === "hero" ? " is-hero-hit" : "";
+  const tierClass = impactTier ? ` impact-tier-${impactTier}` : "";
+  const outcomeClass = isMiss ? " is-outcome-miss" : isArmorBlock ? " is-outcome-armor-block" : "";
   const targetStyle = {
     left: geometry.target.x,
     top: geometry.target.y,
@@ -252,7 +265,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
 
   return <>
     <span
-      className={`combat-effect-impact effect-${event.effectKind}${event.areaImpact ? " is-area-impact" : ""}${event.bossArea ? " is-boss-area" : ""}${hitClass}${visualClass}${slowClass}`}
+      className={`combat-effect-impact effect-${event.effectKind}${event.areaImpact ? " is-area-impact" : ""}${event.bossArea ? " is-boss-area" : ""}${hitClass}${tierClass}${outcomeClass}${event.damage?.retaliation ? " is-retaliation" : ""}${visualClass}${slowClass}`}
       style={{ ...profileStyle, ...impactStyle, animationPlayState: paused ? "paused" : "running" }}
       onAnimationEnd={finish}
       aria-hidden="true"
@@ -289,14 +302,25 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
       alt=""
       style={{ ...profileStyle, ...style }}
     />}
-    {event.damageTarget === "minion" && <span
-      className="combat-effect-blood-splatter"
+    {isMiss && <span className="combat-effect-miss-fragments" style={{ ...targetStyle, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /><i /></span>}
+    {isArmorBlock && <span className="combat-effect-armor-spark" style={{ ...targetStyle, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /></span>}
+    {event.affectedTargets?.filter(({ damage }) => damage.outcome === "armor-block").map(({ target }, blockIndex) => {
+      const point = anchorPoint(target, event, false);
+      return <span key={`${event.id}-block-${blockIndex}`} className="combat-effect-armor-spark is-area-block-spark" style={{ left: point.x, top: point.y, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /></span>;
+    })}
+    {event.damageTarget === "minion" && hasHit && <span
+      className={`combat-effect-blood-splatter${tierClass}${event.damage?.retaliation ? " is-retaliation" : ""}`}
       style={{ ...targetStyle, "--card-accent": profile?.accent ?? "#d31d2c" } as CSSProperties}
       aria-hidden="true"
     />}
-    {event.damageTarget === "hero" && <span
-      className={`combat-effect-hero-hit-flash${slowClass}`}
+    {event.damageTarget === "hero" && hasHit && <span
+      className={`combat-effect-hero-hit-flash${tierClass}${slowClass}`}
       style={{ animationDelay: `${(delay + 930) * motionScale}ms`, animationPlayState: paused ? "paused" : "running" }}
+      aria-hidden="true"
+    />}
+    {event.source.kind === "minion" && event.target.kind === "hero" && hasHit && !event.bossArea && <span
+      className={`combat-effect-hero-melee-slash${tierClass}${slowClass}`}
+      style={{ ...targetStyle, animationPlayState: paused ? "paused" : "running" }}
       aria-hidden="true"
     />}
     {event.deathAnchors?.map((anchor, deathIndex) => {

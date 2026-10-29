@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
-import { CARD_COMBAT_VISUAL_PROFILES, collectCombatEffectEvents, collectEnemyActionEffects } from "./combatEffects.js";
+import { CARD_COMBAT_VISUAL_PROFILES, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects } from "./combatEffects.js";
 
 function withBattle(run: RunState, update: (run: RunState) => void): RunState {
   const next = structuredClone(run);
@@ -9,6 +9,10 @@ function withBattle(run: RunState, update: (run: RunState) => void): RunState {
 }
 
 describe("collectCombatEffectEvents", () => {
+  it("maps damage into distinct presentation tiers", () => {
+    expect([0, 1, 2, 3, 4, 5].map(combatImpactTier)).toEqual([null, "light", "light", "medium", "medium", "heavy"]);
+  });
+
   it("marks only the lethal player attack for slow motion", () => {
     const run = createRun(38);
     const before = withBattle(run, (state) => {

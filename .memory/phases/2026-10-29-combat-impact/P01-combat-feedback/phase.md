@@ -4,10 +4,10 @@
 | Task | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
 | T01 | `done ✅` | Record resolved per-target damage, armor blocks, misses, retaliation, and boss phase in combat presentation events. | [T01](./T01-damage-event-data.md) |
-| T02 | `in_progress 🔵` | Add damage-tier impacts plus dedicated hero, retaliation, armor-block, and miss visuals. | [T02](./T02-impact-visuals.md) |
-| T03 | `pending` | Create tiered impact sound assets from existing clips and route combat events to the correct sound. | [T03](./T03-impact-audio.md) |
+| T02 | `done ✅` | Add damage-tier impacts plus dedicated hero, retaliation, armor-block, and miss visuals. | [T02](./T02-impact-visuals.md) |
+| T03 | `in_progress 🔵` | Create tiered impact sound assets from existing clips and route combat events to the correct sound. | [T03](./T03-impact-audio.md) |
 | T04 | `pending` | Sequence warning, phase-specific boss casting, and large area impact. | [T04](./T04-boss-area-sequence.md) |
 
 ## Progress
-- done: 1/4 (active: T02)
+- done: 2/4 (active: T03)
 

@@ -12,7 +12,15 @@ export interface CardCombatVisualProfile {
 }
 
 export type CombatDamageTarget = "minion" | "hero";
+export type CombatImpactTier = "light" | "medium" | "heavy";
 export type CombatDamageOutcome = "hit" | "miss" | "armor-block";
+
+export function combatImpactTier(amount: number): CombatImpactTier | null {
+  if (amount <= 0) return null;
+  if (amount <= 2) return "light";
+  if (amount <= 4) return "medium";
+  return "heavy";
+}
 
 export interface CombatDamageInfo {
   /** Damage after armor, before clamping to the target's remaining health. */

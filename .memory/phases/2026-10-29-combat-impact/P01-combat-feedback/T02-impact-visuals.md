@@ -1,6 +1,6 @@
 # Task: T02 Damage-Tier and Target-Specific Visuals
 
-## Status: in_progress
+## Status: done
 
 ## Goal
 Make light, medium, and heavy hits visually distinct and render separate feedback for minion hits, hero hits, minion retaliation, armor blocks, misses, and lethal hits. Apply the confirmed effects on desktop and mobile, even when reduced motion is enabled.
@@ -55,11 +55,11 @@ Make light, medium, and heavy hits visually distinct and render separate feedbac
 - Assert class assignment does not depend on `prefers-reduced-motion`.
 
 ## Acceptance Criteria
-- [ ] Tier differences are obvious in impact size, flash, and shake; heavy is dramatically stronger than light.
-- [ ] Minion, hero, retaliation, armor-block, miss, and death outcomes are visually distinguishable.
-- [ ] Direct minion-to-hero feedback differs from boss area damage.
-- [ ] Enhanced effects play when reduced motion is enabled.
-- [ ] Desktop and mobile layouts keep board controls usable.
+- [x] Tier differences are obvious in impact size, flash, and shake; heavy is dramatically stronger than light.
+- [x] Minion, hero, retaliation, armor-block, miss, and death outcomes are visually distinguishable.
+- [x] Direct minion-to-hero feedback differs from boss area damage.
+- [x] Enhanced effects play when reduced motion is enabled.
+- [x] Desktop and mobile layouts keep board controls usable.
 
 ## Validation
 - `npm.cmd test -- apps/web/src/components/CombatEffectLayer.test.tsx apps/web/src/game/combatEffects.test.ts` — run after implementation.
@@ -78,7 +78,8 @@ Task: T02-impact-visuals
 ```
 
 ## Progress
-- [ ] Implementation complete
-- [ ] Validation passed
+- [x] Implementation complete
+- [x] Validation passed: 49 targeted tests, targeted ESLint, and web production build.
+- Full web lint reports existing errors in CardView.test.tsx, EnemyHeroDefeatEffect.tsx, gameActions.ts, and useLocalRun.ts.
 - commit: pending
 

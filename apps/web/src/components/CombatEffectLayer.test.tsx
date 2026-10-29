@@ -54,18 +54,67 @@ describe("CombatEffectLayer", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the reduced-motion fallback short", async () => {
+  it("plays the full combat effect when reduced motion is requested", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
     vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
     const onComplete = vi.fn();
-    render(<CombatEffectLayer events={[{ id: 9, assetCardId: null, effectKind: "impact", soundCues: [], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={onComplete} />);
+    const duration = Math.max(1_400, 1_010 + 390);
+    render(<div className="battle-board"><CombatEffectLayer events={[{ id: 9, assetCardId: null, effectKind: "impact", damageTarget: "hero", damage: { amount: 1, armorBlocked: 0, outcome: "hit", retaliation: false }, soundCues: [], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={onComplete} /></div>);
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(219); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.querySelector(".battle-board")?.classList.contains("is-hit-shaking")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(duration - 1); });
     expect(onComplete).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it("renders tier classes and target-specific miss, block, and hero melee effects", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    render(<div className="battle-board"><CombatEffectLayer events={[
+      { id: 40, assetCardId: "ash-wolf", effectKind: "attack", damageTarget: "minion", damage: { amount: 2, armorBlocked: 0, outcome: "hit", retaliation: false }, soundCues: [], source: { kind: "minion", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 0 } },
+      { id: 41, assetCardId: "ash-wolf", effectKind: "attack", damageTarget: "minion", damage: { amount: 3, armorBlocked: 0, outcome: "hit", retaliation: false }, soundCues: [], source: { kind: "minion", side: "player", slot: 1 }, target: { kind: "minion", side: "enemy", slot: 1 } },
+      { id: 42, assetCardId: "ash-wolf", effectKind: "attack", damageTarget: "minion", damage: { amount: 5, armorBlocked: 0, outcome: "hit", retaliation: true }, soundCues: [], source: { kind: "minion", side: "enemy", slot: 2 }, target: { kind: "minion", side: "player", slot: 2 } },
+      { id: 43, assetCardId: "fate-shard", effectKind: "damage", damageTarget: "minion", damage: { amount: 0, armorBlocked: 0, outcome: "miss", retaliation: false }, soundCues: ["spell"], source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 3 } },
+      { id: 44, assetCardId: "shadow-bolt", effectKind: "damage", damageTarget: "hero", damage: { amount: 0, armorBlocked: 2, outcome: "armor-block", retaliation: false }, soundCues: ["spell"], source: { kind: "hand", side: "enemy", slot: 0 }, target: { kind: "hero", side: "player" } },
+      { id: 45, assetCardId: "ash-wolf", effectKind: "attack", damageTarget: "hero", damage: { amount: 5, armorBlocked: 0, outcome: "hit", retaliation: false }, soundCues: [], source: { kind: "minion", side: "enemy", slot: 3 }, target: { kind: "hero", side: "player" } },
+    ]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(document.body.querySelector(".combat-effect-impact.impact-tier-light")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-impact.impact-tier-medium")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-impact.impact-tier-light.is-retaliation")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-miss-fragments")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-armor-spark")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-hero-melee-slash.impact-tier-heavy")).not.toBeNull();
+    expect(document.body.querySelectorAll(".combat-effect-blood-splatter")).toHaveLength(3);
+  });
+
+  it("shows localized armor sparks without duplicating a boss-wide impact", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    render(<div className="battle-board"><div data-effect-anchor="hero:player" /><CombatEffectLayer events={[{
+      id: 46,
+      assetCardId: null,
+      effectKind: "impact",
+      areaImpact: true,
+      bossArea: true,
+      affectedTargets: [{ target: { kind: "hero", side: "player" }, damage: { amount: 0, armorBlocked: 1, outcome: "armor-block", retaliation: false } }],
+      soundCues: [],
+      source: { kind: "hero", side: "enemy" },
+      target: { kind: "hero", side: "player" },
+    }]} onComplete={vi.fn()} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(document.body.querySelectorAll(".combat-effect-impact")).toHaveLength(1);
+    expect(document.body.querySelector(".combat-effect-impact.is-area-impact")).not.toBeNull();
+    expect(document.body.querySelectorAll(".combat-effect-armor-spark.is-area-block-spark")).toHaveLength(1);
+    expect(document.body.querySelector(".combat-effect-hero-hit-flash")).toBeNull();
   });
 
   it("pauses the current effect timeout and resumes with the remaining duration", async () => {
@@ -132,7 +181,7 @@ describe("CombatEffectLayer", () => {
     expect(board?.classList.contains("is-hit-shaking")).toBe(false);
   });
 
-  it("pauses direct hit feedback and suppresses its shake for reduced motion", async () => {
+  it("pauses direct hit feedback and keeps its shake for reduced motion", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
     vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
@@ -146,7 +195,7 @@ describe("CombatEffectLayer", () => {
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
     render(<div className="battle-board"><CombatEffectLayer events={[{ ...event, id: 34 }]} onComplete={vi.fn()} /></div>);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(document.querySelector(".battle-board")?.classList.contains("is-hit-shaking")).toBe(false);
+    expect(document.querySelector(".battle-board")?.classList.contains("is-hit-shaking")).toBe(true);
     expect(document.body.querySelector(".combat-effect-hero-hit-flash")).not.toBeNull();
   });
 
@@ -173,7 +222,7 @@ describe("CombatEffectLayer", () => {
     expect(document.body.querySelector<HTMLElement>(".combat-effect-impact")?.style.left).toBe("650px");
   });
 
-  it("skips the board shake for reduced motion while still completing the area event", async () => {
+  it("keeps the full board shake for reduced motion while the area event completes", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
     vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
@@ -181,8 +230,10 @@ describe("CombatEffectLayer", () => {
     const onComplete = vi.fn();
     render(<div className="battle-board"><CombatEffectLayer events={[{ id: 16, assetCardId: null, effectKind: "impact", areaImpact: true, soundCues: ["damage"], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={onComplete} /></div>);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     expect(document.querySelector(".battle-board")?.classList.contains("is-shaking")).toBe(false);
-    await act(async () => { await vi.advanceTimersByTimeAsync(220); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(900); });
     expect(onComplete).toHaveBeenCalledWith(16);
   });
 });
