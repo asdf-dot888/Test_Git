@@ -13,6 +13,11 @@ export type SpellEffect =
   | { kind: "gainMana"; amount: number }
   | { kind: "discardRandom" }
   | { kind: "gainTemporaryMana"; amount: number }
+  | { kind: "rootMinion"; target: "enemyMinion"; turns: 1 }
+  | { kind: "curseAllEnemyMinions"; attackReduction: 2; turns: 1 }
+  | { kind: "burnEnemyHero"; damagePerTurn: 2; turns: 2 }
+  | { kind: "damageAllEnemyMinions"; amount: 4 }
+  | { kind: "soulHarvest"; damage: 5; heal: 5 }
   | { kind: "randomDamage"; min: 0; max: 5 }
   | { kind: "cleave"; amount: number; target: "enemyMinion" }
   | { kind: "stealFromOpponentDeck"; count: 1 };
@@ -31,6 +36,8 @@ export interface CardDefinition {
   artKey: string;
   rewardTier: RewardTier;
   playerOnly?: boolean;
+  enemyOnly?: boolean;
+  bossId?: string;
   tokenOnly?: boolean;
   classId?: PlayerClass;
   race?: "demon";
@@ -63,7 +70,13 @@ export interface HeroState {
   id: "player" | "enemy";
   health: number;
   maxHealth: number;
+  statusEffects?: CombatStatusEffect[];
 }
+
+export type CombatStatusEffect =
+  | { kind: "root"; turnsRemaining: number }
+  | { kind: "burn"; turnsRemaining: number; amount: number }
+  | { kind: "curse"; turnsRemaining: number; attackReduction: number };
 
 export interface MinionState {
   instanceId: string;
@@ -74,6 +87,7 @@ export interface MinionState {
   maxHealth: number;
   summonedTurn: number;
   hasAttacked: boolean;
+  statusEffects?: CombatStatusEffect[];
 }
 
 export interface BattleState {

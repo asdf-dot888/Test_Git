@@ -229,7 +229,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
   if (action.type === "select-attacker") {
     const battle = session.run?.battle;
     const attacker = battle?.playerBoard.find((minion) => minion.instanceId === action.instanceId);
-    if (!attacker || !battle || battle.status !== "active" || battle.activeSide !== "player" || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) {
+    if (!attacker || !battle || battle.status !== "active" || battle.activeSide !== "player" || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked || attacker.statusEffects?.some((status) => status.kind === "root")) {
       return { ...session, error: "이 하수인은 이번 턴에 공격할 수 없습니다." };
     }
     return { ...session, selectedCardInstanceId: null, selectedAttackerId: attacker.instanceId, targetMode: "attack", error: null };

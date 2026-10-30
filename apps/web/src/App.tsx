@@ -115,7 +115,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const hasBattlePresentation = screen === "game" && Boolean(battle && (battle.status === "active" || victoryPresentationActive));
   const musicKind: MusicKind = hasBattlePresentation ? (enemyKind === "boss" ? "boss" : "normal") : "menu";
   const tutorialAttackUnavailable = Boolean(tutorialMode !== "inactive" && battle
-    && !battle.playerBoard.some((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked));
+    && !battle.playerBoard.some((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")));
   const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active"
     ? `${run.battle.battleId}:${run.battle.turnNumber}`
     : null;
@@ -571,7 +571,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     if (session.selectedAttackerId) {
       if (tutorialMode !== "inactive") {
         const attacker = battle.playerBoard.find((minion) => minion.instanceId === session.selectedAttackerId);
-        if (!attacker || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) return;
+        if (!attacker || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked || attacker.statusEffects?.some((status) => status.kind === "root")) return;
         advanceTutorial("attack");
         const pending = tutorialActionRef.current;
         if (pending) tutorialActionRef.current = { ...pending, attackerId: attacker.instanceId };
@@ -618,7 +618,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     const attacker = battle.playerBoard.find(({ instanceId }) => instanceId === payload.instanceId);
     if (!attacker) return;
     if (tutorialMode !== "inactive" && tutorialStep !== "attack") return;
-    const canAttack = attacker.summonedTurn < battle.turnNumber && !attacker.hasAttacked;
+    const canAttack = attacker.summonedTurn < battle.turnNumber && !attacker.hasAttacked && !attacker.statusEffects?.some((status) => status.kind === "root");
     if (target.kind === "minion" && target.side === "enemy") {
       if (!canAttack) return;
       if (tutorialMode !== "inactive") {

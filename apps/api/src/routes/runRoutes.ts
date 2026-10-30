@@ -15,7 +15,13 @@ import {
 
 const id = z.string().min(1).max(128);
 const cardInstanceSchema = z.object({ instanceId: id, cardId: id });
-const heroSchema = z.object({ id: z.enum(["player", "enemy"]), health: z.number().int().min(0).max(1000), maxHealth: z.number().int().min(1).max(1000) });
+const combatStatusSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("root"), turnsRemaining: z.number().int().min(1).max(3) }),
+  z.object({ kind: z.literal("burn"), turnsRemaining: z.number().int().min(1).max(3), amount: z.number().int().min(1).max(20) }),
+  z.object({ kind: z.literal("curse"), turnsRemaining: z.number().int().min(1).max(3), attackReduction: z.number().int().min(1).max(20) }),
+]);
+const statusEffectsSchema = z.array(combatStatusSchema).max(10).optional();
+const heroSchema = z.object({ id: z.enum(["player", "enemy"]), health: z.number().int().min(0).max(1000), maxHealth: z.number().int().min(1).max(1000), statusEffects: statusEffectsSchema });
 const minionSchema = z.object({
   instanceId: id,
   cardId: id,
@@ -25,6 +31,7 @@ const minionSchema = z.object({
   maxHealth: z.number().int().min(1).max(1000),
   summonedTurn: z.number().int().min(0).max(100_000),
   hasAttacked: z.boolean(),
+  statusEffects: statusEffectsSchema,
 });
 const battleSchema = z.object({
   battleId: id,

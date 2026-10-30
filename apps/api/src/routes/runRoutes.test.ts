@@ -204,6 +204,43 @@ describe("authenticated Run API", () => {
     }
   });
 
+  it("persists optional combat statuses and enforces their bounded durations", async () => {
+    await repository.create(userId, createRun(17), ownerId, instant);
+    const run = createRun(91);
+    run.battle!.playerHero.statusEffects = [{ kind: "burn", turnsRemaining: 2, amount: 2 }];
+    run.battle!.playerBoard = [{
+      instanceId: "rooted-player",
+      cardId: "ash-wolf",
+      owner: "player",
+      attack: 2,
+      health: 3,
+      maxHealth: 3,
+      summonedTurn: 0,
+      hasAttacked: false,
+      statusEffects: [{ kind: "root", turnsRemaining: 1 }, { kind: "curse", turnsRemaining: 1, attackReduction: 2 }],
+    }];
+    const accepted = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run }),
+    });
+    expect(accepted.status).toBe(200);
+    expect(repository.save.mock.calls[0]?.[3].battle?.playerHero.statusEffects).toEqual([{ kind: "burn", turnsRemaining: 2, amount: 2 }]);
+    expect(repository.save.mock.calls[0]?.[3].battle?.playerBoard[0]?.statusEffects).toHaveLength(2);
+
+    repository.record = null;
+    repository.save.mockClear();
+    await repository.create(userId, createRun(17), ownerId, instant);
+    run.battle!.playerHero.statusEffects = [{ kind: "burn", turnsRemaining: 4, amount: 2 }];
+    const rejected = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run }),
+    });
+    expect(rejected.status).toBe(400);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it("defaults an omitted opening redraw field in legacy saves to unavailable", async () => {
     await repository.create(userId, createRun(17), ownerId, instant);
     const run = createRun(89);

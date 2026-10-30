@@ -21,7 +21,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
     <section className={`minion-lane lane-${side}`} aria-label={`${side === "player" ? "내" : "적"} 하수인 전장`}>
       {Array.from({ length: gameConstants.maxBoard }, (_, index) => {
         const minion = minions[index];
-        const attackUnavailable = Boolean(minion && side === "player" && (minion.summonedTurn >= turnNumber || minion.hasAttacked));
+        const attackUnavailable = Boolean(minion && side === "player" && (minion.summonedTurn >= turnNumber || minion.hasAttacked || minion.statusEffects?.some((status) => status.kind === "root")));
         const isSelectingAttacker = targetMode === "attack" && selectedAttackerId === null;
         const targetable = !disabled
           && targetMode !== "none"
@@ -51,7 +51,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
                 intentTarget={intentTargetIds.includes(minion.instanceId)}
                 exhausted={attackUnavailable && !targetable}
                 onSelect={() => {
-                  if (side === "player" && (targetMode === "none" || isSelectingAttacker) && (minion.summonedTurn >= turnNumber || minion.hasAttacked)) return;
+                  if (side === "player" && (targetMode === "none" || isSelectingAttacker) && (minion.summonedTurn >= turnNumber || minion.hasAttacked || minion.statusEffects?.some((status) => status.kind === "root"))) return;
                   onSelectTarget(minion.instanceId);
                 }}
               />

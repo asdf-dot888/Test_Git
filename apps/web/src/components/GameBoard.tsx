@@ -79,7 +79,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
   const fieldActionsDisabled = actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "attack" && !(tutorialStep === "play-card" && targetMode === "spell"));
   const canEndTurn = tutorialStep === undefined || tutorialStep === "end-first-turn" || tutorialStep === "end-second-turn";
-  const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked).length;
+  const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")).length;
   const allAttackDisabled = actionsDisabled || battle.enemyBoard.length > 0 || readyMinionCount === 0;
   const targetSide = targetMode === "spell"
     ? spellTargetSide(selectedCardInstanceId, run)

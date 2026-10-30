@@ -18,6 +18,12 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
   const name = card?.name ?? "알 수 없는 하수인";
   const faction = minion.owner === "enemy" ? "적" : "아군";
   const tooltipId = `minion-ability-${minion.instanceId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const statuses = minion.statusEffects ?? [];
+  const statusLabels = statuses.map((status) => status.kind === "root"
+    ? "Rooted: cannot attack this turn"
+    : status.kind === "burn"
+      ? `Burning: ${status.amount} damage for ${status.turnsRemaining} turns`
+      : `Cursed: attack reduced by ${status.attackReduction} for ${status.turnsRemaining} turns`);
   return (
     <button
       className={`minion-card ${minion.owner === "enemy" ? "minion-enemy" : "minion-friendly"}${selected ? " is-selected" : ""}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}${exhausted ? " is-exhausted" : ""}`}
@@ -34,6 +40,11 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
       <span className="minion-art-frame"><img src={`/art/cards/${card?.artKey ?? minion.cardId}.png`} alt="" /></span>
       <span className="minion-name">{name}</span>
       <span className="minion-stats"><b aria-label={`공격력 ${minion.attack}`}>{minion.attack}</b><b aria-label={`체력 ${minion.health}/${minion.maxHealth}`}>{minion.health}<small>/{minion.maxHealth}</small></b></span>
+      {statuses.length > 0 && <span className="minion-statuses" aria-label={statusLabels.join("; ")}>
+        {statuses.map((status, index) => <span className={`minion-status minion-status--${status.kind}`} key={`${status.kind}-${index}`} role="status" title={statusLabels[index]}>
+          {status.kind === "root" ? "ROOT" : status.kind === "burn" ? `BURN ${status.turnsRemaining}` : `CURSE ${status.turnsRemaining}`}
+        </span>)}
+      </span>}
       <span id={tooltipId} className="minion-ability-tooltip" role="tooltip">{card?.description ?? "특수 효과 없음"}</span>
     </button>
   );

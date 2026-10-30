@@ -70,6 +70,10 @@
 @keyframes boss-field-flash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
 .battle-board.is-timer-critical { animation: battle-board-timer-breath 1.35s ease-in-out infinite; }
 .enemy-intent-preview { position: absolute; z-index: 8; top: 62px; left: 50%; width: min(520px, calc(100% - 28px)); min-height: 76px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; transform: translateX(-50%); border: 1px solid rgb(244 207 142 / 72%); border-radius: 12px; color: #fff1d7; background: linear-gradient(120deg, rgb(45 31 27 / 97%), rgb(25 23 23 / 96%)); box-shadow: 0 8px 28px #000b, 0 0 24px rgb(222 153 75 / 22%); pointer-events: none; }
+.enemy-intent-preview.is-boss-warning { min-height: 110px; border: 2px solid #ff5a38; background: linear-gradient(110deg, rgb(93 20 14 / 98%), rgb(30 13 14 / 98%)); box-shadow: 0 0 0 3px rgb(255 73 44 / 20%), 0 0 38px rgb(255 45 25 / 64%), 0 12px 40px #000d; animation: boss-warning-pulse .7s ease-in-out infinite alternate; }
+.enemy-intent-preview.is-boss-warning strong { color: #fff0d6; font-size: clamp(18px, 3vw, 28px); letter-spacing: .08em; text-shadow: 0 0 15px #ff4a2a; }
+.enemy-intent-preview.is-boss-warning p { color: #ffd1bb; font-size: 13px; }
+@keyframes boss-warning-pulse { from { filter: brightness(.92); } to { filter: brightness(1.28); } }
 .field-action-bar { grid-column: 1 / -1; min-height: 40px; display: flex; justify-content: flex-end; align-items: flex-start; }
 .enemy-intent-preview > img { flex: none; width: 46px; height: 58px; object-fit: cover; border: 1px solid #d9b16a; border-radius: 5px; }
 .enemy-intent-preview > div { min-width: 0; display: grid; gap: 2px; }
@@ -132,6 +136,11 @@
 .minion-card:disabled { opacity: .62; filter: saturate(.55); cursor: not-allowed; }
 .minion-card.is-exhausted { opacity: .62; filter: grayscale(.82) saturate(.35); }
 .minion-card.is-exhausted.is-targetable { outline: 2px solid #f0d48d; outline-offset: 2px; cursor: crosshair; }
+.minion-statuses { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
+.minion-status { padding: 1px 4px; border: 1px solid currentColor; border-radius: 999px; color: #d8c8ad; background: #1b1717; font-size: 8px; font-weight: 900; letter-spacing: .05em; }
+.minion-status--root { color: #b9a2ff; }
+.minion-status--burn { color: #ff8b54; }
+.minion-status--curse { color: #c78bff; }
 .minion-art-frame { position: relative; display: block; width: 100%; aspect-ratio: 1 / .9; overflow: hidden; border: 1px solid rgb(238 219 179 / 54%); border-radius: 9px; background: #30292a; box-shadow: inset 0 0 12px #0008; }
 .minion-art-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .minion-enemy { border-color: rgb(232 134 117 / 78%); box-shadow: 0 0 0 1px rgb(151 37 31 / 46%), 0 0 14px rgb(151 37 31 / 30%), 0 6px 13px rgb(0 0 0 / 33%); }

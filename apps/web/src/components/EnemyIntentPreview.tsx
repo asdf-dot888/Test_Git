@@ -5,9 +5,9 @@ function intentDetails(step: EnemyTurnPlaybackStep): { title: string; descriptio
   const battle = beforeRun.battle;
   if (action.type === "boss-area") {
     return {
-      title: "보스 고유 패턴 · 광역 강타",
-      description: "내 하수인과 영웅 모두에게 피해 1을 줍니다.",
-      target: `아군 하수인 ${action.targetMinionIds.length}명 및 내 영웅`,
+      title: "\uBCF4\uC2A4\uAC00 \uACF5\uACA9\uD569\uB2C8\uB2E4",
+      description: "\uAC15\uB825\uD55C \uAD11\uC5ED \uACF5\uACA9\uC774 \uB2E4\uAC00\uC635\uB2C8\uB2E4. \uBC29\uC5B4\uB97C \uC900\uBE44\uD558\uC138\uC694.",
+      target: "",
     };
   }
   const card = CARD_BY_ID.get(action.cardId);
@@ -49,13 +49,13 @@ function intentDetails(step: EnemyTurnPlaybackStep): { title: string; descriptio
 export function EnemyIntentPreview({ step }: { step: EnemyTurnPlaybackStep }) {
   const intent = intentDetails(step);
   return (
-    <aside className="enemy-intent-preview" role="status" aria-live="assertive" data-testid="enemy-intent-preview">
+    <aside className={`enemy-intent-preview${step.action.type === "boss-area" ? " is-boss-warning" : ""}`} role="status" aria-live="assertive" data-testid="enemy-intent-preview">
       {intent.artKey && <img src={`/art/cards/${intent.artKey}.png`} alt="" />}
       <div>
         <span className="enemy-intent-preview__eyebrow">적의 행동 예고</span>
         <strong>{intent.title}</strong>
         <p>{intent.description}</p>
-        <small>대상: {intent.target}</small>
+        {intent.target && <small>{intent.target}</small>}
       </div>
     </aside>
   );

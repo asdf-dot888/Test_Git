@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createRun, type RunState } from "@board-game/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameSessionView } from "./App.js";
 import { renderWithTestAuth } from "./App.testUtils.js";
+import { EnemyIntentPreview } from "./components/EnemyIntentPreview.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -42,6 +43,15 @@ async function advanceUntil(predicate: () => boolean, limitMs = 8_000): Promise<
   if (!predicate()) throw new Error("Timed out waiting for enemy playback state.");
 }
 
+function markTutorialComplete(): void {
+  window.localStorage.setItem("board-card-roguelike:tutorial:v1:test-employee", JSON.stringify({
+    schemaVersion: 1,
+    userId: "test-employee",
+    completed: true,
+    completedAt: new Date().toISOString(),
+  }));
+}
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -50,6 +60,21 @@ afterEach(() => {
 });
 
 describe("enemy turn playback in the game screen", () => {
+  it("shows a prominent, non-specific warning for a boss area attack", () => {
+    const run = createRun(800, "warrior", "hard");
+    const step = {
+      action: { type: "boss-area" as const, damage: 1 as const, targetMinionIds: ["hidden-target"], targetHeroId: "player" as const },
+      beforeRun: run,
+      presentationRun: run,
+    };
+    render(<EnemyIntentPreview step={step} />);
+    const warning = screen.getByTestId("enemy-intent-preview");
+    expect(warning.classList.contains("is-boss-warning")).toBe(true);
+    expect(warning.textContent).toContain("\uBCF4\uC2A4\uAC00 \uACF5\uACA9\uD569\uB2C8\uB2E4");
+    expect(warning.textContent).not.toContain("1\uB370\uBBF8\uC9C0");
+    expect(warning.textContent).not.toContain("hidden-target");
+  });
+
   it("previews enemy actions before effects, highlights targets, and pauses intent on the menu", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(100_000);
@@ -62,6 +87,7 @@ describe("enemy turn playback in the game screen", () => {
     run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "eclipse" }];
     run.battle!.enemyBoard = [{ instanceId: "enemy-attacker", cardId: "bone-rat", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
     run.battle!.playerBoard = [{ instanceId: "player-target", cardId: "ash-wolf", owner: "player", attack: 1, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false }];
+    markTutorialComplete();
     renderWithTestAuth(<GameSessionView sync={syncWith(run)} />);
     await act(async () => { await Promise.resolve(); });
     expect(document.body.querySelector(".turn-start-glow")).toBeNull();
@@ -114,6 +140,7 @@ describe("enemy turn playback in the game screen", () => {
     run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "eclipse" }];
     run.battle!.enemyBoard = [{ instanceId: "enemy-attacker", cardId: "bone-rat", owner: "enemy", attack: 3, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
     run.battle!.playerHero.health = 1;
+    markTutorialComplete();
     renderWithTestAuth(<GameSessionView sync={syncWith(run)} />);
     await act(async () => { await Promise.resolve(); });
     enterActiveEncounter();
@@ -131,7 +158,7 @@ describe("enemy turn playback in the game screen", () => {
     await advance(1_400);
     await advance(999);
     expect(screen.queryByText("원정이 끝났습니다")).toBeNull();
-    await advance(1);
+    await advance(5_000);
     expect(screen.getByText("원정이 끝났습니다")).toBeTruthy();
   });
 });

@@ -95,10 +95,10 @@ describe("card and enemy catalog", () => {
   });
 
   it("contains unique base, class, and token cards with complete effect descriptions", () => {
-    expect(CARD_CATALOG).toHaveLength(77);
-    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(77);
-    expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(53);
-    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(24);
+    expect(CARD_CATALOG).toHaveLength(89);
+    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(89);
+    expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(57);
+    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(32);
     for (const card of CARD_CATALOG) {
       expect(card.cost).toBeGreaterThanOrEqual(0);
       expect(card.cost).toBeLessThanOrEqual(10);
@@ -1151,9 +1151,9 @@ describe("enemy turns, rewards, and run progression", () => {
 
     expect(resolution.run).toEqual(legacyResult);
     expect(run).toEqual(inputSnapshot);
-    expect(resolution.steps.map((step) => step.action.type)).toEqual(["play-minion", "boss-area", "attack"]);
+    expect(resolution.steps.map((step) => step.action.type)).toEqual(["play-minion", "attack", "boss-area"]);
     expect(resolution.steps[0]?.action).toMatchObject({ type: "play-minion", instanceId: "boss-minion" });
-    expect(resolution.steps[1]?.presentationRun.battle?.playerBoard[0]?.health).toBe(4);
+    expect(resolution.steps[1]?.presentationRun.battle?.playerBoard[0]?.health).toBe(3);
     expect(resolution.steps[2]?.presentationRun.battle?.playerBoard[0]?.health).toBe(2);
     for (const step of resolution.steps) {
       expect(step.beforeRun.battle?.activeSide).toBe("enemy");
@@ -1314,7 +1314,7 @@ describe("enemy turns, rewards, and run progression", () => {
     expect(result.battle?.enemyHand[0]?.instanceId).toMatch(/^enemy-recycle-/);
   });
 
-  it("runs the boss area pattern on turns 3, 6, and 9 after cards and before minion attacks", () => {
+  it("keeps Normal boss attacks on turns 3, 6, and 9 and schedules Hard attacks every 2 turns", () => {
     for (const turnNumber of [3, 6, 9]) {
       const bossRun = asEnemyTurn(createRun(54 + turnNumber));
       const bossBattle = activeBattle(bossRun);
@@ -1328,10 +1328,10 @@ describe("enemy turns, rewards, and run progression", () => {
       const result = resolveEnemyTurn(bossRun);
       expect(result.battle?.playerHero.health).toBe(29);
       expect(result.battle?.playerBoard.map((minion) => minion.instanceId)).toEqual([`survivor-${turnNumber}`]);
-      expect(result.battle?.playerBoard[0]?.health).toBe(turnNumber === 3 ? 1 : 2);
+      expect(result.battle?.playerBoard[0]?.health).toBe(2);
       expect(result.battle?.enemyBoard.some((minion) => minion.cardId === "ash-wolf")).toBe(turnNumber === 3);
       expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(true);
-      if (turnNumber === 3) expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "attack" && event.targetId === `survivor-${turnNumber}`)).toBe(true);
+      if (turnNumber === 3) expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "attack" && event.targetId === `one-health-${turnNumber}`)).toBe(true);
     }
 
     const offTurn = asEnemyTurn(createRun(55));
@@ -1342,6 +1342,28 @@ describe("enemy turns, rewards, and run progression", () => {
     activeBattle(offTurn).enemyDrawPile = [instance("boss-expensive", "eclipse")];
     const secondTurn = resolveEnemyTurn(offTurn);
     expect(secondTurn.battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(false);
+
+    for (const turnNumber of [2, 4, 6]) {
+      const hardRun = asEnemyTurn(createRun(155 + turnNumber, "warrior", "hard"));
+      const hardBattle = activeBattle(hardRun);
+      hardBattle.enemyId = "boss-grave-king";
+      hardBattle.turnNumber = turnNumber;
+      hardBattle.enemyMana.current = 0;
+      hardBattle.enemyHand = [];
+      hardBattle.enemyDrawPile = [];
+      hardBattle.playerBoard = [minion({ instanceId: `hard-target-${turnNumber}`, health: 5, maxHealth: 5 })];
+      const result = resolveEnemyTurn(hardRun);
+      expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(true);
+      expect(result.battle?.playerBoard[0]?.health).toBe(4);
+    }
+
+    const hardOffTurn = asEnemyTurn(createRun(162, "warrior", "hard"));
+    activeBattle(hardOffTurn).enemyId = "boss-grave-king";
+    activeBattle(hardOffTurn).turnNumber = 3;
+    activeBattle(hardOffTurn).enemyMana.current = 0;
+    activeBattle(hardOffTurn).enemyHand = [];
+    activeBattle(hardOffTurn).enemyDrawPile = [];
+    expect(resolveEnemyTurn(hardOffTurn).battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(false);
 
     const lethal = asEnemyTurn(createRun(56));
     activeBattle(lethal).enemyId = "boss-grave-king";
@@ -1511,6 +1533,84 @@ describe("enemy turns, rewards, and run progression", () => {
     const loss = copyRun(run);
     loss.status = "defeat";
     expect(() => endPlayerTurn(loss)).toThrowError(expect.objectContaining({ code: "TERMINAL_RUN" }));
+  });
+});
+
+describe("Hard boss cards and temporary combat statuses", () => {
+  it("guarantees only the current boss's three signature cards in Hard mode decks", () => {
+    for (const bossId of ["boss-blood-matron", "boss-grave-king", "boss-void-titan"]) {
+      for (const difficulty of ["normal", "hard"] as const) {
+        const run = createRun(700, "warrior", difficulty);
+        const battle = activeBattle(run);
+        battle.enemyId = bossId;
+        const legacy = battle as unknown as Record<string, unknown>;
+        delete legacy.enemyMana;
+        delete legacy.enemyStarterDeck;
+        delete legacy.enemyHand;
+        delete legacy.enemyDrawPile;
+        delete legacy.enemyDiscardPile;
+        const generated = hydrateRunForCurrentBattle(run).battle!.enemyStarterDeck;
+        expect(generated).toHaveLength(30);
+        const cards = generated.map(({ cardId }) => cardId);
+        const ownIds = CARD_CATALOG.filter((card) => card.enemyOnly && card.bossId === bossId).map((card) => card.id);
+        const otherBossIds = CARD_CATALOG.filter((card) => card.enemyOnly && card.bossId !== bossId).map((card) => card.id);
+        expect(ownIds).toHaveLength(3);
+        expect(cards.filter((cardId) => ownIds.includes(cardId))).toEqual(difficulty === "hard" ? ownIds : []);
+        expect(cards.some((cardId) => otherBossIds.includes(cardId))).toBe(false);
+        expect([...new Set(cards)].every((cardId) => cards.filter((item) => item === cardId).length <= 2)).toBe(true);
+      }
+    }
+  });
+
+  it("applies root and curse through the player's turn and restores attack when the curse expires", () => {
+    const rooted = asEnemyTurn(createRun(701));
+    activeBattle(rooted).enemyMana.current = 3;
+    activeBattle(rooted).enemyHand = [instance("root-card", "matron-thorn-prison")];
+    activeBattle(rooted).enemyStarterDeck = [];
+    activeBattle(rooted).enemyDrawPile = [];
+    activeBattle(rooted).playerBoard = [minion({ instanceId: "root-target", attack: 5, health: 9, maxHealth: 9 })];
+    const afterRoot = resolveEnemyTurn(rooted);
+    expect(afterRoot.battle?.playerBoard[0]?.statusEffects).toContainEqual({ kind: "root", turnsRemaining: 1 });
+    expect(() => attackWithMinion(afterRoot, "root-target", "enemy")).toThrow(GameRuleError);
+    const afterRootExpires = endPlayerTurn(afterRoot);
+    expect(afterRootExpires.battle?.playerBoard[0]?.statusEffects ?? []).toEqual([]);
+
+    const cursed = asEnemyTurn(createRun(702));
+    activeBattle(cursed).enemyMana.current = 4;
+    activeBattle(cursed).enemyHand = [instance("curse-card", "matron-wither-curse")];
+    activeBattle(cursed).enemyStarterDeck = [];
+    activeBattle(cursed).enemyDrawPile = [];
+    activeBattle(cursed).playerBoard = [minion({ instanceId: "cursed-target", attack: 3, health: 9, maxHealth: 9 })];
+    const afterCurse = resolveEnemyTurn(cursed);
+    expect(afterCurse.battle?.playerBoard[0]).toMatchObject({ attack: 1, statusEffects: [{ kind: "curse", turnsRemaining: 1, attackReduction: 2 }] });
+    const afterCurseExpires = endPlayerTurn(afterCurse);
+    expect(afterCurseExpires.battle?.playerBoard[0]).toMatchObject({ attack: 3, statusEffects: [] });
+  });
+
+  it("ticks hero burn at both player-turn starts and allows soul tithe with no discard target", () => {
+    const burning = asEnemyTurn(createRun(703));
+    activeBattle(burning).enemyMana.current = 3;
+    activeBattle(burning).enemyHand = [instance("burn-card", "void-titan-burning-mark")];
+    activeBattle(burning).enemyStarterDeck = [];
+    activeBattle(burning).enemyDrawPile = [];
+    activeBattle(burning).playerHero.health = 10;
+    const firstTick = resolveEnemyTurn(burning);
+    expect(firstTick.battle?.playerHero).toMatchObject({ health: 8, statusEffects: [{ kind: "burn", turnsRemaining: 1, amount: 2 }] });
+    const nextEnemyTurn = asEnemyTurn(firstTick);
+    activeBattle(nextEnemyTurn).enemyMana.current = 0;
+    activeBattle(nextEnemyTurn).enemyHand = [];
+    activeBattle(nextEnemyTurn).enemyDrawPile = [];
+    const secondTick = resolveEnemyTurn(nextEnemyTurn);
+    expect(secondTick.battle?.playerHero).toMatchObject({ health: 6, statusEffects: [] });
+
+    const tithe = asEnemyTurn(createRun(704));
+    activeBattle(tithe).enemyMana.current = 1;
+    activeBattle(tithe).enemyHand = [instance("tithe-card", "grave-king-soul-tithe")];
+    activeBattle(tithe).enemyStarterDeck = [];
+    activeBattle(tithe).enemyDrawPile = [];
+    const titheResult = resolveEnemyTurn(tithe);
+    expect(titheResult.battle?.enemyBoard).toContainEqual(expect.objectContaining({ cardId: "grave-king-demon", attack: 4, maxHealth: 4 }));
+    expect(titheResult.battle?.enemyDiscardPile).toContainEqual(instance("tithe-card", "grave-king-soul-tithe"));
   });
 });
 

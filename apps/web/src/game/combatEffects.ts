@@ -120,6 +120,15 @@ function damageTargetFor(anchor: CombatAnchor): CombatDamageTarget | undefined {
   return anchor.kind === "minion" || anchor.kind === "hero" ? anchor.kind : undefined;
 }
 
+function combatKindForSpellEffect(effect: SpellEffect): CombatEffectKind {
+  if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "damageAllEnemyMinions" || effect.kind === "soulHarvest" || effect.kind === "burnEnemyHero") return "damage";
+  if (effect.kind === "rootMinion" || effect.kind === "curseAllEnemyMinions") return "buff";
+  if (effect.kind === "cleave") return "cleave";
+  if (effect.kind === "gainMana" || effect.kind === "gainTemporaryMana") return "mana";
+  if (effect.kind === "stealFromOpponentDeck" || effect.kind === "discardRandom") return "theft";
+  return effect.kind;
+}
+
 function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false, deathAnchors?: CombatAnchor[], bossArea = false, damageTarget?: CombatDamageTarget, damage?: CombatDamageInfo, affectedTargets?: CombatTargetDamage[], bossPhase?: 1 | 2 | 3): void {
   events.push({
     id: firstEventId + events.length,
@@ -198,6 +207,15 @@ function enemySpellTarget(battle: NonNullable<RunState["battle"]>, effect: Spell
       : { kind: "hero", side: "player" };
   }
   if (effect.kind === "cleave") return { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId ?? "")) };
+  if (effect.kind === "burnEnemyHero") return { kind: "hero", side: "player" };
+  if (effect.kind === "rootMinion" || effect.kind === "soulHarvest") {
+    return targetId
+      ? { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId)) }
+      : { kind: "hero", side: "player" };
+  }
+  if (effect.kind === "curseAllEnemyMinions" || effect.kind === "damageAllEnemyMinions") {
+    return battle.playerBoard.length > 0 ? { kind: "minion", side: "player", slot: 0 } : { kind: "hero", side: "player" };
+  }
   if (effect.kind === "heal") {
     return effect.target === "playerHero"
       ? { kind: "hero", side: "enemy" }
@@ -226,13 +244,10 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
       for (const [index, logged] of record.effects.entries()) {
         const effect = definition?.spellEffects?.[index];
         if (!effect) continue;
-        const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage"
-          ? "damage"
-          : effect.kind === "cleave" ? "cleave"
-          : effect.kind === "gainMana" || effect.kind === "gainTemporaryMana" ? "mana"
-            : effect.kind === "stealFromOpponentDeck" || effect.kind === "discardRandom" ? "theft" : effect.kind;
+        const kind = combatKindForSpellEffect(effect);
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
-        if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
+        const causesDamage = effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave" || effect.kind === "damageAllEnemyMinions" || effect.kind === "soulHarvest";
+        if (causesDamage) {
           cues.push("damage");
           if (logged.targetId && !next.playerBoard.some((minion) => minion.instanceId === logged.targetId)) cues.push("death");
         } else if (effect.kind === "heal") cues.push("heal");
@@ -241,14 +256,14 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
           .filter((minion) => !next.playerBoard.some((current) => current.instanceId === minion.instanceId))
           .map((minion) => ({ kind: "minion", side: "player", slot: slotOf(previous.playerBoard, minion.instanceId) }) as CombatAnchor);
         if (deathAnchors.length && !cues.includes("death")) cues.push("death");
-        const damageAmount = effect.kind === "randomDamage" ? logged.amount : effect.kind === "damage" || effect.kind === "cleave" ? effect.amount : undefined;
+        const damageAmount = effect.kind === "randomDamage" || effect.kind === "soulHarvest" ? logged.amount : effect.kind === "damage" || effect.kind === "cleave" || effect.kind === "damageAllEnemyMinions" ? effect.amount : undefined;
         const targets = effect.kind === "cleave" && damageAmount !== undefined
           ? cleaveTargets(previous.playerBoard, logged.targetId, "player", damageAmount)
           : undefined;
         pushEvent(events, firstEventId, record.cardId, kind,
           { kind: "hand", side: "enemy", slot: record.handSlot, instanceId: record.instanceId },
           target, cues, effect.kind === "cleave", deathAnchors, false,
-          effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave" ? damageTargetFor(target) : undefined,
+          causesDamage ? damageTargetFor(target) : undefined,
           damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets);
       }
       continue;
@@ -338,11 +353,7 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
     if (card && definition?.kind === "spell") {
       for (const [effectIndex, effect] of (definition.spellEffects ?? []).entries()) {
-        const kind: CombatEffectKind = effect.kind === "damage" || effect.kind === "randomDamage"
-          ? "damage"
-          : effect.kind === "cleave" ? "cleave"
-          : effect.kind === "gainMana" || effect.kind === "gainTemporaryMana" ? "mana"
-            : effect.kind === "stealFromOpponentDeck" || effect.kind === "discardRandom" ? "theft" : effect.kind;
+        const kind = combatKindForSpellEffect(effect);
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
         if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
           cues.push("damage");

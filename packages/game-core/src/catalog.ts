@@ -6,6 +6,9 @@ const SUMMONED_CARD_NAMES: Readonly<Record<string, string>> = {
   "demon-lesser-imp": "하급 임프",
   "demon-ashling": "잿불 악마",
   "demon-cinder-fiend": "숯불 마귀",
+  "matron-thornling": "가시 새끼",
+  "grave-king-demon": "심연의 악마",
+  "void-titan-whelp": "화염 비룡 새끼",
 };
 
 function summonedCardName(cardId: string): string {
@@ -58,6 +61,11 @@ function describeSpellEffects(effects: readonly SpellEffect[]): string {
     if (effect.kind === "gainMana") return `마나 ${effect.amount}을 얻습니다.`;
     if (effect.kind === "discardRandom") return `손패에서 무작위 카드 1장을 버립니다.`;
     if (effect.kind === "gainTemporaryMana") return `이번 턴에만 임시 마나 ${effect.amount}을 얻습니다.`;
+    if (effect.kind === "rootMinion") return `가장 공격력이 높은 적 하수인을 다음 턴 동안 속박합니다.`;
+    if (effect.kind === "curseAllEnemyMinions") return `모든 적 하수인의 공격력을 ${effect.attackReduction} 낮춥니다. 다음 턴까지 지속됩니다.`;
+    if (effect.kind === "burnEnemyHero") return `적 영웅에게 다음 2턴 동안 턴 시작마다 ${effect.damagePerTurn}의 화상 피해를 줍니다.`;
+    if (effect.kind === "damageAllEnemyMinions") return `모든 적 하수인에게 ${effect.amount}의 피해를 줍니다.`;
+    if (effect.kind === "soulHarvest") return `가장 강한 적 하수인 또는 적 영웅에게 ${effect.damage}의 피해를 주고 영웅을 ${effect.heal} 회복합니다.`;
     if (effect.kind === "buff") {
       return `아군 하수인에게 ${describeStatChanges(effect.attack, effect.health)}${statChangesParticle(effect.attack, effect.health)} 부여합니다.`;
     }
@@ -150,6 +158,29 @@ function demonToken(card: CardDefinition): CardDefinition {
   return { ...card, classId: "demonist", race: "demon", tokenOnly: true };
 }
 
+function bossOnly(card: CardDefinition, bossId: string, artKey: string): CardDefinition {
+  return { ...card, artKey, rewardTier: "boss", enemyOnly: true, bossId };
+}
+
+function enemyToken(card: CardDefinition): CardDefinition {
+  return { ...card, tokenOnly: true };
+}
+
+const BOSS_CARD_CATALOG: readonly CardDefinition[] = [
+  bossOnly(spell("matron-thorn-prison", "가시 감옥", 3, [{ kind: "rootMinion", target: "enemyMinion", turns: 1 }], "boss"), "boss-blood-matron", "thorn-brute"),
+  bossOnly(spell("matron-wither-curse", "시드는 저주", 4, [{ kind: "curseAllEnemyMinions", attackReduction: 2, turns: 1 }], "boss"), "boss-blood-matron", "plague-bearer"),
+  bossOnly(minion("matron-briar-guardian", "가시숲의 수호자", 6, 5, 7, "boss", { kind: "battlecrySummon", cardId: "matron-thornling", count: 2 }), "boss-blood-matron", "ancient-treant"),
+  bossOnly(spell("grave-king-soul-tithe", "영혼 십일조", 1, [{ kind: "discardRandom" }, { kind: "gainTemporaryMana", amount: 3 }, { kind: "summon", cardId: "grave-king-demon", count: 1 }], "boss"), "boss-grave-king", "soul-bargain"),
+  bossOnly(spell("grave-king-pit-gate", "심연의 문", 6, [{ kind: "summon", cardId: "grave-king-demon", count: 2 }], "boss"), "boss-grave-king", "demonist-abyss-lord"),
+  bossOnly(spell("grave-king-harvest", "군주의 수확", 5, [{ kind: "soulHarvest", damage: 5, heal: 5 }], "boss"), "boss-grave-king", "demonist-hellfire"),
+  bossOnly(spell("void-titan-burning-mark", "용의 낙인", 3, [{ kind: "burnEnemyHero", damagePerTurn: 2, turns: 2 }], "boss"), "boss-void-titan", "meteor-shard"),
+  bossOnly(spell("void-titan-inferno", "화염 숨결", 6, [{ kind: "damageAllEnemyMinions", amount: 4 }], "boss"), "boss-void-titan", "eclipse"),
+  bossOnly(spell("void-titan-flame-legion", "화염군단", 7, [{ kind: "summon", cardId: "void-titan-whelp", count: 2 }], "boss"), "boss-void-titan", "storm-crow"),
+  enemyToken(minion("matron-thornling", "가시 새끼", 0, 1, 1)),
+  enemyToken(minion("grave-king-demon", "심연의 악마", 0, 4, 4)),
+  enemyToken(minion("void-titan-whelp", "화염 비룡 새끼", 0, 3, 3)),
+];
+
 const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
   forClass(minion("warrior-vanguard", "전위병", 1, 1, 4), "warrior"),
   forClass(minion("warrior-shield-maiden", "방패 여전사", 2, 2, 4, "normal", { kind: "battlecryBuff", attack: 0, health: 1, target: "self" }), "warrior"),
@@ -201,7 +232,7 @@ const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
   forClass(minion("demonist-abyss-lord", "심연의 군주", 7, 7, 8, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
 ];
 
-export const CARD_CATALOG: readonly CardDefinition[] = [...BASE_CARD_CATALOG, ...CLASS_CARD_CATALOG];
+export const CARD_CATALOG: readonly CardDefinition[] = [...BASE_CARD_CATALOG, ...CLASS_CARD_CATALOG, ...BOSS_CARD_CATALOG];
 
 export const STARTER_DECK_CARD_IDS: readonly string[] = [
   "ash-wolf", "ash-wolf", "crypt-guard", "crypt-guard", "cinder-imp", "cinder-imp",
