@@ -1,6 +1,6 @@
 import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
 import { EntraTokenError } from "../auth/entraBearer.js";
-import type { LeaderboardRepository, LeaderboardTokenVerifier } from "../leaderboard/types.js";
+import type { LeaderboardRepository, LeaderboardTokenVerifier, RunDifficulty } from "../leaderboard/types.js";
 import { errorResponse, jsonResponse, progressSubmissionSchema } from "../leaderboard/validation.js";
 
 export type LeaderboardHandlerDependencies = {
@@ -41,8 +41,12 @@ export function createLeaderboardHandlers(dependencies: LeaderboardHandlerDepend
   const get = async (request: HttpRequest): Promise<HttpResponseInit> => {
     const authentication = await authenticate(request);
     if (authentication.response) return authentication.response;
+    const requestedDifficulty = new URL(request.url).searchParams.get("difficulty") ?? "normal";
+    if (requestedDifficulty !== "normal" && requestedDifficulty !== "hard") {
+      return errorResponse("INVALID_DIFFICULTY", "Difficulty must be normal or hard.", 400);
+    }
     try {
-      const items = await dependencies.repository.getTopTen();
+      const items = await dependencies.repository.getTopTen(requestedDifficulty as RunDifficulty);
       return jsonResponse({ items: items.slice(0, 10) });
     } catch {
       return errorResponse("LEADERBOARD_UNAVAILABLE", "The leaderboard is temporarily unavailable.", 503);
@@ -68,6 +72,7 @@ export function createLeaderboardHandlers(dependencies: LeaderboardHandlerDepend
       const result = await dependencies.repository.recordBestProgress({
         userId: authentication.principal.userId,
         displayName: authentication.principal.displayName,
+        difficulty: parsed.data.difficulty,
         completedBattles: parsed.data.completedBattles,
         recordedAt: now().toISOString(),
       });

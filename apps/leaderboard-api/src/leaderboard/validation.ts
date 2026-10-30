@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const progressSubmissionSchema = z.object({
   completedBattles: z.number().int().min(1).max(12),
+  difficulty: z.enum(["normal", "hard"]),
 }).strict();
 
 export type ProgressSubmission = z.infer<typeof progressSubmissionSchema>;

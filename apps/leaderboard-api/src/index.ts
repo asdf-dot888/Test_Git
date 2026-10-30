@@ -16,7 +16,7 @@ function getRepository(): LeaderboardRepository {
 }
 
 const lazyRepository: LeaderboardRepository = {
-  getTopTen: () => getRepository().getTopTen(),
+  getTopTen: (difficulty) => getRepository().getTopTen(difficulty),
   recordBestProgress: (input) => getRepository().recordBestProgress(input),
 };
 

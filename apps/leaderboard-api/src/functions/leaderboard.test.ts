@@ -9,13 +9,14 @@ const record: LeaderboardRecord = {
   id: "best-progress",
   userId: principal.userId,
   displayName: principal.displayName,
+  difficulty: "normal",
   completedBattles: 4,
   recordedAt: "2026-10-26T00:00:00.000Z",
-  schemaVersion: 1,
+  schemaVersion: 2,
 };
 
-function request(options: { method?: string; accessToken?: string; body?: string } = {}) {
-  return new Request("https://game.example/api/leaderboard", {
+function request(options: { method?: string; accessToken?: string; body?: string; url?: string } = {}) {
+  return new Request(options.url ?? "https://game.example/api/leaderboard", {
     method: options.method ?? "GET",
     headers: {
       ...(options.accessToken ? { "x-leaderboard-access-token": options.accessToken } : {}),
@@ -54,6 +55,19 @@ describe("Static Web Apps leaderboard function handlers", () => {
     const response = await get(request({ accessToken: "valid-token" }));
     expect(response.status).toBe(200);
     expect(response.jsonBody).toEqual({ items: rows.slice(0, 10) });
+    expect(repo.getTopTen).toHaveBeenCalledWith("normal");
+  });
+
+  it("queries Hard rankings and rejects an unsupported difficulty", async () => {
+    const repo = repository();
+    const { get } = handlers(repo);
+    const hard = await get(request({ accessToken: "valid-token", url: "https://game.example/api/leaderboard?difficulty=hard" }));
+    const invalid = await get(request({ accessToken: "valid-token", url: "https://game.example/api/leaderboard?difficulty=nightmare" }));
+
+    expect(hard.status).toBe(200);
+    expect(repo.getTopTen).toHaveBeenCalledWith("hard");
+    expect(invalid.status).toBe(400);
+    expect(invalid.jsonBody).toMatchObject({ error: { code: "INVALID_DIFFICULTY" } });
   });
 
   it("requires an access token before calling the repository", async () => {
@@ -86,7 +100,7 @@ describe("Static Web Apps leaderboard function handlers", () => {
     const response = await post(request({
       method: "POST",
       accessToken: "valid-token",
-      body: JSON.stringify({ completedBattles: 4, userId: "forged", displayName: "Forged" }),
+      body: JSON.stringify({ completedBattles: 4, difficulty: "normal", userId: "forged", displayName: "Forged" }),
     }));
     expect(response.status).toBe(400);
     expect(response.jsonBody).toMatchObject({ error: { code: "INVALID_PROGRESS" } });
@@ -99,12 +113,13 @@ describe("Static Web Apps leaderboard function handlers", () => {
     const response = await post(request({
       method: "POST",
       accessToken: "valid-token",
-      body: JSON.stringify({ completedBattles: 8 }),
+      body: JSON.stringify({ completedBattles: 8, difficulty: "hard" }),
     }));
     expect(response.status).toBe(200);
     expect(repo.recordBestProgress).toHaveBeenCalledWith({
       userId: "verified-oid",
       displayName: "Verified Name",
+      difficulty: "hard",
       completedBattles: 8,
       recordedAt: "2026-10-26T00:00:00.000Z",
     });

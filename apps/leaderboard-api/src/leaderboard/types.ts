@@ -1,10 +1,13 @@
+export type RunDifficulty = "normal" | "hard";
+
 export type LeaderboardRecord = {
-  id: "best-progress";
+  id: "best-progress" | "best-progress:hard";
   userId: string;
   displayName: string;
+  difficulty: RunDifficulty;
   completedBattles: number;
   recordedAt: string;
-  schemaVersion: 1;
+  schemaVersion: 2;
 };
 
 export type LeaderboardPrincipal = {
@@ -16,12 +19,13 @@ export type LeaderboardPrincipal = {
 export type RecordBestProgressInput = {
   userId: string;
   displayName: string;
+  difficulty: RunDifficulty;
   completedBattles: number;
   recordedAt: string;
 };
 
 export interface LeaderboardRepository {
-  getTopTen(): Promise<LeaderboardRecord[]>;
+  getTopTen(difficulty: RunDifficulty): Promise<LeaderboardRecord[]>;
   recordBestProgress(input: RecordBestProgressInput): Promise<{
     record: LeaderboardRecord;
     updated: boolean;
