@@ -1738,24 +1738,42 @@ describe("Hard expedition enemy health and tactical AI", () => {
     expect(firstPlayedCard(makeChoiceRun(true))).toBe("rune-smith");
   });
 
-  it("uses a lethal Hard attack on the hero and prioritizes ready player threats while Normal keeps its old target order", () => {
-    const hard = asEnemyTurn(createRun(8804, "warrior", "hard"));
-    const hardBattle = activeBattle(hard);
-    hardBattle.enemyMana.current = 0;
-    hardBattle.enemyHand = [];
-    hardBattle.enemyDrawPile = [];
-    hardBattle.playerHero.health = 2;
-    hardBattle.playerBoard = [minion({ instanceId: "ready-threat", attack: 5, health: 6, maxHealth: 6, hasAttacked: false }), minion({ instanceId: "spent-threat", attack: 1, health: 1, maxHealth: 1, hasAttacked: true })];
-    hardBattle.enemyBoard = [minion({ instanceId: "lethal-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
-    expect(resolveEnemyTurnWithPlayback(hard).steps[0]?.action).toMatchObject({ type: "attack", targetId: "player" });
+  it("attacks the hero for nonlethal damage only when the Hard player board is empty", () => {
+    const open = asEnemyTurn(createRun(8804, "warrior", "hard"));
+    const openBattle = activeBattle(open);
+    openBattle.enemyMana.current = 0;
+    openBattle.enemyHand = [];
+    openBattle.enemyDrawPile = [];
+    openBattle.playerHero.health = 20;
+    openBattle.enemyBoard = [minion({ instanceId: "open-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
+    const openResult = resolveEnemyTurnWithPlayback(open);
+    expect(openResult.steps[0]?.action).toMatchObject({ type: "attack", targetId: "player" });
+    expect(openResult.run.battle?.playerHero.health).toBe(18);
 
+    const blocked = asEnemyTurn(createRun(8808, "warrior", "hard"));
+    const blockedBattle = activeBattle(blocked);
+    blockedBattle.enemyMana.current = 0;
+    blockedBattle.enemyHand = [];
+    blockedBattle.enemyDrawPile = [];
+    blockedBattle.playerHero.health = 2;
+    blockedBattle.playerBoard = [minion({ instanceId: "blocker", attack: 1, health: 3, maxHealth: 3 })];
+    blockedBattle.enemyBoard = [minion({ instanceId: "blocked-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
+    const blockedResult = resolveEnemyTurnWithPlayback(blocked);
+    expect(blockedResult.steps[0]?.action).toMatchObject({ type: "attack", targetId: "blocker" });
+    expect(blockedResult.run.battle?.playerHero.health).toBe(2);
+  });
+
+  it("prioritizes killable ready threats in Hard mode while Normal keeps its old target order", () => {
     const hardTrade = asEnemyTurn(createRun(8807, "warrior", "hard"));
     const hardTradeBattle = activeBattle(hardTrade);
     hardTradeBattle.enemyMana.current = 0;
     hardTradeBattle.enemyHand = [];
     hardTradeBattle.enemyStarterDeck = [];
     hardTradeBattle.enemyDrawPile = [];
-    hardTradeBattle.playerBoard = [minion({ instanceId: "ready-threat", attack: 5, health: 6, maxHealth: 6, hasAttacked: false }), minion({ instanceId: "spent-threat", attack: 1, health: 1, maxHealth: 1, hasAttacked: true })];
+    hardTradeBattle.playerBoard = [
+      minion({ instanceId: "ready-threat", attack: 5, health: 2, maxHealth: 2, hasAttacked: false }),
+      minion({ instanceId: "spent-threat", attack: 1, health: 1, maxHealth: 1, hasAttacked: true }),
+    ];
     hardTradeBattle.enemyBoard = [minion({ instanceId: "hard-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
     expect(resolveEnemyTurnWithPlayback(hardTrade).steps[0]?.action).toMatchObject({ type: "attack", targetId: "ready-threat" });
 
@@ -1767,6 +1785,31 @@ describe("Hard expedition enemy health and tactical AI", () => {
     normalBattle.playerBoard = [minion({ instanceId: "ready-threat", attack: 5, health: 6, maxHealth: 6, hasAttacked: false }), minion({ instanceId: "spent-threat", attack: 1, health: 1, maxHealth: 1, hasAttacked: true })];
     normalBattle.enemyBoard = [minion({ instanceId: "normal-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
     expect(resolveEnemyTurnWithPlayback(normal).steps[0]?.action).toMatchObject({ type: "attack", targetId: "spent-threat" });
+  });
+
+  it("plans and plays a legal multi-card sequence after the opening battle", () => {
+    expect(gameConstants.hardAiBeamWidth(0)).toBe(8);
+    expect(gameConstants.hardAiBeamWidth(1)).toBe(10);
+    expect(gameConstants.hardAiBeamWidth(12)).toBe(32);
+    expect(gameConstants.hardAiBeamWidth(20)).toBe(32);
+
+    const firstBattle = asEnemyTurn(createRun(8810, "warrior", "hard"));
+    const firstBattleState = activeBattle(firstBattle);
+    firstBattleState.enemyMana.current = 2;
+    firstBattleState.enemyHand = [instance("first-shadow", "shadow-bolt"), instance("first-imp", "cinder-imp")];
+    firstBattleState.enemyStarterDeck = [];
+    firstBattleState.enemyDrawPile = [];
+    const openingActions = resolveEnemyTurnWithPlayback(firstBattle).steps.filter(({ action }) => action.type === "cast-spell" || action.type === "play-minion");
+    expect(openingActions).toHaveLength(2);
+
+    const laterBattle = copyRun(firstBattle);
+    laterBattle.completedBattles = 1;
+    activeBattle(laterBattle).enemyMana.current = 2;
+    const planned = resolveEnemyTurnWithPlayback(laterBattle);
+    const playActions = planned.steps.flatMap(({ action }) => action.type === "cast-spell" || action.type === "play-minion" ? [action] : []);
+    expect(playActions).toHaveLength(2);
+    expect(playActions.map((action) => action.cardId)).toEqual(expect.arrayContaining(["shadow-bolt", "cinder-imp"]));
+    expect(activeBattle(laterBattle).enemyHand).toHaveLength(2);
   });
 });
 

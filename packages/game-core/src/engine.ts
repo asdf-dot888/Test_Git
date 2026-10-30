@@ -699,7 +699,13 @@ function hasIncomingRemovalFor(minion: MinionState, battle: BattleState): boolea
   return highestDrawDamage >= minion.health;
 }
 
-function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyDefinition, difficulty: RunDifficulty = "normal"): number {
+function scoreEnemyCard(
+  card: CardDefinition,
+  battle: BattleState,
+  enemy: EnemyDefinition,
+  difficulty: RunDifficulty = "normal",
+  completedBattles = 0,
+): number {
   const effects = card.spellEffects ?? [];
   const ownBoard = battle.enemyBoard;
   let score = 25 + card.cost * 3;
@@ -714,6 +720,9 @@ function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyD
       const minion = battle.playerBoard.find((candidate) => candidate.instanceId === target);
       score += minion ? 24 + minion.attack + (minion.health <= effect.amount ? 30 : 0) : 20 + effect.amount * 3;
       if (!minion && effect.amount >= battle.playerHero.health) score += 1000;
+      if (difficulty === "hard" && completedBattles > 0 && battle.playerBoard.length === 0 && effect.target === "enemyHero") {
+        score += 2 * completedBattles;
+      }
     } else if (effect.kind === "randomDamage") {
       const target = selectEnemySpellTarget(effect, battle, difficulty);
       const minion = battle.playerBoard.find((candidate) => candidate.instanceId === target);
@@ -786,11 +795,11 @@ function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyD
   return score;
 }
 
-function selectEnemyCard(battle: BattleState, enemy: EnemyDefinition, difficulty: RunDifficulty): CardInstance | null {
+function selectEnemyCard(battle: BattleState, enemy: EnemyDefinition, difficulty: RunDifficulty, completedBattles = 0): CardInstance | null {
   const playable = battle.enemyHand
     .map((instance, handSlot) => ({ instance, handSlot, card: getCard(instance.cardId) }))
     .filter(({ card }) => isEnemyCardPlayable(card, battle))
-    .map((entry) => ({ ...entry, score: scoreEnemyCard(entry.card, battle, enemy, difficulty) }));
+    .map((entry) => ({ ...entry, score: scoreEnemyCard(entry.card, battle, enemy, difficulty, completedBattles) }));
   if (playable.length === 0) return null;
   const highest = Math.max(...playable.map((entry) => entry.score));
   const tied = playable.filter((entry) => entry.score === highest);
@@ -798,6 +807,74 @@ function selectEnemyCard(battle: BattleState, enemy: EnemyDefinition, difficulty
   const picked = pickIndex(tied.length, battle.rngState);
   battle.rngState = picked.state;
   return tied[picked.value]!.instance;
+}
+
+interface HardPlanNode {
+  run: RunState;
+  sequence: string[];
+  score: number;
+  tieBreak: Array<{ handSlot: number; instanceId: string }>;
+}
+
+function enemyBoardValue(battle: BattleState): number {
+  return battle.enemyBoard.reduce((total, minion) => total + 3 * minion.attack + 2 * minion.health, 0)
+    - battle.playerBoard.reduce((total, minion) => total + 4 * minion.attack + minion.health, 0);
+}
+
+function comparePlanTieBreak(left: HardPlanNode, right: HardPlanNode): number {
+  const sharedLength = Math.min(left.tieBreak.length, right.tieBreak.length);
+  for (let index = 0; index < sharedLength; index += 1) {
+    const a = left.tieBreak[index]!;
+    const b = right.tieBreak[index]!;
+    if (a.handSlot !== b.handSlot) return a.handSlot - b.handSlot;
+    const idOrder = a.instanceId.localeCompare(b.instanceId);
+    if (idOrder !== 0) return idOrder;
+  }
+  return left.tieBreak.length - right.tieBreak.length;
+}
+
+function hardAiBeamWidth(completedBattles: number): number {
+  return Math.min(32, 8 + 2 * completedBattles);
+}
+
+function planHardEnemyTurn(run: RunState, enemy: EnemyDefinition): string[] {
+  const initialBattle = run.battle;
+  if (!initialBattle || run.completedBattles === 0) return [];
+  const initialSlots = new Map(initialBattle.enemyHand.map((instance, index) => [instance.instanceId, index]));
+  const beamWidth = hardAiBeamWidth(run.completedBattles);
+  let beam: HardPlanNode[] = [{ run: cloneRun(run), sequence: [], score: 0, tieBreak: [] }];
+  let best: HardPlanNode = beam[0]!;
+  const maxDepth = Math.min(30, initialBattle.enemyHand.length + initialBattle.enemyDrawPile.length + 1);
+
+  for (let depth = 0; depth < maxDepth; depth += 1) {
+    const expanded: HardPlanNode[] = [];
+    for (const node of beam) {
+      const battle = node.run.battle;
+      if (!battle || node.run.status !== "active" || battle.playerHero.health === 0) continue;
+      const candidates = battle.enemyHand
+        .map((instance) => ({ instance, handSlot: initialSlots.get(instance.instanceId) ?? Number.MAX_SAFE_INTEGER }))
+        .filter(({ instance }) => isEnemyCardPlayable(getCard(instance.cardId), battle))
+        .sort((left, right) => left.handSlot - right.handSlot || left.instance.instanceId.localeCompare(right.instance.instanceId));
+      for (const { instance, handSlot } of candidates) {
+        const card = getCard(instance.cardId);
+        const transitionScore = scoreEnemyCard(card, battle, enemy, "hard", run.completedBattles);
+        const simulated = playEnemyCard(cloneRun(node.run), instance.instanceId, true);
+        if (!simulated.battle) continue;
+        const candidate: HardPlanNode = {
+          run: simulated,
+          sequence: [...node.sequence, instance.instanceId],
+          score: node.score + transitionScore + enemyBoardValue(simulated.battle),
+          tieBreak: [...node.tieBreak, { handSlot, instanceId: instance.instanceId }],
+        };
+        expanded.push(candidate);
+        if (candidate.score > best.score || (candidate.score === best.score && comparePlanTieBreak(candidate, best) < 0)) best = candidate;
+      }
+    }
+    if (expanded.length === 0) break;
+    expanded.sort((left, right) => right.score - left.score || comparePlanTieBreak(left, right));
+    beam = expanded.slice(0, beamWidth);
+  }
+  return best.sequence;
 }
 
 function playEnemyCard(run: RunState, handInstanceId: string, deferDefeat = false): RunState {
@@ -858,9 +935,9 @@ function resolveEnemyMinionAttacks(
     const battle = run.battle;
     if (!battle) break;
     const attacker = battle.enemyBoard.find((minion) => minion.instanceId === attackerId);
-    if (!attacker || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked || attacker.statusEffects?.some((status) => status.kind === "root")) continue;
+    if (!attacker || attacker.attack <= 0 || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked || attacker.statusEffects?.some((status) => status.kind === "root")) continue;
     const beforeRun = onAttack ? cloneRun(run) : run;
-    if (run.difficulty === "hard" && attacker.attack >= battle.playerHero.health) {
+    if (run.difficulty === "hard" && battle.playerBoard.length === 0) {
       const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
       battle.enemyTurnEvents?.push(action);
       attacker.hasAttacked = true;
@@ -873,9 +950,12 @@ function resolveEnemyMinionAttacks(
       .map((minion, index) => ({ minion, index }))
       .sort((left, right) => {
         if (run.difficulty === "hard") {
-          const leftReady = left.minion.attack > 0 && !left.minion.hasAttacked && !left.minion.statusEffects?.some((status) => status.kind === "root");
-          const rightReady = right.minion.attack > 0 && !right.minion.hasAttacked && !right.minion.statusEffects?.some((status) => status.kind === "root");
-          return Number(rightReady) - Number(leftReady)
+          const leftKillable = left.minion.health <= attacker.attack;
+          const rightKillable = right.minion.health <= attacker.attack;
+          const leftReady = left.minion.summonedTurn < battle.turnNumber && left.minion.attack > 0 && !left.minion.hasAttacked && !left.minion.statusEffects?.some((status) => status.kind === "root");
+          const rightReady = right.minion.summonedTurn < battle.turnNumber && right.minion.attack > 0 && !right.minion.hasAttacked && !right.minion.statusEffects?.some((status) => status.kind === "root");
+          return Number(rightKillable) - Number(leftKillable)
+            || Number(rightReady) - Number(leftReady)
             || right.minion.attack - left.minion.attack
             || left.minion.health - right.minion.health
             || left.index - right.index;
@@ -1258,7 +1338,7 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   if (battle.turnNumber > 1) gainRegularMana(battle.enemyMana, 1);
 
   if (battle.enemyHand.length >= MAX_HAND) {
-    const scored = battle.enemyHand.map((instance) => ({ instance, score: scoreEnemyCard(getCard(instance.cardId), battle, enemy, next.difficulty) }));
+    const scored = battle.enemyHand.map((instance) => ({ instance, score: scoreEnemyCard(getCard(instance.cardId), battle, enemy, next.difficulty, next.completedBattles) }));
     const lowest = Math.min(...scored.map((entry) => entry.score));
     const candidates = scored.filter((entry) => entry.score === lowest);
     const picked = candidates.length > 1 ? pickIndex(candidates.length, battle.rngState) : { value: 0, state: battle.rngState };
@@ -1270,10 +1350,13 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   const drawn = takeEnemyDraw(next, battle);
   if (drawn) battle.enemyHand.push(drawn);
 
+  const hardPlan = next.difficulty === "hard" && next.completedBattles > 0 ? planHardEnemyTurn(next, enemy) : null;
   let plays = 0;
   while (plays < 30 && next.status === "active" && next.battle?.playerHero.health !== 0) {
     battle = next.battle!;
-    const selected = selectEnemyCard(battle, enemy, next.difficulty);
+    const selected = hardPlan
+      ? battle.enemyHand.find((instance) => instance.instanceId === hardPlan[plays]) ?? null
+      : selectEnemyCard(battle, enemy, next.difficulty, next.completedBattles);
     if (!selected) break;
     const beforeHandSize = battle.enemyHand.length;
     const priorEventCount = battle.enemyTurnEvents?.length ?? 0;
@@ -1401,4 +1484,5 @@ export const gameConstants = {
   heroHealth: HERO_HEALTH,
   initialMana: INITIAL_MANA,
   maxMana: MAX_MANA,
+  hardAiBeamWidth,
 } as const;

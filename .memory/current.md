@@ -7,11 +7,11 @@
 [P01 Hard Mode Ramp](./phases/2026-10-30-hard-mode-ramp/P01-hard-mode-ramp/phase.md)
 
 ## Active Task
-[T02 Progressive Legal Hard AI](./phases/2026-10-30-hard-mode-ramp/P01-hard-mode-ramp/T02-progressive-hard-ai.md)
+[T03 Tutorial Health Reset](./phases/2026-10-30-hard-mode-ramp/P01-hard-mode-ramp/T03-tutorial-health-reset.md)
 
 ## Status
-- T01 completed and validated; commit will be recorded after creation.
-- T02 is now active.
+- T01 and T02 completed and validated.
+- T03 is now active.
 
 ## Next Step
-Read the T02 blueprint and implement progressive Hard AI planning and legal enemy targeting in `packages/game-core/src/engine.ts`.
+Read the T03 blueprint and restore player-side health after first-run tutorial completion or skip.
