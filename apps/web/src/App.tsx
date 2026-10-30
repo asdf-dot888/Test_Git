@@ -27,6 +27,7 @@ import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord,
 import { combatEventSounds } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
 import { loadTutorialProgress, markTutorialCompleted } from "./game/tutorialProgress.js";
+import { restoreTutorialPlayerHealth } from "./game/tutorialHealth.js";
 import { createRun as createGameRun, type RunState } from "@board-game/game-core";
 
 const INTERACTIVE_AUDIO_SELECTOR = "button, a[href], input, select, textarea, label[for], [role='button'], [role='option'], [data-pointer-interaction]";
@@ -127,6 +128,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   }, [audioController, dispatchGameAction]);
   const finishTutorial = () => {
     tutorialActionRef.current = null;
+    if (tutorialMode === "first-run" && session.run) {
+      dispatchGameAction({ type: "restore-run", run: restoreTutorialPlayerHealth(session.run) });
+    }
     if (tutorialMode === "first-run" && auth.userId) {
       let result;
       try {

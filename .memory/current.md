@@ -7,11 +7,10 @@
 [P01 Hard Mode Ramp](./phases/2026-10-30-hard-mode-ramp/P01-hard-mode-ramp/phase.md)
 
 ## Active Task
-[T03 Tutorial Health Reset](./phases/2026-10-30-hard-mode-ramp/P01-hard-mode-ramp/T03-tutorial-health-reset.md)
+None — all planned tasks are complete.
 
 ## Status
-- T01 and T02 completed and validated.
-- T03 is now active.
+- T01, T02, and T03 completed and validated.
 
 ## Next Step
-Read the T03 blueprint and restore player-side health after first-run tutorial completion or skip.
+No active task remains in this plan.

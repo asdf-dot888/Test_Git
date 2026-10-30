@@ -6,8 +6,8 @@
 | :--- | :--- | :--- | :--- |
 | T01 | `done` | Scale Hard enemy hero and minion stats at Phase 2 and Phase 3. | [T01](./T01-phase-stat-scaling.md) |
 | T02 | `done` | Make Hard AI plan stronger legal turns and obey player-minion blockers. | [T02](./T02-progressive-hard-ai.md) |
-| T03 | `in_progress` | Restore player hero and friendly minion health after first-run tutorial completion or skip. | [T03](./T03-tutorial-health-reset.md) |
+| T03 | `done` | Restore player hero and friendly minion health after first-run tutorial completion or skip. | [T03](./T03-tutorial-health-reset.md) |
 
 ## Progress
 
-- done: 2/3 (active: T03)
+- done: 3/3 (complete)
