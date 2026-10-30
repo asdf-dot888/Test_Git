@@ -28,6 +28,7 @@ export function MainMenu({ canContinue, disabled = false, showAutoplayHint = fal
         <button className="menu-secondary" type="button" disabled={disabled} onClick={() => setGuideOpen(true)}>게임 방법</button>
         <button className="menu-secondary" type="button" disabled={disabled} onClick={onLeaderboard}>랭킹</button>
         <span className="menu-note">전투는 이 브라우저 세션에서 이어집니다.</span>
+        <span className="menu-version">v{__APP_VERSION__}</span>
       </div>
       <GameGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </main>

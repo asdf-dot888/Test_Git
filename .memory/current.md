@@ -1,16 +1,16 @@
-﻿# Current Context
+# Current Context
 
 ## Active Plan
-[Menu, Map, and Interaction Audio](./plans/2026-10-29-menu-map-audio.md)
+[Deployment-Based Versioning](./plans/2026-10-30-deployment-versioning.md)
 
 ## Active Phase
-[P01 Menu and Interaction Audio](./phases/2026-10-29-menu-map-audio/P01-menu-audio/phase.md)
+[P01 Versioned Static Web Apps Release](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/phase.md)
 
 ## Active Task
-None — the current plan is complete.
+[T02 Production Release Automation](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/T02-production-release-automation.md)
 
 ## Status
-- T01, T02, and T03 are implemented and validated. Plan: complete.
+- T01 canonical version metadata and main-menu display are implemented and validated.
 
 ## Next Step
-No active task. Select or plan the next feature when ready.
+Read T02 and implement success-only version recording and Git release automation in scripts/deploy-static-web-app.ps1.
