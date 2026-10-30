@@ -1614,3 +1614,119 @@ describe("Hard boss cards and temporary combat statuses", () => {
   });
 });
 
+describe("Hard expedition enemy health and tactical AI", () => {
+  function startAtEnemy(enemyId: string, difficulty: "normal" | "hard") {
+    const run = copyRun(createRun(8801, "warrior", difficulty));
+    run.battle = null;
+    run.encounters[0]!.status = "pending";
+    run.encounters[0]!.enemyId = enemyId;
+    return startBattle(run, enemyId);
+  }
+
+  function firstPlayedCard(run: RunState): string | undefined {
+    const result = resolveEnemyTurnWithPlayback(run);
+    const action = result.steps[0]?.action;
+    return action?.type === "play-minion" || action?.type === "cast-spell" ? action.cardId : undefined;
+  }
+
+  it("adds only the specified Hard-mode enemy health and preserves Normal values", () => {
+    expect(startAtEnemy("fallen-elf-scout", "normal").battle?.enemyHero).toMatchObject({ health: 19, maxHealth: 19 });
+    expect(startAtEnemy("fallen-elf-scout", "hard").battle?.enemyHero).toMatchObject({ health: 22, maxHealth: 22 });
+    expect(startAtEnemy("boss-blood-matron", "normal").battle?.enemyHero).toMatchObject({ health: 34, maxHealth: 34 });
+    expect(startAtEnemy("boss-blood-matron", "hard").battle?.enemyHero).toMatchObject({ health: 39, maxHealth: 39 });
+  });
+
+  it("uses a player's hidden board-clear spell to change Hard card choice but not Normal choice", () => {
+    const tieSeed = Array.from({ length: 100 }, (_, index) => index + 1)
+      .find((seed) => pickIndex(2, seed).value === 1)!;
+    const makeChoiceRun = (difficulty: "normal" | "hard", hasClearSpell: boolean) => {
+      const run = asEnemyTurn(createRun(8802, "warrior", difficulty));
+      const battle = activeBattle(run);
+      battle.enemyId = "boss-grave-king";
+      battle.enemyMana.current = 5;
+      battle.rngState = tieSeed;
+      battle.enemyHand = [instance("thorn-brute-choice", "thorn-brute"), instance("moon-stag-choice", "moon-stag")];
+      battle.enemyBoard = [minion({ instanceId: "enemy-board", owner: "enemy", attack: 2, health: 8, maxHealth: 8, summonedTurn: 0 })];
+      battle.enemyStarterDeck = [];
+      battle.enemyDrawPile = [];
+      battle.hand = hasClearSpell ? [instance("known-board-clear", "soul-lance")] : [];
+      return run;
+    };
+
+    expect(firstPlayedCard(makeChoiceRun("hard", false))).toBe("moon-stag");
+    expect(firstPlayedCard(makeChoiceRun("hard", true))).toBe("thorn-brute");
+    expect(firstPlayedCard(makeChoiceRun("normal", false))).toBe("moon-stag");
+    expect(firstPlayedCard(makeChoiceRun("normal", true))).toBe("moon-stag");
+  });
+
+  it("uses the next three hidden draws to keep a Hard attacker that can trade into a large minion", () => {
+    const tieSeed = Array.from({ length: 100 }, (_, index) => index + 1)
+      .find((seed) => pickIndex(2, seed).value === 0)!;
+    const makeChoiceRun = (hasLargeMinionDraw: boolean) => {
+      const run = asEnemyTurn(createRun(8803, "warrior", "hard"));
+      const battle = activeBattle(run);
+      battle.enemyId = "boss-grave-king";
+      battle.enemyMana.current = 5;
+      battle.rngState = tieSeed;
+      battle.enemyHand = [instance("thorn-brute-choice", "thorn-brute"), instance("moon-stag-choice", "moon-stag")];
+      battle.enemyBoard = [minion({ instanceId: "enemy-board", owner: "enemy", attack: 2, health: 8, maxHealth: 8, summonedTurn: 0 })];
+      battle.enemyStarterDeck = [];
+      battle.enemyDrawPile = [];
+      battle.drawPile = hasLargeMinionDraw ? [instance("large-next-draw", "moon-stag")] : [];
+      return run;
+    };
+
+    expect(firstPlayedCard(makeChoiceRun(false))).toBe("thorn-brute");
+    expect(firstPlayedCard(makeChoiceRun(true))).toBe("moon-stag");
+  });
+
+  it("protects a high-attack Hard attacker when a drawn removal spell can kill it", () => {
+    const makeChoiceRun = (hasRemovalDraw: boolean) => {
+      const run = asEnemyTurn(createRun(8806, "warrior", "hard"));
+      const battle = activeBattle(run);
+      battle.enemyId = "bandit-scout";
+      battle.enemyMana.current = 4;
+      battle.enemyHand = [instance("shade-choice", "shade-stalker"), instance("smith-choice", "rune-smith")];
+      battle.enemyBoard = [minion({ instanceId: "valuable-attacker", owner: "enemy", attack: 6, health: 5, maxHealth: 5, summonedTurn: 0 })];
+      battle.enemyStarterDeck = [];
+      battle.enemyDrawPile = [];
+      battle.drawPile = hasRemovalDraw ? [instance("removal-draw", "meteor-shard")] : [];
+      return run;
+    };
+
+    expect(firstPlayedCard(makeChoiceRun(false))).toBe("shade-stalker");
+    expect(firstPlayedCard(makeChoiceRun(true))).toBe("rune-smith");
+  });
+
+  it("uses a lethal Hard attack on the hero and prioritizes ready player threats while Normal keeps its old target order", () => {
+    const hard = asEnemyTurn(createRun(8804, "warrior", "hard"));
+    const hardBattle = activeBattle(hard);
+    hardBattle.enemyMana.current = 0;
+    hardBattle.enemyHand = [];
+    hardBattle.enemyDrawPile = [];
+    hardBattle.playerHero.health = 2;
+    hardBattle.playerBoard = [minion({ instanceId: "ready-threat", attack: 5, health: 6, maxHealth: 6, hasAttacked: false }), minion({ instanceId: "spent-threat", attack: 1, health: 1, maxHealth: 1, hasAttacked: true })];
+    hardBattle.enemyBoard = [minion({ instanceId: "lethal-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
+    expect(resolveEnemyTurnWithPlayback(hard).steps[0]?.action).toMatchObject({ type: "attack", targetId: "player" });
+
+    const hardTrade = asEnemyTurn(createRun(8807, "warrior", "hard"));
+    const hardTradeBattle = activeBattle(hardTrade);
+    hardTradeBattle.enemyMana.current = 0;
+    hardTradeBattle.enemyHand = [];
+    hardTradeBattle.enemyStarterDeck = [];
+    hardTradeBattle.enemyDrawPile = [];
+    hardTradeBattle.playerBoard = [minion({ instanceId: "ready-threat", attack: 5, health: 6, maxHealth: 6, hasAttacked: false }), minion({ instanceId: "spent-threat", attack: 1, health: 1, maxHealth: 1, hasAttacked: true })];
+    hardTradeBattle.enemyBoard = [minion({ instanceId: "hard-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
+    expect(resolveEnemyTurnWithPlayback(hardTrade).steps[0]?.action).toMatchObject({ type: "attack", targetId: "ready-threat" });
+
+    const normal = asEnemyTurn(createRun(8805, "warrior", "normal"));
+    const normalBattle = activeBattle(normal);
+    normalBattle.enemyMana.current = 0;
+    normalBattle.enemyHand = [];
+    normalBattle.enemyDrawPile = [];
+    normalBattle.playerBoard = [minion({ instanceId: "ready-threat", attack: 5, health: 6, maxHealth: 6, hasAttacked: false }), minion({ instanceId: "spent-threat", attack: 1, health: 1, maxHealth: 1, hasAttacked: true })];
+    normalBattle.enemyBoard = [minion({ instanceId: "normal-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
+    expect(resolveEnemyTurnWithPlayback(normal).steps[0]?.action).toMatchObject({ type: "attack", targetId: "spent-threat" });
+  });
+});
+

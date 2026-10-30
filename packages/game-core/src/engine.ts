@@ -64,7 +64,7 @@ function cardCounts(deck: readonly CardInstance[]): Map<string, number> {
   return counts;
 }
 
-function enemyCardWeight(card: CardDefinition, enemy: EnemyDefinition): number {
+function enemyCardWeight(card: CardDefinition, enemy: EnemyDefinition, difficulty: RunDifficulty): number {
   const profile = enemy.tactics.profile;
   const effects = card.spellEffects ?? [];
   const minion = card.minion;
@@ -88,6 +88,11 @@ function enemyCardWeight(card: CardDefinition, enemy: EnemyDefinition): number {
     if (card.kind === "spell" && card.cost >= 4) weight += 4;
     if (effects.some((effect) => effect.kind === "damage")) weight += 2;
   }
+  if (difficulty === "hard") {
+    if (card.cost <= INITIAL_MANA) weight += 2;
+    if (effects.some((effect) => effect.kind === "damage" || effect.kind === "damageAllEnemyMinions")) weight += 3;
+    if (minion?.attack && minion.attack >= 3) weight += 2;
+  }
   return weight;
 }
 
@@ -104,7 +109,7 @@ function createEnemyDeck(enemy: EnemyDefinition, seed: number, idPrefix: string,
   while (starterDeck.length < 30) {
     const candidates = CARD_CATALOG
       .filter((card) => !card.playerOnly && !card.enemyOnly && !card.classId && !card.tokenOnly && (counts.get(card.id) ?? 0) < 2)
-      .map((card) => ({ card, weight: enemyCardWeight(card, enemy) }));
+      .map((card) => ({ card, weight: enemyCardWeight(card, enemy, difficulty) }));
     const totalWeight = candidates.reduce((total, candidate) => total + candidate.weight, 0);
     if (totalWeight <= 0) fail("INVALID_ACTION", `No valid cards are available for ${enemy.id}.`);
     const picked = pickIndex(totalWeight, state);
@@ -578,12 +583,13 @@ function startPlayerTurn(run: RunState): RunState {
   return run;
 }
 
-function selectEnemySpellTarget(effect: SpellEffect, battle: BattleState): string | undefined {
+function selectEnemySpellTarget(effect: SpellEffect, battle: BattleState, difficulty: RunDifficulty = "normal"): string | undefined {
   if (effect.kind === "damage" || effect.kind === "randomDamage") {
     if (battle.playerBoard.length === 0) return undefined;
     const anticipatedDamage = effect.kind === "damage" ? effect.amount : Math.floor((effect.min + effect.max) / 2);
     return [...battle.playerBoard]
       .sort((left, right) => Number(right.health <= anticipatedDamage) - Number(left.health <= anticipatedDamage)
+        || (difficulty === "hard" ? Number(right.attack >= 3) - Number(left.attack >= 3) : 0)
         || right.attack - left.attack || left.health - right.health)[0]?.instanceId;
   }
   if (effect.kind === "cleave") {
@@ -649,7 +655,49 @@ function isEnemyCardPlayable(card: CardDefinition, battle: BattleState): boolean
   return isEnemyCardTargetPlayable(card, battle);
 }
 
-function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyDefinition): number {
+function hasBoardClearSpellInHand(battle: BattleState): boolean {
+  return battle.hand.some((instance) => {
+    const card = getCard(instance.cardId);
+    if (card.kind !== "spell") return false;
+    return (card.spellEffects ?? []).some((effect) => {
+      if (effect.kind === "damage" && effect.target === "enemyMinion") return effect.amount >= 3;
+      if (effect.kind === "damageAllEnemyMinions") return effect.amount * battle.enemyBoard.length >= 3;
+      if (effect.kind === "cleave") return effect.amount * Math.min(3, battle.enemyBoard.length) >= 3;
+      if (effect.kind === "randomDamage") return effect.max * battle.enemyBoard.length >= 3;
+      return false;
+    });
+  });
+}
+
+function hasHighCostMinionInNextDraws(battle: BattleState): boolean {
+  return battle.drawPile.slice(0, 3).some((instance) => {
+    const card = getCard(instance.cardId);
+    return card.kind === "minion" && card.cost >= 5;
+  });
+}
+
+function removalDamage(effect: SpellEffect): number {
+  if (effect.kind === "damage" && effect.target === "enemyMinion") return effect.amount;
+  if (effect.kind === "damageAllEnemyMinions") return effect.amount;
+  if (effect.kind === "randomDamage") return effect.max;
+  if (effect.kind === "cleave") return effect.amount;
+  return 0;
+}
+
+function highestAttackMinion(board: readonly MinionState[]): MinionState | undefined {
+  return [...board].sort((left, right) => right.attack - left.attack || right.health - left.health)[0];
+}
+
+function hasIncomingRemovalFor(minion: MinionState, battle: BattleState): boolean {
+  const highestDrawDamage = battle.drawPile.slice(0, 3).reduce((damage, instance) => {
+    const card = getCard(instance.cardId);
+    if (card.kind !== "spell") return damage;
+    return Math.max(damage, ...(card.spellEffects ?? []).map(removalDamage));
+  }, 0);
+  return highestDrawDamage >= minion.health;
+}
+
+function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyDefinition, difficulty: RunDifficulty = "normal"): number {
   const effects = card.spellEffects ?? [];
   const ownBoard = battle.enemyBoard;
   let score = 25 + card.cost * 3;
@@ -660,16 +708,16 @@ function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyD
   }
   for (const effect of effects) {
     if (effect.kind === "damage") {
-      const target = selectEnemySpellTarget(effect, battle);
+      const target = selectEnemySpellTarget(effect, battle, difficulty);
       const minion = battle.playerBoard.find((candidate) => candidate.instanceId === target);
       score += minion ? 24 + minion.attack + (minion.health <= effect.amount ? 30 : 0) : 20 + effect.amount * 3;
       if (!minion && effect.amount >= battle.playerHero.health) score += 1000;
     } else if (effect.kind === "randomDamage") {
-      const target = selectEnemySpellTarget(effect, battle);
+      const target = selectEnemySpellTarget(effect, battle, difficulty);
       const minion = battle.playerBoard.find((candidate) => candidate.instanceId === target);
       score += minion ? 22 + minion.attack + (minion.health <= 2 ? 18 : 0) : 24;
     } else if (effect.kind === "cleave") {
-      const target = selectEnemySpellTarget(effect, battle);
+      const target = selectEnemySpellTarget(effect, battle, difficulty);
       const index = battle.playerBoard.findIndex((minion) => minion.instanceId === target);
       const covered = [battle.playerBoard[index - 1], battle.playerBoard[index], battle.playerBoard[index + 1]].filter(Boolean);
       score += 12 + covered.reduce((total, minion) => total + (minion!.health <= effect.amount ? 15 : 4), 0);
@@ -683,7 +731,7 @@ function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyD
     else if (effect.kind === "buff") score += 20 + Math.max(0, ...ownBoard.map((minion) => minion.attack)) * 2;
     else if (effect.kind === "draw") score += 15 + effect.count * 4;
     else if (effect.kind === "rootMinion") {
-      const target = battle.playerBoard.find((minion) => minion.instanceId === selectEnemySpellTarget(effect, battle));
+      const target = battle.playerBoard.find((minion) => minion.instanceId === selectEnemySpellTarget(effect, battle, difficulty));
       score += target ? 20 + target.attack : 0;
     } else if (effect.kind === "curseAllEnemyMinions") score += 12 * battle.playerBoard.length;
     else if (effect.kind === "burnEnemyHero") score += effect.damagePerTurn * effect.turns;
@@ -705,7 +753,7 @@ function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyD
       },
     };
     const bestFollowUp = Math.max(0, ...getSoulBargainFollowUps(card, battle)
-      .map((followUp) => scoreEnemyCard(followUp, projectedBattle, enemy)));
+      .map((followUp) => scoreEnemyCard(followUp, projectedBattle, enemy, difficulty)));
     score = Math.max(score, bestFollowUp + 1);
   }
   const profile = enemy.tactics.profile;
@@ -714,14 +762,33 @@ function scoreEnemyCard(card: CardDefinition, battle: BattleState, enemy: EnemyD
   if ((profile === "controller" || profile === "drain") && effects.some((effect) => effect.kind === "heal" || effect.kind === "buff")) score += 18;
   if ((profile === "board-clear" || profile === "ravager") && effects.some((effect) => effect.kind === "damage")) score += 18;
   if (enemy.kind === "boss" && card.rewardTier === "boss") score += 5;
+  if (difficulty === "hard") {
+    if (hasBoardClearSpellInHand(battle)) {
+      if (effects.some((effect) => effect.kind === "damage" && effect.target === "enemyHero")) score += 4;
+      if (card.kind === "minion" && card.minion && card.minion.maxHealth >= card.minion.attack + 2) score += 4;
+      const summonedCount = effects.reduce((total, effect) => total + (effect.kind === "summon" ? effect.count : 0), 0)
+        + (card.minion?.effect?.kind === "battlecrySummon" ? card.minion.effect.count : 0);
+      if (summonedCount >= 2) score -= 6;
+    }
+    if (hasHighCostMinionInNextDraws(battle)) {
+      if ((card.kind === "minion" && card.minion?.attack && card.minion.attack >= 5)
+        || ownBoard.some((minion) => minion.attack >= 5 && !minion.hasAttacked)) score += 3;
+    }
+    const threatenedAttacker = highestAttackMinion(ownBoard);
+    if (threatenedAttacker && hasIncomingRemovalFor(threatenedAttacker, battle)) {
+      if (effects.some((effect) => effect.kind === "buff" || effect.kind === "heal")
+        || (card.kind === "minion" && card.minion && card.minion.maxHealth > 3)) score += 4;
+      if (card.kind === "minion" && card.minion && card.minion.maxHealth <= 3) score -= 3;
+    }
+  }
   return score;
 }
 
-function selectEnemyCard(battle: BattleState, enemy: EnemyDefinition): CardInstance | null {
+function selectEnemyCard(battle: BattleState, enemy: EnemyDefinition, difficulty: RunDifficulty): CardInstance | null {
   const playable = battle.enemyHand
     .map((instance, handSlot) => ({ instance, handSlot, card: getCard(instance.cardId) }))
     .filter(({ card }) => isEnemyCardPlayable(card, battle))
-    .map((entry) => ({ ...entry, score: scoreEnemyCard(entry.card, battle, enemy) }));
+    .map((entry) => ({ ...entry, score: scoreEnemyCard(entry.card, battle, enemy, difficulty) }));
   if (playable.length === 0) return null;
   const highest = Math.max(...playable.map((entry) => entry.score));
   const tied = playable.filter((entry) => entry.score === highest);
@@ -754,7 +821,7 @@ function playEnemyCard(run: RunState, handInstanceId: string, deferDefeat = fals
   battle.enemyDiscardPile.push(instance);
   const eventEffects: Array<{ kind: SpellEffect["kind"]; targetId: string | null; amount?: number; transferredCardInstanceId?: string }> = [];
   for (const effect of card.spellEffects ?? []) {
-    const targetId = selectEnemySpellTarget(effect, battle);
+    const targetId = selectEnemySpellTarget(effect, battle, run.difficulty);
     const resolved: { amount?: number; transferredCardInstanceId?: string } = {};
     run = applySpellEffect(run, effect, targetId, "enemy", deferDefeat, resolved);
     eventEffects.push({ kind: effect.kind, targetId: targetId ?? null, ...resolved });
@@ -791,9 +858,26 @@ function resolveEnemyMinionAttacks(
     const attacker = battle.enemyBoard.find((minion) => minion.instanceId === attackerId);
     if (!attacker || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked || attacker.statusEffects?.some((status) => status.kind === "root")) continue;
     const beforeRun = onAttack ? cloneRun(run) : run;
+    if (run.difficulty === "hard" && attacker.attack >= battle.playerHero.health) {
+      const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
+      battle.enemyTurnEvents?.push(action);
+      attacker.hasAttacked = true;
+      run = dealDamageToPlayerHero(run, attacker.attack, deferDefeat);
+      onAttack?.(action, beforeRun, run);
+      if (run.status !== "active" || (deferDefeat && run.battle?.playerHero.health === 0)) return run;
+      continue;
+    }
     const target = [...battle.playerBoard]
       .map((minion, index) => ({ minion, index }))
       .sort((left, right) => {
+        if (run.difficulty === "hard") {
+          const leftReady = left.minion.attack > 0 && !left.minion.hasAttacked && !left.minion.statusEffects?.some((status) => status.kind === "root");
+          const rightReady = right.minion.attack > 0 && !right.minion.hasAttacked && !right.minion.statusEffects?.some((status) => status.kind === "root");
+          return Number(rightReady) - Number(leftReady)
+            || right.minion.attack - left.minion.attack
+            || left.minion.health - right.minion.health
+            || left.index - right.index;
+        }
         const leftKillable = left.minion.health <= attacker.attack;
         const rightKillable = right.minion.health <= attacker.attack;
         return Number(rightKillable) - Number(leftKillable)
@@ -851,13 +935,14 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
   encounter.status = "active";
   const shuffled = shuffle(run.deck, battleSeed);
   const enemyDeck = createEnemyDeck(enemy, shuffled.state, `${run.runId}-enemy-${encounterIndex + 1}`, run.difficulty);
+  const enemyMaxHealth = enemy.maxHealth + (run.difficulty === "hard" ? (enemy.kind === "boss" ? 5 : 3) : 0);
   const nextRun = { ...run, phase: encounter.phase, battle: null } as RunState;
   const battle: BattleState = {
     battleId: `${run.runId}-battle-${encounterIndex + 1}`,
     turnNumber: 1,
     activeSide: "player",
     playerHero: { id: "player", health: HERO_HEALTH, maxHealth: HERO_HEALTH },
-    enemyHero: { id: "enemy", health: enemy.maxHealth, maxHealth: enemy.maxHealth },
+    enemyHero: { id: "enemy", health: enemyMaxHealth, maxHealth: enemyMaxHealth },
     playerMana: { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 },
     enemyMana: { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 },
     playerArmor: 0,
@@ -1169,7 +1254,7 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   if (battle.turnNumber > 1) gainRegularMana(battle.enemyMana, 1);
 
   if (battle.enemyHand.length >= MAX_HAND) {
-    const scored = battle.enemyHand.map((instance) => ({ instance, score: scoreEnemyCard(getCard(instance.cardId), battle, enemy) }));
+    const scored = battle.enemyHand.map((instance) => ({ instance, score: scoreEnemyCard(getCard(instance.cardId), battle, enemy, next.difficulty) }));
     const lowest = Math.min(...scored.map((entry) => entry.score));
     const candidates = scored.filter((entry) => entry.score === lowest);
     const picked = candidates.length > 1 ? pickIndex(candidates.length, battle.rngState) : { value: 0, state: battle.rngState };
@@ -1184,7 +1269,7 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   let plays = 0;
   while (plays < 30 && next.status === "active" && next.battle?.playerHero.health !== 0) {
     battle = next.battle!;
-    const selected = selectEnemyCard(battle, enemy);
+    const selected = selectEnemyCard(battle, enemy, next.difficulty);
     if (!selected) break;
     const beforeHandSize = battle.enemyHand.length;
     const priorEventCount = battle.enemyTurnEvents?.length ?? 0;
