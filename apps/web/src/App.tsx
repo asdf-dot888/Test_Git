@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CARD_BY_ID, ENEMY_BY_ID, type PlayerClass, type RunDifficulty } from "@board-game/game-core";
+import { CARD_BY_ID, ENEMY_BY_ID, type PlayerClass } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
 import { EnemyHeroDefeatEffect } from "./components/EnemyHeroDefeatEffect.js";
@@ -23,7 +23,7 @@ import { useEnemyTurnPlayback } from "./game/useEnemyTurnPlayback.js";
 import { createAudioController, type AudioController, type AudioSettings, type MusicKind } from "./game/audio.js";
 import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
-import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord } from "./leaderboard/leaderboardClient.js";
+import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord, type RunDifficulty } from "./leaderboard/leaderboardClient.js";
 import { combatEventSounds } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
 import { loadTutorialProgress, markTutorialCompleted } from "./game/tutorialProgress.js";
@@ -70,10 +70,12 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const [classSelectionReason, setClassSelectionReason] = useState<"completed" | "abandoned" | null>(null);
   const [deckLimitPromptedKey, setDeckLimitPromptedKey] = useState<string | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  const [leaderboardState, setLeaderboardState] = useState<LeaderboardLoadState>("loading");
-  const [leaderboardRecords, setLeaderboardRecords] = useState<LeaderboardRecord[]>([]);
-  const [leaderboardError, setLeaderboardError] = useState<string | undefined>();
-  const [pendingLeaderboardProgress, setPendingLeaderboardProgress] = useState<number | null>(null);
+  const [selectedLeaderboardDifficulty, setSelectedLeaderboardDifficulty] = useState<RunDifficulty>("normal");
+  const [leaderboardViews, setLeaderboardViews] = useState<Record<RunDifficulty, { state: LeaderboardLoadState; records: LeaderboardRecord[]; error: string | undefined }>>({
+    normal: { state: "loading", records: [], error: undefined },
+    hard: { state: "loading", records: [], error: undefined },
+  });
+  const [pendingLeaderboardProgress, setPendingLeaderboardProgress] = useState<{ completedBattles: number; difficulty: RunDifficulty } | null>(null);
   const [leaderboardNotice, setLeaderboardNotice] = useState<string | null>(null);
   const [abandonOpen, setAbandonOpen] = useState(false);
   const [menuView, setMenuView] = useState<"closed" | "choices" | "settings">("closed");
@@ -439,18 +441,17 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     setMenuView("closed");
   };
 
-  const loadLeaderboard = async () => {
-    setLeaderboardState("loading");
-    setLeaderboardError(undefined);
+  const loadLeaderboard = async (difficulty: RunDifficulty = selectedLeaderboardDifficulty) => {
+    setLeaderboardViews((current) => ({ ...current, [difficulty]: { ...current[difficulty], state: "loading", error: undefined } }));
     try {
       const token = await auth.getLeaderboardAccessToken(true);
-      setLeaderboardRecords(await getTopTen(token));
-      setLeaderboardState("success");
+      const records = await getTopTen(token, difficulty);
+      setLeaderboardViews((current) => ({ ...current, [difficulty]: { state: "success", records, error: undefined } }));
     } catch (error) {
-      setLeaderboardError(error instanceof LeaderboardApiError
+      const errorMessage = error instanceof LeaderboardApiError
         ? error.message
-        : "랭킹을 불러오지 못했습니다. 로그인 권한이나 네트워크를 확인하고 다시 시도하세요.");
-      setLeaderboardState("error");
+        : "랭킹을 불러오지 못했습니다. 로그인 권한이나 네트워크를 확인하고 다시 시도하세요.";
+      setLeaderboardViews((current) => ({ ...current, [difficulty]: { ...current[difficulty], state: "error", error: errorMessage } }));
     }
   };
 
@@ -461,31 +462,39 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
   const closeLeaderboard = () => setLeaderboardOpen(false);
 
-  const submitLeaderboardProgress = async (completedBattles: number, allowInteraction: boolean) => {
+  const submitLeaderboardProgress = async (completedBattles: number, difficulty: RunDifficulty, allowInteraction: boolean) => {
     try {
       const token = await auth.getLeaderboardAccessToken(allowInteraction);
-      await submitProgress(token, completedBattles);
+      await submitProgress(token, completedBattles, difficulty);
       setPendingLeaderboardProgress(null);
       setLeaderboardNotice(null);
     } catch {
-      setPendingLeaderboardProgress(completedBattles);
+      setPendingLeaderboardProgress({ completedBattles, difficulty });
       setLeaderboardNotice("이번 승리 기록을 랭킹에 제출하지 못했습니다. 다시 시도할 수 있습니다.");
     }
   };
 
   const acknowledgeVictory = () => {
     if (run) {
-      const submissionId = `${run.runId}:${run.completedBattles}`;
+      const submissionId = run.runId + ":" + run.difficulty + ":" + run.completedBattles;
       if (!submittedProgressIds.current.has(submissionId)) {
         submittedProgressIds.current.add(submissionId);
-        void submitLeaderboardProgress(run.completedBattles, false);
+        void submitLeaderboardProgress(run.completedBattles, run.difficulty, false);
       }
     }
     dispatch({ type: "acknowledge-victory" });
   };
 
   const retryLeaderboardProgress = () => {
-    if (pendingLeaderboardProgress !== null) void submitLeaderboardProgress(pendingLeaderboardProgress, true);
+    if (pendingLeaderboardProgress !== null) {
+      void submitLeaderboardProgress(pendingLeaderboardProgress.completedBattles, pendingLeaderboardProgress.difficulty, true);
+    }
+  };
+
+  const changeLeaderboardDifficulty = (difficulty: RunDifficulty) => {
+    if (difficulty === selectedLeaderboardDifficulty) return;
+    setSelectedLeaderboardDifficulty(difficulty);
+    void loadLeaderboard(difficulty);
   };
 
   const selectRoadmapEncounter = (encounterIndex: number) => {
@@ -640,14 +649,17 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     }
   };
 
+  const leaderboardView = leaderboardViews[selectedLeaderboardDifficulty];
   const leaderboardModal = (
     <LeaderboardModal
       open={leaderboardOpen}
-      state={leaderboardState}
-      records={leaderboardRecords}
-      {...(leaderboardError ? { errorMessage: leaderboardError } : {})}
+      state={leaderboardView.state}
+      records={leaderboardView.records}
+      difficulty={selectedLeaderboardDifficulty}
+      {...(leaderboardView.error ? { errorMessage: leaderboardView.error } : {})}
       onClose={closeLeaderboard}
       onRetry={() => { void loadLeaderboard(); }}
+      onDifficultyChange={changeLeaderboardDifficulty}
     />
   );
   const leaderboardSubmitNotice = leaderboardNotice && pendingLeaderboardProgress !== null ? (

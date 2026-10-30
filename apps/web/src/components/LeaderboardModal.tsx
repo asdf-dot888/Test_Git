@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
-import type { LeaderboardRecord } from "../leaderboard/leaderboardClient.js";
+import type { LeaderboardRecord, RunDifficulty } from "../leaderboard/leaderboardClient.js";
 import { progressLabel } from "../leaderboard/progressLabel.js";
 
 export type LeaderboardLoadState = "loading" | "success" | "error";
@@ -9,12 +9,14 @@ interface LeaderboardModalProps {
   open: boolean;
   state: LeaderboardLoadState;
   records: LeaderboardRecord[];
+  difficulty: RunDifficulty;
   errorMessage?: string;
   onClose(): void;
   onRetry(): void;
+  onDifficultyChange(difficulty: RunDifficulty): void;
 }
 
-export function LeaderboardModal({ open, state, records, errorMessage, onClose, onRetry }: LeaderboardModalProps): ReactElement | null {
+export function LeaderboardModal({ open, state, records, difficulty, errorMessage, onClose, onRetry, onDifficultyChange }: LeaderboardModalProps): ReactElement | null {
   if (!open) return null;
 
   return createPortal(
@@ -26,6 +28,23 @@ export function LeaderboardModal({ open, state, records, errorMessage, onClose, 
         </header>
         <h2 id="leaderboard-title">랭킹</h2>
         <p className="leaderboard-description">가장 멀리 원정을 완료한 사내 플레이어 10명입니다.</p>
+        <div className="leaderboard-tabs" role="tablist" aria-label="랭킹 난이도">
+          {(["normal", "hard"] as const).map((tabDifficulty) => (
+            <button
+              key={tabDifficulty}
+              id={`leaderboard-tab-${tabDifficulty}`}
+              className={`leaderboard-tab${difficulty === tabDifficulty ? " is-selected" : ""}`}
+              type="button"
+              role="tab"
+              aria-selected={difficulty === tabDifficulty}
+              aria-controls="leaderboard-list-panel"
+              onClick={() => onDifficultyChange(tabDifficulty)}
+            >
+              {tabDifficulty === "normal" ? "보통" : "하드"}
+            </button>
+          ))}
+        </div>
+        <div id="leaderboard-list-panel" role="tabpanel" aria-labelledby={`leaderboard-tab-${difficulty}`}>
         {state === "loading" && <p className="leaderboard-state" role="status">랭킹을 불러오는 중…</p>}
         {state === "error" && (
           <div className="leaderboard-state leaderboard-state--error" role="alert">
@@ -35,7 +54,7 @@ export function LeaderboardModal({ open, state, records, errorMessage, onClose, 
         )}
         {state === "success" && records.length === 0 && <p className="leaderboard-state" role="status">아직 등록된 원정 기록이 없습니다.</p>}
         {state === "success" && records.length > 0 && (
-          <ol className="leaderboard-list" aria-label="상위 10명 랭킹">
+          <ol className="leaderboard-list" aria-label={`${difficulty === "normal" ? "보통" : "하드"} 상위 10명 랭킹`}>
             {records.slice(0, 10).map((record, index) => (
               <li className="leaderboard-row" key={record.userId}>
                 <span className={`leaderboard-rank${index < 3 ? " is-top-three" : ""}`} aria-label={`${index + 1}위`}>{String(index + 1).padStart(2, "0")}</span>
@@ -48,6 +67,7 @@ export function LeaderboardModal({ open, state, records, errorMessage, onClose, 
             ))}
           </ol>
         )}
+        </div>
       </section>
     </div>,
     document.body,

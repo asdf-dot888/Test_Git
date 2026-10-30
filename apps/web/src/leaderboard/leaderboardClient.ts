@@ -1,10 +1,13 @@
+export type RunDifficulty = "normal" | "hard";
+
 export interface LeaderboardRecord {
-  id: "best-progress";
+  id: "best-progress" | "best-progress:hard";
   userId: string;
   displayName: string;
+  difficulty: RunDifficulty;
   completedBattles: number;
   recordedAt: string;
-  schemaVersion: 1;
+  schemaVersion: 2;
 }
 
 export class LeaderboardApiError extends Error {
@@ -14,8 +17,8 @@ export class LeaderboardApiError extends Error {
   }
 }
 
-export async function getTopTen(token: string, fetcher: typeof fetch = fetch): Promise<LeaderboardRecord[]> {
-  const body = await requestJson("/api/leaderboard", token, undefined, fetcher);
+export async function getTopTen(token: string, difficulty: RunDifficulty, fetcher: typeof fetch = fetch): Promise<LeaderboardRecord[]> {
+  const body = await requestJson(`/api/leaderboard?difficulty=${difficulty}`, token, undefined, fetcher);
   if (!isObject(body) || !Array.isArray(body.items) || body.items.length > 10 || !body.items.every(isLeaderboardRecord)) {
     throw new LeaderboardApiError("랭킹 정보를 읽을 수 없습니다.");
   }
@@ -25,12 +28,13 @@ export async function getTopTen(token: string, fetcher: typeof fetch = fetch): P
 export async function submitProgress(
   token: string,
   completedBattles: number,
+  difficulty: RunDifficulty,
   fetcher: typeof fetch = fetch,
 ): Promise<{ record: LeaderboardRecord; updated: boolean }> {
   if (!Number.isInteger(completedBattles) || completedBattles < 1 || completedBattles > 12) {
     throw new LeaderboardApiError("유효하지 않은 원정 진행도입니다.");
   }
-  const body = await requestJson("/api/leaderboard/progress", token, { completedBattles }, fetcher);
+  const body = await requestJson("/api/leaderboard/progress", token, { completedBattles, difficulty }, fetcher);
   if (!isObject(body) || !isLeaderboardRecord(body.record) || typeof body.updated !== "boolean") {
     throw new LeaderboardApiError("랭킹 응답을 읽을 수 없습니다.");
   }
@@ -40,7 +44,7 @@ export async function submitProgress(
 async function requestJson(
   path: string,
   token: string,
-  payload: { completedBattles: number } | undefined,
+  payload: { completedBattles: number; difficulty: RunDifficulty } | undefined,
   fetcher: typeof fetch,
 ): Promise<unknown> {
   let response: Response;
@@ -81,13 +85,15 @@ async function readApiErrorCode(response: Response): Promise<string | undefined>
 
 function isLeaderboardRecord(value: unknown): value is LeaderboardRecord {
   if (!isObject(value)) return false;
-  return value.id === "best-progress"
+  const validDifficulty = value.difficulty === "normal" || value.difficulty === "hard";
+  return validDifficulty
+    && value.id === (value.difficulty === "hard" ? "best-progress:hard" : "best-progress")
     && typeof value.userId === "string" && value.userId.length > 0
     && typeof value.displayName === "string" && value.displayName.length > 0
     && typeof value.completedBattles === "number" && Number.isInteger(value.completedBattles)
     && value.completedBattles >= 1 && value.completedBattles <= 12
     && typeof value.recordedAt === "string" && !Number.isNaN(Date.parse(value.recordedAt))
-    && value.schemaVersion === 1;
+    && value.schemaVersion === 2;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

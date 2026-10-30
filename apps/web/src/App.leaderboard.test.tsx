@@ -21,9 +21,10 @@ const record = {
   id: "best-progress",
   userId: "employee-id",
   displayName: "테스트 직원",
+  difficulty: "normal",
   completedBattles: 2,
   recordedAt: "2026-10-26T00:00:00.000Z",
-  schemaVersion: 1,
+  schemaVersion: 2,
 };
 
 function syncWith(run: ReturnType<typeof createRun> | null = null): LocalRunController {
@@ -41,6 +42,13 @@ function authValue(overrides: Partial<AuthContextValue> = {}): AuthContextValue 
     getLeaderboardAccessToken: vi.fn(async () => "access-token"), signIn: vi.fn(async () => undefined), signOut: vi.fn(async () => undefined),
     ...overrides,
   };
+}
+
+function leaderboardFetcher() {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const difficulty = String(input).includes("difficulty=hard") ? "hard" : "normal";
+    return Response.json({ items: [{ ...record, id: difficulty === "hard" ? "best-progress:hard" : "best-progress", difficulty }] });
+  });
 }
 
 function renderGame(sync: LocalRunController, auth = authValue()) {
@@ -83,7 +91,7 @@ describe("game leaderboard integration", () => {
 
   it("opens the shared leaderboard from the main menu and closes back to it", async () => {
     vi.stubGlobal("Audio", FakeAudio);
-    const fetcher = vi.fn(async () => Response.json({ items: [record] }));
+    const fetcher = leaderboardFetcher();
     vi.stubGlobal("fetch", fetcher);
     renderGame(syncWith());
 
@@ -91,6 +99,9 @@ describe("game leaderboard integration", () => {
     expect(await screen.findByRole("heading", { name: "랭킹" })).toBeTruthy();
     expect(screen.getByText("테스트 직원")).toBeTruthy();
     expect(screen.queryByText("employee-id")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "하드" }));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledWith("/api/leaderboard?difficulty=hard", expect.any(Object)));
+    expect(screen.getByRole("tab", { name: "하드" }).getAttribute("aria-selected")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
     expect(await screen.findByRole("button", { name: "새 원정 시작" })).toBeTruthy();
   });
@@ -108,5 +119,27 @@ describe("game leaderboard integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
     expect(screen.getByText("완료한 전투 0 / 12")).toBeTruthy();
+  });
+
+  it("submits a Hard victory with its difficulty", async () => {
+    vi.stubGlobal("Audio", FakeAudio);
+    const hardRecord = { ...record, id: "best-progress:hard", difficulty: "hard" };
+    const fetcher = vi.fn(async () => Response.json({ record: hardRecord, updated: true }));
+    vi.stubGlobal("fetch", fetcher);
+    const run = createRun(712, "warrior", "hard");
+    run.pendingVictoryAcknowledgement = true;
+    run.pendingReward = { tier: "normal", choices: ["life-thread"], encounterIndex: 0 };
+    run.battle!.status = "playerWon";
+    run.encounters[0]!.status = "complete";
+    run.completedBattles = 1;
+    renderGame(syncWith(run));
+
+    fireEvent.click(await screen.findByRole("button", { name: /계속/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /확인/ }));
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalledWith("/api/leaderboard/progress", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ completedBattles: 1, difficulty: "hard" }),
+    })));
   });
 });

@@ -747,6 +747,10 @@
 .leaderboard-header button { min-height: 36px; }
 .leaderboard-panel h2 { margin: 18px 0 5px; color: #fff2d9; font-size: clamp(27px, 5vw, 36px); letter-spacing: .08em; }
 .leaderboard-description { margin: 0 0 20px; color: #c5baaa; font-size: 13px; }
+.leaderboard-tabs { display: flex; gap: 8px; margin: 0 0 16px; border-bottom: 1px solid rgb(219 173 101 / 28%); }
+.leaderboard-tab { min-width: 88px; padding: 10px 18px; color: #bdb2a1; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; font-weight: 800; cursor: pointer; }
+.leaderboard-tab:hover, .leaderboard-tab:focus-visible { color: #fff1d5; outline: 2px solid rgb(233 193 119 / 75%); outline-offset: 2px; }
+.leaderboard-tab.is-selected { color: #241b12; border-color: #e2b66e; background: linear-gradient(135deg, #f1d391, #c58b3d); box-shadow: 0 0 18px rgb(213 166 91 / 22%); }
 .leaderboard-state { padding: 28px 16px; color: #d7c9b2; text-align: center; border: 1px solid rgb(219 173 101 / 18%); border-radius: 10px; background: rgb(255 255 255 / 3%); }
 .leaderboard-state--error p { margin: 0 0 14px; color: #f0c4b0; }
 .leaderboard-list { margin: 0; padding: 0; display: grid; gap: 7px; list-style: none; }
