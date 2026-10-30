@@ -7,10 +7,10 @@
 [P01 Versioned Static Web Apps Release](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/phase.md)
 
 ## Active Task
-[T03 Versioning and Release Documentation](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/T03-versioning-documentation.md)
+None
 
 ## Status
-- T01 version display and T02 deployment automation are implemented and validated with builds and no-upload dry runs.
+- Deployment-based version display, production release automation, and workflow documentation are complete. T01-T03 are validated and committed.
 
 ## Next Step
-Read T03 and document the deployment version rules and recovery guidance in README.md and docs/azure-setup.md.
+No active task. Start a new memory plan when the next feature is selected.

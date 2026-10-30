@@ -10,7 +10,7 @@ Source decision: [Deployment-Based Versioning](../decisions/2026-10-30-deploymen
 
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | in_progress | Add the version to the game, automate production release bookkeeping in the existing SWA deploy command, and document the workflow. | [P01](../phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/phase.md) |
+| P01 | done | Add the version to the game, automate production release bookkeeping in the existing SWA deploy command, and document the workflow. | [P01](../phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/phase.md) |
 
 ## Scope and constraints
 

@@ -1,6 +1,6 @@
 # Task: T03 Versioning and Release Documentation
 
-## Status: pending
+## Status: done
 
 ## Goal
 
@@ -34,15 +34,15 @@ Document version source, production increment rule, preview behavior, clean-tree
 
 ## Acceptance Criteria
 
-- [ ] README and Azure setup guide agree on production versus preview behavior.
-- [ ] Instructions explain clean-tree/upstream requirements and automatic release commit/push.
-- [ ] Push-failure recovery does not suggest redeploying the already-live version.
-- [ ] No deployment secrets or fabricated historical release metadata are added.
+- [x] README and Azure setup guide agree on production versus preview behavior.
+- [x] Instructions explain clean-tree/upstream requirements and automatic release commit/push.
+- [x] Push-failure recovery does not suggest redeploying the already-live version.
+- [x] No deployment secrets or fabricated historical release metadata are added.
 
 ## Validation
 
-- git diff --check — documentation changes have no whitespace errors.
-- Manually compare README and Azure setup instructions with deployment script parameters and output messages.
+- git diff --check: documentation changes have no whitespace errors.
+- Manually compare README and Azure setup instructions with deployment script parameters and output messages: passed.
 
 ## Commit Message
 
@@ -57,6 +57,6 @@ Task: T03-versioning-documentation
 
 ## Progress
 
-- [ ] Implementation complete
-- [ ] Validation complete
+- [x] Implementation complete
+- [x] Validation complete
 - commit: pending

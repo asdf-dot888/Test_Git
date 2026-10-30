@@ -51,6 +51,20 @@ npm run deploy:swa
 npm run deploy:swa -- -DryRun
 ```
 
+### 배포 버전 관리
+
+현재 기준 버전은 1.0.0이며, 이 기준 버전에 대한 과거 배포 기록은 만들지 않았습니다. 다음 프로덕션 배포가 성공하면 게임 메인 메뉴에 v1.0.1이 표시됩니다. 이후 성공한 프로덕션 배포마다 패치 버전이 1씩 올라갑니다.
+
+실제 배포 명령은 현재 Git 작업 트리가 깨끗하고 현재 브랜치에 upstream이 설정되어 있어야 합니다. 업로드가 성공한 뒤에만 루트 package.json과 package-lock.json의 버전, deployments.json의 기록을 갱신하고 chore(release) 커밋을 만든 다음 upstream으로 push합니다. 기록에는 버전, UTC 배포 시각, 배포한 소스의 전체 커밋 SHA가 포함됩니다.
+
+Azure 업로드는 성공했지만 push가 실패했다는 경고가 나오면 새 버전은 이미 서비스 중입니다. 다시 배포하지 말고 안내된 git push 명령으로 로컬 release 커밋만 push하세요.
+
+미리보기 배포는 현재 버전을 그대로 사용하며 프로덕션 기록과 Git release 변경을 만들지 않습니다. 아래 명령은 업로드 없이 빌드와 배포 패키지만 확인합니다. DryRun, 로컬 빌드, 또는 빌드·업로드 실패는 프로덕션 버전을 올리거나 배포 기록을 추가하지 않습니다.
+
+미리보기 배포 명령:
+
+    npm run deploy:swa -- -Environment preview
+
 이 배포에는 별도 App Service가 필요하지 않습니다. Cosmos DB 사용량과 저장 용량에는 비용이 발생할 수 있습니다. Cosmos key는 Static Web Apps의 서버 API 설정에만 저장하며 프런트엔드 번들이나 Git에 넣지 않습니다.
 
 ## 문제 해결

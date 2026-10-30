@@ -87,6 +87,28 @@ Static Web App 리소스의 **Environment variables / Configuration**에서 Func
 
 SWA CLI는 Azure 로그인 세션이나 `SWA_CLI_DEPLOYMENT_TOKEN`으로 배포할 수 있습니다. 리소스에 접근할 권한이 없다면 Azure 관리자에게 Static Web Apps 배포 권한 또는 배포 token을 요청하세요.
 
+### 배포 버전 및 기록
+
+루트 package.json이 앱 버전의 기준입니다. 현재 기준은 1.0.0이며, 이 기준 버전의 과거 배포 기록은 추정해서 추가하지 않습니다. 프로덕션 배포는 다음 패치 버전으로 빌드하므로 다음 배포가 성공하면 앱에는 v1.0.1이 표시됩니다.
+
+실제 프로덕션 및 미리보기 배포는 Git 작업 트리가 깨끗하고 현재 브랜치에 upstream이 설정된 경우에만 진행됩니다. 프로덕션 Azure 업로드가 성공하면 package.json과 package-lock.json을 새 버전으로 맞추고, 저장소 루트의 deployments.json에 다음 항목을 추가합니다.
+
+    version: 배포된 버전
+    deployedAtUtc: ISO 8601 UTC 배포 시각
+    sourceCommit: 배포한 소스의 전체 Git 커밋 SHA
+
+그 뒤 스크립트가 chore(release): v{버전} 커밋을 만들고 현재 브랜치의 upstream으로 push합니다. Azure 업로드 성공 후 push만 실패한 경우 사이트에는 이미 새 버전이 배포된 상태입니다. 재배포하지 말고 로컬 release 커밋을 push하세요.
+
+미리보기 배포는 현재 package.json 버전을 사용하고 deployments.json, 패키지 버전, Git 기록을 변경하지 않습니다. DryRun은 Azure 업로드가 없는 검증이며 기록도 남기지 않습니다. 빌드나 Azure 업로드가 실패해도 프로덕션 버전과 배포 기록은 갱신하지 않습니다.
+
+미리보기 배포:
+
+    npm run deploy:swa -- -Environment preview
+
+업로드 없이 확인:
+
+    npm run deploy:swa -- -DryRun
+
 ## 배포 후 확인
 
 1. 배포된 사이트 주소에서 Entra 로그인 및 게임 시작을 확인합니다.
