@@ -1615,11 +1615,12 @@ describe("Hard boss cards and temporary combat statuses", () => {
 });
 
 describe("Hard expedition enemy health and tactical AI", () => {
-  function startAtEnemy(enemyId: string, difficulty: "normal" | "hard") {
+  function startAtEnemy(enemyId: string, difficulty: "normal" | "hard", phase: 1 | 2 | 3 = 1) {
     const run = copyRun(createRun(8801, "warrior", difficulty));
     run.battle = null;
     run.encounters[0]!.status = "pending";
     run.encounters[0]!.enemyId = enemyId;
+    run.encounters[0]!.phase = phase;
     return startBattle(run, enemyId);
   }
 
@@ -1634,6 +1635,45 @@ describe("Hard expedition enemy health and tactical AI", () => {
     expect(startAtEnemy("fallen-elf-scout", "hard").battle?.enemyHero).toMatchObject({ health: 22, maxHealth: 22 });
     expect(startAtEnemy("boss-blood-matron", "normal").battle?.enemyHero).toMatchObject({ health: 34, maxHealth: 34 });
     expect(startAtEnemy("boss-blood-matron", "hard").battle?.enemyHero).toMatchObject({ health: 39, maxHealth: 39 });
+  });
+
+  it("adds the selected Hard hero-health bonus at phase boundaries, including bosses", () => {
+    expect(startAtEnemy("fallen-elf-scout", "normal", 2).battle?.enemyHero).toMatchObject({ health: 19, maxHealth: 19 });
+    expect(startAtEnemy("fallen-elf-scout", "hard", 1).battle?.enemyHero).toMatchObject({ health: 22, maxHealth: 22 });
+    expect(startAtEnemy("fallen-elf-scout", "hard", 2).battle?.enemyHero).toMatchObject({ health: 30, maxHealth: 30 });
+    expect(startAtEnemy("fallen-elf-scout", "hard", 3).battle?.enemyHero).toMatchObject({ health: 38, maxHealth: 38 });
+    expect(startAtEnemy("boss-grave-king", "normal", 2).battle?.enemyHero).toMatchObject({ health: 40, maxHealth: 40 });
+    expect(startAtEnemy("boss-grave-king", "hard", 2).battle?.enemyHero).toMatchObject({ health: 53, maxHealth: 53 });
+    expect(startAtEnemy("boss-grave-king", "hard", 3).battle?.enemyHero).toMatchObject({ health: 61, maxHealth: 61 });
+  });
+
+  it("scales every enemy minion and summon in Hard phases but never scales player minions", () => {
+    const hardDirect = asEnemyTurn(startAtEnemy("fallen-elf-scout", "hard", 2));
+    activeBattle(hardDirect).enemyMana.current = 5;
+    activeBattle(hardDirect).enemyHand = [instance("enemy-ash-wolf", "ash-wolf")];
+    activeBattle(hardDirect).enemyStarterDeck = [];
+    activeBattle(hardDirect).enemyDrawPile = [];
+    const directResult = resolveEnemyTurn(hardDirect);
+    expect(directResult.battle?.enemyBoard).toContainEqual(expect.objectContaining({ cardId: "ash-wolf", attack: 3, health: 2, maxHealth: 2 }));
+
+    const hardSummon = asEnemyTurn(startAtEnemy("boss-grave-king", "hard", 3));
+    activeBattle(hardSummon).enemyMana.current = 10;
+    activeBattle(hardSummon).enemyHand = [instance("pit-gate", "grave-king-pit-gate")];
+    activeBattle(hardSummon).enemyStarterDeck = [];
+    activeBattle(hardSummon).enemyDrawPile = [];
+    const summonResult = resolveEnemyTurn(hardSummon);
+    expect(summonResult.battle?.enemyBoard.filter(({ cardId }) => cardId === "grave-king-demon")).toHaveLength(2);
+    expect(summonResult.battle?.enemyBoard).toEqual(expect.arrayContaining([
+      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 6, maxHealth: 6 }),
+      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 6, maxHealth: 6 }),
+    ]));
+
+    const playerRun = startAtEnemy("fallen-elf-scout", "hard", 3);
+    const playerBattle = activeBattle(playerRun);
+    playerBattle.hand = [instance("player-ash-wolf", "ash-wolf")];
+    playerBattle.playerMana.current = 5;
+    const playerResult = playMinion(playerRun, "player-ash-wolf");
+    expect(playerResult.battle?.playerBoard[0]).toMatchObject({ cardId: "ash-wolf", attack: 2, health: 1, maxHealth: 1 });
   });
 
   it("uses a player's hidden board-clear spell to change Hard card choice but not Normal choice", () => {

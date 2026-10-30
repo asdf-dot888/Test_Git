@@ -1,17 +1,17 @@
-# Current Context
+﻿# Current Context
 
 ## Active Plan
-[First-Run Tutorial and Hard Expedition Mode](./plans/2026-10-30-tutorial-hard-mode.md)
+[Hard Mode Ramp and Tutorial Health Reset](./plans/2026-10-30-hard-mode-ramp.md)
 
 ## Active Phase
-[P03 Difficulty Rankings](./phases/2026-10-30-tutorial-hard-mode/P03-difficulty-rankings/phase.md) — complete
+[P01 Hard Mode Ramp](./phases/2026-10-30-hard-mode-ramp/P01-hard-mode-ramp/phase.md)
 
 ## Active Task
-None — plan complete
+[T02 Progressive Legal Hard AI](./phases/2026-10-30-hard-mode-ramp/P01-hard-mode-ramp/T02-progressive-hard-ai.md)
 
 ## Status
-- Complete. P01, P02, and P03 are finished.
-- Task commits: `53caff7`, `66a27a3`, `6a5fe5b`, `9efd3a1`, `942fe37`, `b0d65c5`, `849bd58`.
+- T01 completed and validated; commit will be recorded after creation.
+- T02 is now active.
 
 ## Next Step
-All planned tasks are complete.
+Read the T02 blueprint and implement progressive Hard AI planning and legal enemy targeting in `packages/game-core/src/engine.ts`.

@@ -23,6 +23,8 @@ const MAX_BOARD = 6;
 const HERO_HEALTH = 30;
 const INITIAL_MANA = 5;
 const MAX_MANA = 10;
+const HARD_PHASE_HERO_HEALTH_BONUS: Record<RunState["phase"], number> = { 1: 0, 2: 8, 3: 16 };
+const HARD_PHASE_MINION_STAT_BONUS: Record<RunState["phase"], number> = { 1: 0, 2: 1, 3: 2 };
 
 function fail(code: ConstructorParameters<typeof GameRuleError>[0], message: string): never {
   throw new GameRuleError(code, message);
@@ -182,9 +184,9 @@ function createMinion(
       instanceId: instance.instanceId,
       cardId,
       owner,
-      attack: definition.minion.attack,
-      health: definition.minion.maxHealth,
-      maxHealth: definition.minion.maxHealth,
+      attack: definition.minion.attack + (owner === "enemy" && run.difficulty === "hard" ? HARD_PHASE_MINION_STAT_BONUS[run.phase] : 0),
+      health: definition.minion.maxHealth + (owner === "enemy" && run.difficulty === "hard" ? HARD_PHASE_MINION_STAT_BONUS[run.phase] : 0),
+      maxHealth: definition.minion.maxHealth + (owner === "enemy" && run.difficulty === "hard" ? HARD_PHASE_MINION_STAT_BONUS[run.phase] : 0),
       summonedTurn: turnNumber,
       hasAttacked: false,
     },
@@ -935,7 +937,9 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
   encounter.status = "active";
   const shuffled = shuffle(run.deck, battleSeed);
   const enemyDeck = createEnemyDeck(enemy, shuffled.state, `${run.runId}-enemy-${encounterIndex + 1}`, run.difficulty);
-  const enemyMaxHealth = enemy.maxHealth + (run.difficulty === "hard" ? (enemy.kind === "boss" ? 5 : 3) : 0);
+  const existingHardBonus = run.difficulty === "hard" ? (enemy.kind === "boss" ? 5 : 3) : 0;
+  const phaseHealthBonus = run.difficulty === "hard" ? HARD_PHASE_HERO_HEALTH_BONUS[encounter.phase] : 0;
+  const enemyMaxHealth = enemy.maxHealth + existingHardBonus + phaseHealthBonus;
   const nextRun = { ...run, phase: encounter.phase, battle: null } as RunState;
   const battle: BattleState = {
     battleId: `${run.runId}-battle-${encounterIndex + 1}`,
