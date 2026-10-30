@@ -6,6 +6,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$staticWebAppName = "board-card-roguelike-demo"
+$staticWebAppResourceGroup = "grill-me-edu"
 Push-Location $repoRoot
 
 function Invoke-GitText([string[]]$Arguments, [string]$FailureMessage) {
@@ -153,7 +155,7 @@ try {
   }
 
   Write-Host "Deploying the SPA and managed Functions API to the $Environment environment..."
-  & npx.cmd swa deploy $webOutput --api-location $stagedApi --api-language node --api-version 22 --env $Environment
+  & npx.cmd swa deploy $webOutput --api-location $stagedApi --api-language node --api-version 22 --env $Environment --app-name $staticWebAppName --resource-group $staticWebAppResourceGroup
   if ($LASTEXITCODE -ne 0) {
     throw "SWA deployment failed with exit code $LASTEXITCODE. Sign in with 'npx swa login' or set SWA_CLI_DEPLOYMENT_TOKEN, then retry."
   }
