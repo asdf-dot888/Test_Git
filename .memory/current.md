@@ -1,16 +1,17 @@
 # Current Context
 
 ## Active Plan
-[Deployment-Based Versioning](./plans/2026-10-30-deployment-versioning.md)
+[First-Run Tutorial and Hard Expedition Mode](./plans/2026-10-30-tutorial-hard-mode.md)
 
 ## Active Phase
-[P01 Versioned Static Web Apps Release](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/phase.md)
+[P03 Difficulty Rankings](./phases/2026-10-30-tutorial-hard-mode/P03-difficulty-rankings/phase.md) — complete
 
 ## Active Task
-None
+None — plan complete
 
 ## Status
-- Deployment-based version display, production release automation, and workflow documentation are complete. T01-T03 are validated and committed.
+- Complete. P01, P02, and P03 are finished.
+- Task commits: `53caff7`, `66a27a3`, `6a5fe5b`, `9efd3a1`, `942fe37`, `b0d65c5`, `849bd58`.
 
 ## Next Step
-No active task. Start a new memory plan when the next feature is selected.
+All planned tasks are complete.
