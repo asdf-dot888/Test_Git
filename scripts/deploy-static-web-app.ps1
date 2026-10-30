@@ -8,6 +8,14 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $repoRoot
 
+function Invoke-GitText([string[]]$Arguments, [string]$FailureMessage) {
+  $output = & git @Arguments 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "$FailureMessage $($output -join ' ')"
+  }
+  return ($output -join [Environment]::NewLine).Trim()
+}
+
 function Get-PublicBuildSetting([string]$Name) {
   $fromProcess = [Environment]::GetEnvironmentVariable($Name)
   if (-not [string]::IsNullOrWhiteSpace($fromProcess)) { return $fromProcess.Trim() }
@@ -23,6 +31,46 @@ function Get-PublicBuildSetting([string]$Name) {
 }
 
 try {
+  $packagePath = Join-Path $repoRoot "package.json"
+  $historyPath = Join-Path $repoRoot "deployments.json"
+  $package = Get-Content -Raw -LiteralPath $packagePath | ConvertFrom-Json
+  $currentVersion = [string]$package.version
+  $versionMatch = [regex]::Match($currentVersion, "^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+  if (-not $versionMatch.Success) {
+    throw "The root package.json version must use non-negative MAJOR.MINOR.PATCH format."
+  }
+  try {
+    $major = [long]::Parse($versionMatch.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture)
+    $minor = [long]::Parse($versionMatch.Groups[2].Value, [Globalization.CultureInfo]::InvariantCulture)
+    $patch = [long]::Parse($versionMatch.Groups[3].Value, [Globalization.CultureInfo]::InvariantCulture)
+    if ($Environment -eq "production") {
+      if ($patch -eq [long]::MaxValue) { throw "PATCH version cannot be incremented further." }
+      $patch++
+    }
+  } catch {
+    throw "The root package.json version components are outside the supported integer range."
+  }
+  $candidateVersion = "$major.$minor.$patch"
+  if ($Environment -eq "preview") { $candidateVersion = $currentVersion }
+
+  $sourceCommit = $null
+  if (-not $DryRun) {
+    $gitStatus = Invoke-GitText -Arguments @("status", "--porcelain", "--untracked-files=normal") -FailureMessage "Could not inspect the Git working tree."
+    if (-not [string]::IsNullOrWhiteSpace($gitStatus)) {
+      throw "Deployment stopped because the Git working tree has uncommitted changes. Commit or remove them, then retry."
+    }
+    $branchName = Invoke-GitText -Arguments @("branch", "--show-current") -FailureMessage "Could not determine the current Git branch."
+    if ([string]::IsNullOrWhiteSpace($branchName)) {
+      throw "Deployment stopped because Git is in a detached HEAD state."
+    }
+    $upstreamRemote = Invoke-GitText -Arguments @("config", "--get", "branch.$branchName.remote") -FailureMessage "Deployment stopped because the current Git branch has no configured upstream remote."
+    $upstreamMerge = Invoke-GitText -Arguments @("config", "--get", "branch.$branchName.merge") -FailureMessage "Deployment stopped because the current Git branch has no configured upstream branch."
+    if ([string]::IsNullOrWhiteSpace($upstreamRemote) -or $upstreamRemote -eq "." -or $upstreamMerge -notmatch "^refs/heads/.+") {
+      throw "Deployment stopped because the current Git branch has no configured upstream."
+    }
+    $sourceCommit = Invoke-GitText -Arguments @("rev-parse", "HEAD") -FailureMessage "Could not capture the deployed source commit."
+  }
+
   $missing = @()
   foreach ($name in @("VITE_ENTRA_TENANT_ID", "VITE_ENTRA_CLIENT_ID")) {
     if ([string]::IsNullOrWhiteSpace((Get-PublicBuildSetting $name))) { $missing += $name }
@@ -31,9 +79,15 @@ try {
     throw "Set the public SPA build settings in .env or the process environment: $($missing -join ', '). Values are not printed by this script."
   }
 
-  Write-Host "Building the game and leaderboard API..."
-  & npm.cmd run build
-  if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE." }
+  Write-Host "Building Mango Stone v$candidateVersion and the leaderboard API..."
+  $previousVersionOverride = [Environment]::GetEnvironmentVariable("VITE_APP_VERSION", "Process")
+  try {
+    [Environment]::SetEnvironmentVariable("VITE_APP_VERSION", $candidateVersion, "Process")
+    & npm.cmd run build
+    if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE." }
+  } finally {
+    [Environment]::SetEnvironmentVariable("VITE_APP_VERSION", $previousVersionOverride, "Process")
+  }
 
   $webOutput = Join-Path $repoRoot "apps/web/dist"
   $apiOutput = Join-Path $repoRoot "apps/leaderboard-api"
@@ -94,7 +148,7 @@ try {
   }
 
   if ($DryRun) {
-    Write-Host "Dry run complete. The standalone Functions API package is ready; no Azure upload was started."
+    Write-Host "Dry run complete for v$candidateVersion. Build and API package checks passed; no Azure upload or release record was created."
     return
   }
 
@@ -103,6 +157,48 @@ try {
   if ($LASTEXITCODE -ne 0) {
     throw "SWA deployment failed with exit code $LASTEXITCODE. Sign in with 'npx swa login' or set SWA_CLI_DEPLOYMENT_TOKEN, then retry."
   }
+
+  if ($Environment -eq "preview") {
+    Write-Host "Preview deployment of v$candidateVersion succeeded. Production version and release history were not changed."
+    return
+  }
+
+  $deployedAtUtc = [DateTimeOffset]::UtcNow.ToString("o")
+  try {
+    & npm.cmd version $candidateVersion --no-git-tag-version --ignore-scripts --workspaces=false
+    if ($LASTEXITCODE -ne 0) { throw "npm could not update package version metadata." }
+
+    $history = [ordered]@{ releases = @() }
+    if (Test-Path -LiteralPath $historyPath) {
+      $history = Get-Content -Raw -LiteralPath $historyPath | ConvertFrom-Json
+      if ($null -eq $history -or $null -eq $history.releases -or $history.releases -isnot [array]) {
+        throw "deployments.json must contain an object with a releases array."
+      }
+    }
+    $history.releases += [ordered]@{
+      version = $candidateVersion
+      deployedAtUtc = $deployedAtUtc
+      sourceCommit = $sourceCommit
+    }
+    $historyJson = ($history | ConvertTo-Json -Depth 10) + [Environment]::NewLine
+    [System.IO.File]::WriteAllText($historyPath, $historyJson, [System.Text.UTF8Encoding]::new($false))
+
+    & git add -- package.json package-lock.json deployments.json
+    if ($LASTEXITCODE -ne 0) { throw "Git could not stage release metadata." }
+    & git commit -m "chore(release): v$candidateVersion"
+    if ($LASTEXITCODE -ne 0) { throw "Git could not create the release metadata commit." }
+  } catch {
+    throw "Azure production deployment v$candidateVersion succeeded, but release metadata could not be committed. Inspect package.json, package-lock.json, and deployments.json before retrying. $($_.Exception.Message)"
+  }
+
+  $releaseCommit = Invoke-GitText -Arguments @("rev-parse", "HEAD") -FailureMessage "Azure deployment and release commit succeeded, but the release commit SHA could not be read."
+  & git push $upstreamRemote "HEAD:$upstreamMerge"
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Azure deployment v$candidateVersion succeeded and release commit $releaseCommit is local, but Git push failed. Retry with 'git push $upstreamRemote HEAD:$upstreamMerge'."
+    $LASTEXITCODE = 0
+    return
+  }
+  Write-Host "Production deployment v$candidateVersion succeeded; release commit $releaseCommit was pushed."
 } finally {
   Pop-Location
 }

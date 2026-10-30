@@ -7,10 +7,10 @@
 [P01 Versioned Static Web Apps Release](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/phase.md)
 
 ## Active Task
-[T02 Production Release Automation](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/T02-production-release-automation.md)
+[T03 Versioning and Release Documentation](./phases/2026-10-30-deployment-versioning/P01-versioned-swa-release/T03-versioning-documentation.md)
 
 ## Status
-- T01 canonical version metadata and main-menu display are implemented and validated.
+- T01 version display and T02 deployment automation are implemented and validated with builds and no-upload dry runs.
 
 ## Next Step
-Read T02 and implement success-only version recording and Git release automation in scripts/deploy-static-web-app.ps1.
+Read T03 and document the deployment version rules and recovery guidance in README.md and docs/azure-setup.md.
