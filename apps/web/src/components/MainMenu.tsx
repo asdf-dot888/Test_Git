@@ -9,9 +9,10 @@ interface MainMenuProps {
   onContinue(): void;
   onLeaderboard(): void;
   onAudioSettings(): void;
+  onReplayTutorial?(): void;
 }
 
-export function MainMenu({ canContinue, disabled = false, showAutoplayHint = false, onStart, onContinue, onLeaderboard, onAudioSettings }: MainMenuProps) {
+export function MainMenu({ canContinue, disabled = false, showAutoplayHint = false, onStart, onContinue, onLeaderboard, onAudioSettings, onReplayTutorial }: MainMenuProps) {
   const [guideOpen, setGuideOpen] = useState(false);
 
   return (
@@ -30,7 +31,7 @@ export function MainMenu({ canContinue, disabled = false, showAutoplayHint = fal
         <span className="menu-note">전투는 이 브라우저 세션에서 이어집니다.</span>
         <span className="menu-version">v{__APP_VERSION__}</span>
       </div>
-      <GameGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
+      <GameGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} {...(onReplayTutorial ? { onReplayTutorial } : {})} />
     </main>
   );
 }

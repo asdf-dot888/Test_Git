@@ -4,9 +4,10 @@ import { createPortal } from "react-dom";
 interface GameGuideModalProps {
   open: boolean;
   onClose(): void;
+  onReplayTutorial?(): void;
 }
 
-export function GameGuideModal({ open, onClose }: GameGuideModalProps): ReactElement | null {
+export function GameGuideModal({ open, onClose, onReplayTutorial }: GameGuideModalProps): ReactElement | null {
   if (!open) return null;
 
   return createPortal(
@@ -37,6 +38,7 @@ export function GameGuideModal({ open, onClose }: GameGuideModalProps): ReactEle
             <p>전투에서 이기면 승리를 확인하고 카드 보상을 선택하거나 건너뜁니다. 보상 확인 후 다음 전투를 시작할 수 있습니다.</p>
           </section>
         </div>
+        {onReplayTutorial && <button className="menu-primary game-guide-replay" type="button" onClick={() => { onClose(); onReplayTutorial(); }}>전투 튜토리얼 다시 보기</button>}
       </section>
     </div>,
     document.body,

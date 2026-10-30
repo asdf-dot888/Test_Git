@@ -16,6 +16,7 @@ import { HeroPowerControl } from "./HeroPowerControl.js";
 import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
 import { OpeningHandRedrawControl } from "./OpeningHandRedrawControl.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
+import type { TutorialStepId } from "./FirstRunTutorial.js";
 
 export interface GameBoardProps {
   run: RunState;
@@ -40,6 +41,7 @@ export interface GameBoardProps {
   onAllAttack?(): void;
   onDropInteraction?(payload: DragPayload, target: DropTarget): void;
   enemyIntentStep?: EnemyTurnPlaybackStep | null;
+  tutorialStep?: TutorialStepId;
 }
 
 function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide | null {
@@ -57,7 +59,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const playerHeroArtKey = run.playerClass ?? "player";
@@ -75,6 +77,8 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
       : intentAction?.type === "boss-area";
   const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
+  const fieldActionsDisabled = actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "attack" && !(tutorialStep === "play-card" && targetMode === "spell"));
+  const canEndTurn = tutorialStep === undefined || tutorialStep === "end-first-turn" || tutorialStep === "end-second-turn";
   const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked).length;
   const allAttackDisabled = actionsDisabled || battle.enemyBoard.length > 0 || readyMinionCount === 0;
   const targetSide = targetMode === "spell"
@@ -126,11 +130,11 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} temporary={battle.enemyMana.temporary} />
           </div>
           <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
-          <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
+          <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
-          <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={actionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
+          <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
           <HeroPanel
             hero={battle.playerHero}
             side="player"
@@ -145,7 +149,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
                 {...(run.playerClass ? { playerClass: run.playerClass } : {})}
                 currentMana={battle.playerMana.current}
                 used={battle.heroPowerUsed}
-                active={battle.activeSide === "player" && battle.status === "active"}
+                active={tutorialStep === undefined && battle.activeSide === "player" && battle.status === "active"}
                 resolving={isResolving || syncDisabled}
                 shardCount={battle.soulShards}
                 boardSize={battle.playerBoard.length}
@@ -166,9 +170,9 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             {run.openingHandRedrawAvailable === true && <OpeningHandRedrawControl disabled={actionsDisabled} onRedraw={onRedrawOpeningHand} />}
           </div>
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
-          <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled} /></div>
+          <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled || !canEndTurn} /></div>
         </div>
-        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />
+        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "play-card" && !(tutorialStep === "attack" && readyMinionCount === 0))} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />
       </footer>
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
       {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}

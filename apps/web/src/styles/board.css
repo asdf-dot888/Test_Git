@@ -722,6 +722,16 @@
 .game-guide-content p { margin: 0; color: #c5baaa; font-size: 13px; line-height: 1.7; }
 .game-guide-content p + p { margin-top: 8px; }
 .game-guide-content strong { color: #f5dfb2; }
+.game-guide-replay { margin-top: 18px; }
+.first-run-tutorial { position: fixed; z-index: 70; top: max(18px, env(safe-area-inset-top)); left: 50%; width: min(460px, calc(100vw - 28px)); padding: 16px 18px; transform: translateX(-50%); color: #f5ead7; border: 1px solid rgb(238 190 103 / 72%); border-radius: 12px; background: rgb(24 21 21 / 96%); box-shadow: 0 12px 42px #000a, 0 0 22px rgb(228 174 80 / 14%); }
+.first-run-tutorial-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.first-run-tutorial-heading .eyebrow { color: var(--gold-bright); font-size: 10px; letter-spacing: .14em; }
+.first-run-tutorial-heading button { min-height: 32px; padding: 4px 10px; }
+.first-run-tutorial h2 { margin: 8px 0 4px; color: #fff1d5; font-size: 19px; }
+.first-run-tutorial p { margin: 0; color: #d3c8b9; font-size: 13px; line-height: 1.55; }
+.first-run-tutorial > .menu-primary { min-height: 36px; margin-top: 12px; padding: 6px 18px; }
+.first-run-tutorial-notice { position: fixed; z-index: 71; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; max-width: min(460px, calc(100vw - 32px)); padding: 10px 14px; color: #f5ead7; border: 1px solid var(--line); border-radius: 8px; background: #211e1e; }
+.first-run-tutorial-notice button { color: inherit; border: 0; background: transparent; text-decoration: underline; }
 .leaderboard-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(5 5 5 / 82%); }
 .leaderboard-panel { width: min(100%, 700px); max-height: min(90dvh, 780px); padding: clamp(20px, 4vw, 34px); overflow: auto; color: #e9dcc4; border: 1px solid rgb(219 173 101 / 52%); border-radius: 16px; background: radial-gradient(ellipse at 50% 0, #38302a, #1d1b1d 70%); box-shadow: 0 28px 90px rgb(0 0 0 / 68%); }
 .leaderboard-header { display: flex; justify-content: space-between; align-items: center; gap: 14px; }

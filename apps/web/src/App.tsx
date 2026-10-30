@@ -4,6 +4,7 @@ import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
 import { EnemyHeroDefeatEffect } from "./components/EnemyHeroDefeatEffect.js";
 import { GameBoard } from "./components/GameBoard.js";
+import { FirstRunTutorial, type TutorialAction, type TutorialStepId } from "./components/FirstRunTutorial.js";
 import { ExpeditionRoadmap } from "./components/ExpeditionRoadmap.js";
 import { MainMenu } from "./components/MainMenu.js";
 import { ClassSelectionScreen } from "./components/ClassSelectionScreen.js";
@@ -25,6 +26,8 @@ import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord } from "./leaderboard/leaderboardClient.js";
 import { combatEventSounds } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
+import { loadTutorialProgress, markTutorialCompleted } from "./game/tutorialProgress.js";
+import { createRun as createGameRun, type RunState } from "@board-game/game-core";
 
 const INTERACTIVE_AUDIO_SELECTOR = "button, a[href], input, select, textarea, label[for], [role='button'], [role='option'], [data-pointer-interaction]";
 
@@ -80,6 +83,12 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
   const [audioController, setAudioController] = useState<AudioController | null>(null);
   const [autoplayHintVisible, setAutoplayHintVisible] = useState(false);
+  const [tutorialMode, setTutorialMode] = useState<"inactive" | "first-run" | "replay">("inactive");
+  const [tutorialStep, setTutorialStep] = useState<TutorialStepId>("inspect-hand");
+  const [tutorialNotice, setTutorialNotice] = useState<string | null>(null);
+  const tutorialCheckedKey = useRef<string | null>(null);
+  const tutorialReplaySnapshot = useRef<{ run: RunState | null; screen: "menu" | "class-selection" | "map" | "game" } | null>(null);
+  const tutorialActionRef = useRef<{ action: TutorialAction | "attack-retry" | "first-turn-end" | "second-turn-end" | "play-card-recovery"; turn: number; handCount: number; boardIds: string[]; attackerId?: string } | null>(null);
   const appliedLoadVersion = useRef(0);
   const restoringSavedRun = useRef(false);
   const pendingReplacement = useRef(false);
@@ -105,6 +114,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const victoryPresentationActive = Boolean(run?.pendingVictoryAcknowledgement && (session.victoryPresentation || session.combatEffects.some((event) => event.slowMotion)));
   const hasBattlePresentation = screen === "game" && Boolean(battle && (battle.status === "active" || victoryPresentationActive));
   const musicKind: MusicKind = hasBattlePresentation ? (enemyKind === "boss" ? "boss" : "normal") : "menu";
+  const tutorialAttackUnavailable = Boolean(tutorialMode !== "inactive" && battle
+    && !battle.playerBoard.some((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked));
   const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active"
     ? `${run.battle.battleId}:${run.battle.turnNumber}`
     : null;
@@ -112,6 +123,26 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     if (action.type === "end-turn" || action.type === "finish-all-attack") audioController?.playEffect("turn-end");
     dispatchGameAction(action);
   }, [audioController, dispatchGameAction]);
+  const finishTutorial = () => {
+    tutorialActionRef.current = null;
+    if (tutorialMode === "first-run" && auth.userId) {
+      let result;
+      try {
+        result = markTutorialCompleted(window.localStorage, auth.userId);
+      } catch (error) {
+        result = { status: "error" as const, error };
+      }
+      if (result.status === "error") setTutorialNotice("튜토리얼 완료를 저장하지 못했지만 전투는 계속할 수 있습니다.");
+    }
+    if (tutorialMode === "replay") {
+      const snapshot = tutorialReplaySnapshot.current;
+      tutorialReplaySnapshot.current = null;
+      if (snapshot?.run) dispatchGameAction({ type: "restore-run", run: snapshot.run });
+      else dispatchGameAction({ type: "clear-run" });
+      setScreen(snapshot?.screen ?? "menu");
+    }
+    setTutorialMode("inactive");
+  };
   const turnTimer = useTurnTimer({
     run: run ?? null,
     paused: screen !== "game" || menuView !== "closed" || Boolean(run?.pendingVictoryAcknowledgement) || session.resolving || Boolean(playback) || session.combatEffects.length > 0,
@@ -278,9 +309,63 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       restoringSavedRun.current = false;
       return;
     }
-    if (!syncLoaded || (syncStatus !== "ready" && syncStatus !== "saving") || !session.run || session.run === syncedRun) return;
+    if (tutorialMode === "replay" || !syncLoaded || (syncStatus !== "ready" && syncStatus !== "saving") || !session.run || session.run === syncedRun) return;
     void saveRun(session.run).catch(() => undefined);
-  }, [saveRun, session.run, syncLoaded, syncStatus, syncedRun]);
+  }, [saveRun, session.run, syncLoaded, syncStatus, syncedRun, tutorialMode]);
+
+  useEffect(() => {
+    if (tutorialMode !== "inactive" || screen !== "game" || !run?.battle || run.completedBattles !== 0 || !auth.userId) return;
+    const key = `${auth.userId}:${run.runId}:${run.battle.battleId}`;
+    if (tutorialCheckedKey.current === key) return;
+    tutorialCheckedKey.current = key;
+    let result;
+    try {
+      result = loadTutorialProgress(window.localStorage, auth.userId);
+    } catch (error) {
+      result = { status: "error" as const, error };
+    }
+    if (result.status !== "completed") {
+      setTutorialStep("inspect-hand");
+      setTutorialMode("first-run");
+    }
+  }, [auth.userId, run, screen, tutorialMode]);
+
+  useEffect(() => {
+    const pending = tutorialActionRef.current;
+    const currentBattle = session.run?.battle;
+    if (!pending || !currentBattle) return;
+    if (pending.action === "play-card") {
+      if (currentBattle.hand.length < pending.handCount || currentBattle.playerBoard.length > pending.boardIds.length) {
+        tutorialActionRef.current = null;
+        setTutorialStep("end-first-turn");
+      }
+      return;
+    }
+    if (pending.action === "play-card-recovery") {
+      if (currentBattle.hand.length < pending.handCount || currentBattle.playerBoard.length > pending.boardIds.length) {
+        tutorialActionRef.current = null;
+        setTutorialStep("attack");
+      }
+      return;
+    }
+    if (pending.action === "attack") {
+      const remaining = currentBattle.playerBoard.find((minion) => minion.instanceId === pending.attackerId);
+      if (!remaining || remaining.hasAttacked) {
+        tutorialActionRef.current = null;
+        setTutorialStep("end-second-turn");
+      }
+      return;
+    }
+    if (currentBattle.turnNumber <= pending.turn || currentBattle.activeSide !== "player") return;
+    tutorialActionRef.current = null;
+    if (pending.action === "second-turn-end") {
+      finishTutorial();
+    } else if (pending.action === "first-turn-end" || pending.action === "attack-retry") {
+      setTutorialStep("attack");
+    }
+  // finishTutorial is intentionally kept stable through refs below.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.run]);
 
   const startNewLocalRun = async (playerClass: PlayerClass) => {
     pendingReplacement.current = true;
@@ -305,6 +390,43 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     }
     setClassSelectionReason(run ? "completed" : null);
     setScreen("class-selection");
+  };
+
+  const replayTutorial = () => {
+    if (!syncLoaded) return;
+    tutorialReplaySnapshot.current = { run: session.run ? structuredClone(session.run) : null, screen };
+    const playerClass = session.run?.playerClass ?? "warrior";
+    const sandbox = createGameRun(20261030, playerClass);
+    dispatchGameAction({ type: "restore-run", run: sandbox });
+    tutorialActionRef.current = null;
+    setTutorialStep("inspect-hand");
+    setTutorialNotice(null);
+    setTutorialMode("replay");
+    setScreen("game");
+  };
+
+  const tutorialAllows = (action: TutorialAction) => tutorialMode === "inactive"
+    || (tutorialStep === "inspect-hand" && action === "continue")
+    || (tutorialStep === "play-card" && action === "play-card")
+    || (tutorialStep === "end-first-turn" && action === "end-turn")
+    || (tutorialStep === "attack" && (action === "attack" || (tutorialAttackUnavailable && (action === "play-card" || action === "end-turn"))))
+    || (tutorialStep === "end-second-turn" && action === "end-turn");
+
+  const advanceTutorial = (action: TutorialAction) => {
+    if (!tutorialAllows(action)) return;
+    if (action === "continue") {
+      setTutorialStep("play-card");
+      return;
+    }
+    if (!battle) return;
+    tutorialActionRef.current = {
+      action: action === "end-turn"
+        ? tutorialStep === "end-first-turn" ? "first-turn-end" : tutorialStep === "end-second-turn" ? "second-turn-end" : "attack-retry"
+        : action === "play-card" && tutorialStep === "attack" ? "play-card-recovery" : action,
+      turn: battle.turnNumber,
+      handCount: battle.hand.length,
+      boardIds: battle.playerBoard.map((minion) => minion.instanceId),
+    };
   };
 
   const abandonIntoClassSelection = () => {
@@ -401,9 +523,11 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   };
 
   const selectCard = (instanceId: string) => {
+    if (tutorialMode !== "inactive" && !tutorialAllows("play-card")) return;
     const cardInstance = battle?.hand.find((card) => card.instanceId === instanceId);
     const card = cardInstance ? CARD_BY_ID.get(cardInstance.cardId) : undefined;
     if (!card || !battle) return;
+    if (tutorialMode !== "inactive") advanceTutorial("play-card");
     if (card.kind === "minion") {
       dispatch({ type: "play-minion", instanceId });
       return;
@@ -424,6 +548,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
   const selectTarget = (targetId: string) => {
     if (!run || !battle) return;
+    if (tutorialMode !== "inactive" && !((tutorialStep === "attack" && (session.targetMode === "none" || session.targetMode === "attack"))
+      || (tutorialStep === "play-card" && session.targetMode === "spell"))) return;
     if (session.targetMode === "hero-power") {
       dispatch({ type: "use-hero-power", targetId: targetId === battle.enemyHero.id ? "enemy-hero" : targetId });
       return;
@@ -442,7 +568,16 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       dispatch({ type: "select-attacker", instanceId: friendlyMinion.instanceId });
       return;
     }
-    if (session.selectedAttackerId) dispatch({ type: "attack", attackerId: session.selectedAttackerId, targetId });
+    if (session.selectedAttackerId) {
+      if (tutorialMode !== "inactive") {
+        const attacker = battle.playerBoard.find((minion) => minion.instanceId === session.selectedAttackerId);
+        if (!attacker || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked) return;
+        advanceTutorial("attack");
+        const pending = tutorialActionRef.current;
+        if (pending) tutorialActionRef.current = { ...pending, attackerId: attacker.instanceId };
+      }
+      dispatch({ type: "attack", attackerId: session.selectedAttackerId, targetId });
+    }
   };
 
   const activateHeroPower = () => {
@@ -458,18 +593,22 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const handleDropInteraction = (payload: DragPayload, target: DropTarget) => {
     if (!battle) return;
     if (payload.kind === "card") {
+      if (tutorialMode !== "inactive" && !tutorialAllows("play-card")) return;
       const card = battle.hand.find(({ instanceId }) => instanceId === payload.instanceId);
       const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
       if (!card || !definition) return;
       if (target.kind === "slot" && definition.kind === "minion") {
+        if (tutorialMode !== "inactive") advanceTutorial("play-card");
         dispatch({ type: "play-minion", instanceId: payload.instanceId, slotIndex: target.slotIndex });
         return;
       }
       if (definition.kind === "spell" && target.kind === "minion") {
+        if (tutorialMode !== "inactive") advanceTutorial("play-card");
         dispatch({ type: "cast-spell", instanceId: payload.instanceId, targetId: target.instanceId });
         return;
       }
       if (definition.kind === "spell" && target.kind === "hero" && target.side === "enemy") {
+        if (tutorialMode !== "inactive") advanceTutorial("play-card");
         const targetId = definition.spellEffects?.some((effect) => effect.kind === "randomDamage") ? "enemy-hero" : battle.enemyHero.id;
         dispatch({ type: "cast-spell", instanceId: payload.instanceId, targetId });
       }
@@ -478,12 +617,23 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
     const attacker = battle.playerBoard.find(({ instanceId }) => instanceId === payload.instanceId);
     if (!attacker) return;
+    if (tutorialMode !== "inactive" && tutorialStep !== "attack") return;
     const canAttack = attacker.summonedTurn < battle.turnNumber && !attacker.hasAttacked;
     if (target.kind === "minion" && target.side === "enemy") {
       if (!canAttack) return;
+      if (tutorialMode !== "inactive") {
+        advanceTutorial("attack");
+        const pending = tutorialActionRef.current;
+        if (pending) tutorialActionRef.current = { ...pending, attackerId: attacker.instanceId };
+      }
       dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: target.instanceId });
     } else if (target.kind === "hero" && target.side === "enemy") {
       if (!canAttack || battle.enemyBoard.length > 0) return;
+      if (tutorialMode !== "inactive") {
+        advanceTutorial("attack");
+        const pending = tutorialActionRef.current;
+        if (pending) tutorialActionRef.current = { ...pending, attackerId: attacker.instanceId };
+      }
       dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: battle.enemyHero.id });
     } else if (target.kind === "minion" && target.side === "player") {
       dispatch({ type: "fuse-minions", firstMinionId: attacker.instanceId, secondMinionId: target.instanceId });
@@ -518,7 +668,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   if (screen === "menu" || !run) {
     if (sync.status === "loading" || !sync.loaded) return <main className="auth-screen"><p role="status">저장된 원정 상태를 불러오고 있습니다…</p></main>;
     return <>
-      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} showAutoplayHint={autoplayHintVisible} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} onLeaderboard={openLeaderboard} onAudioSettings={() => setAudioSettingsOpen(true)} />
+      <MainMenu canContinue={run?.status === "active" || Boolean(run?.pendingVictoryAcknowledgement || run?.pendingReward)} disabled={sync.status !== "ready" || Boolean(sync.run && !run)} showAutoplayHint={autoplayHintVisible} onStart={beginRun} onContinue={() => setScreen(run?.pendingVictoryAcknowledgement || run?.pendingReward ? "game" : "map")} onLeaderboard={openLeaderboard} onAudioSettings={() => setAudioSettingsOpen(true)} onReplayTutorial={replayTutorial} />
       {audioSettingsModal}
       {leaderboardModal}
       {leaderboardSubmitNotice}
@@ -623,19 +773,27 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           targetMode={session.targetMode}
           isResolving={session.resolving || Boolean(playback)}
           actionsDisabled={(sync.status !== "ready" && sync.status !== "saving") || Boolean(run.pendingVictoryAcknowledgement)}
+          {...(tutorialMode !== "inactive" ? { tutorialStep } : {})}
           error={session.error}
           onSelectCard={selectCard}
           onSelectTarget={selectTarget}
-          onDiscardCard={(instanceId) => dispatch({ type: "discard-before-draw", instanceId })}
+          onDiscardCard={(instanceId) => { if (tutorialMode === "inactive") dispatch({ type: "discard-before-draw", instanceId }); }}
           onCancelTarget={() => dispatch({ type: session.error ? "clear-error" : "cancel-selection" })}
-          onEndTurn={() => dispatch({ type: "end-turn" })}
-          onRedrawOpeningHand={() => dispatch({ type: "redraw-opening-hand" })}
-          onMenu={() => setMenuView("choices")}
-          onUseHeroPower={activateHeroPower}
-          onAllAttack={() => dispatch({ type: "all-attack" })}
+          onEndTurn={() => { if (tutorialMode === "inactive" || tutorialAllows("end-turn")) { if (tutorialMode !== "inactive") advanceTutorial("end-turn"); dispatch({ type: "end-turn" }); } }}
+          onRedrawOpeningHand={() => { if (tutorialMode === "inactive") dispatch({ type: "redraw-opening-hand" }); }}
+          onMenu={() => { if (tutorialMode === "inactive") setMenuView("choices"); }}
+          onUseHeroPower={() => { if (tutorialMode === "inactive") activateHeroPower(); }}
+          onAllAttack={() => { if (tutorialMode === "inactive") dispatch({ type: "all-attack" }); }}
           onDropInteraction={handleDropInteraction}
           enemyIntentStep={playback?.stage === "intent" ? playbackStep ?? null : null}
         />
+      {tutorialMode !== "inactive" && screen === "game" && <FirstRunTutorial
+        step={tutorialStep}
+        attackUnavailable={tutorialStep === "attack" && tutorialAttackUnavailable}
+        onAction={advanceTutorial}
+        onSkip={finishTutorial}
+      />}
+      {tutorialNotice && <aside className="first-run-tutorial-notice" role="status">{tutorialNotice}<button type="button" onClick={() => setTutorialNotice(null)}>닫기</button></aside>}
       {session.victoryPresentation === "enemy-defeat" && <EnemyHeroDefeatEffect onComplete={() => dispatchGameAction({ type: "enemy-defeat-effect-complete" })} />}
       {session.victoryPresentation === "victory-reveal" && <VictoryScreen overlay disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={acknowledgeVictory} />}
       {leaderboardSubmitNotice}

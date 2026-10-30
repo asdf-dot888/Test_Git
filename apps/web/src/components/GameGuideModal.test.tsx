@@ -27,4 +27,11 @@ describe("GameGuideModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it("offers a tutorial replay action when the menu supplies one", () => {
+    const onReplayTutorial = vi.fn();
+    render(<GameGuideModal open={true} onClose={vi.fn()} onReplayTutorial={onReplayTutorial} />);
+    fireEvent.click(screen.getByRole("button", { name: "전투 튜토리얼 다시 보기" }));
+    expect(onReplayTutorial).toHaveBeenCalledOnce();
+  });
 });
