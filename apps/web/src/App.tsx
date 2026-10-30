@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CARD_BY_ID, ENEMY_BY_ID, type PlayerClass } from "@board-game/game-core";
+import { CARD_BY_ID, ENEMY_BY_ID, type PlayerClass, type RunDifficulty } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
 import { EnemyHeroDefeatEffect } from "./components/EnemyHeroDefeatEffect.js";
@@ -367,13 +367,13 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.run]);
 
-  const startNewLocalRun = async (playerClass: PlayerClass) => {
+  const startNewLocalRun = async (playerClass: PlayerClass, difficulty: RunDifficulty) => {
     pendingReplacement.current = true;
     try {
       const seed = secureSeed();
       const created = classSelectionReason
-        ? await sync.replaceRun(classSelectionReason, seed, playerClass)
-        : await sync.createRun(seed, playerClass);
+        ? await sync.replaceRun(classSelectionReason, seed, playerClass, difficulty)
+        : await sync.createRun(seed, playerClass, difficulty);
       dispatch({ type: "restore-run", run: created });
       setAbandonOpen(false);
       setClassSelectionReason(null);
@@ -660,7 +660,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   if (screen === "class-selection") {
     return <ClassSelectionScreen
       disabled={sync.status !== "ready"}
-      onConfirm={(playerClass) => { void startNewLocalRun(playerClass).catch(() => undefined); }}
+      onConfirm={(playerClass, difficulty) => { void startNewLocalRun(playerClass, difficulty).catch(() => undefined); }}
       onCancel={() => { setClassSelectionReason(null); setScreen("menu"); }}
     />;
   }

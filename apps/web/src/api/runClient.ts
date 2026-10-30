@@ -1,4 +1,4 @@
-import type { RunState } from "@board-game/game-core";
+import type { RunDifficulty, RunState } from "@board-game/game-core";
 import { authenticatedFetch, type ApiTokenProvider } from "../auth/apiFetch.js";
 
 export interface ActiveRunResponse {
@@ -41,11 +41,11 @@ export class RunClient {
     return this.request("/api/run", { method: "GET", headers: { "x-run-owner": ownerId } });
   }
 
-  createRun(seed: number, ownerId: string): Promise<RunSaveResponse> {
+  createRun(seed: number, ownerId: string, difficulty: RunDifficulty = "normal"): Promise<RunSaveResponse> {
     return this.request("/api/run", {
       method: "POST",
       headers: { "content-type": "application/json", "x-run-owner": ownerId },
-      body: JSON.stringify({ seed }),
+      body: JSON.stringify({ seed, difficulty }),
     });
   }
 

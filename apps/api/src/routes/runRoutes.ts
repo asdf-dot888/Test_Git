@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router, type ErrorRequestHandler, type Request, type Response } from "express";
-import { createRun, hydrateRunForCurrentBattle, type RunState } from "@board-game/game-core";
+import { createRun, hydrateRunForCurrentBattle, type RunDifficulty, type RunState } from "@board-game/game-core";
 import { z } from "zod";
 import type { AuthenticatedRequest } from "../auth/entraAuth.js";
 import type { RunRepository } from "../db/runRepository.js";
@@ -56,6 +56,8 @@ const runSchema = z.object({
   encounterInPhase: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
   completedBattles: z.number().int().min(0).max(12),
   status: z.enum(["active", "victory", "defeat"]),
+  difficulty: z.enum(["normal", "hard"]).optional().transform((value) => value ?? "normal"),
+  playerClass: z.enum(["warrior", "assassin", "demonist"]).optional(),
   openingHandRedrawAvailable: z.boolean().optional().transform((value) => value ?? false),
   pendingVictoryAcknowledgement: z.boolean().optional().transform((value) => value ?? false),
   deck: z.array(cardInstanceSchema).max(100),
@@ -88,7 +90,7 @@ const runSchema = z.object({
   })).length(12),
 });
 
-const seedBody = z.object({ seed: z.number().int().safe() });
+const seedBody = z.object({ seed: z.number().int().safe(), difficulty: z.enum(["normal", "hard"]).optional().transform((value) => value ?? "normal") });
 const runBody = z.object({ run: runSchema });
 const deleteBody = z.object({ reason: z.enum(["completed", "abandoned"]) });
 const ownerSchema = z.string().uuid();
@@ -97,12 +99,12 @@ export function createRunRouter(deps: {
   repository: RunRepository;
   now?: () => Date;
   newOwnerId?: () => string;
-  newRun?: (seed: number) => RunState;
+  newRun?: (seed: number, difficulty: RunDifficulty) => RunState;
 }) {
   const router = Router();
   const now = deps.now ?? (() => new Date());
   const newOwnerId = deps.newOwnerId ?? randomUUID;
-  const makeRun = deps.newRun ?? createRun;
+  const makeRun = deps.newRun ?? ((seed: number, difficulty: RunDifficulty) => createRun(seed, "warrior", difficulty));
 
   router.get("/", asyncRoute(async (request, response) => {
     const userId = authenticatedUserId(request);
@@ -111,7 +113,7 @@ export function createRunRouter(deps: {
     if (!current) return response.status(200).json({ run: null, ownerId });
     const acquired = await deps.repository.acquire(userId, ownerId, now());
     return response.status(200).json({
-      run: acquired.document.run,
+      run: { ...acquired.document.run, difficulty: acquired.document.run.difficulty ?? "normal" },
       etag: acquired.etag,
       ownerId,
       lease: { owned: true, expiresAt: acquired.document.lease?.expiresAt ?? null },
@@ -123,7 +125,7 @@ export function createRunRouter(deps: {
     const ownerId = getOwnerId(request, newOwnerId);
     const parsed = seedBody.safeParse(request.body);
     if (!parsed.success) return sendError(response, 400, "INVALID_BODY", "The run seed is invalid.");
-    const created = await deps.repository.create(userId, makeRun(parsed.data.seed), ownerId, now());
+    const created = await deps.repository.create(userId, makeRun(parsed.data.seed, parsed.data.difficulty), ownerId, now());
     return response.status(201).json({ run: created.document.run, etag: created.etag });
   }));
 

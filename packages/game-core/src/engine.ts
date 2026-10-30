@@ -14,6 +14,7 @@ import type {
   PlayerClass,
   PlayerSide,
   RunState,
+  RunDifficulty,
   SpellEffect,
 } from "./types.js";
 
@@ -797,7 +798,7 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
   return nextRun;
 }
 
-export function createRun(seed: number, playerClass: PlayerClass = "warrior"): RunState {
+export function createRun(seed: number, playerClass: PlayerClass = "warrior", difficulty: RunDifficulty = "normal"): RunState {
   const normalizedSeed = normalizeSeed(seed);
   let randomState = normalizedSeed;
   const encounters: EncounterState[] = [];
@@ -819,6 +820,7 @@ export function createRun(seed: number, playerClass: PlayerClass = "warrior"): R
   const run: RunState = {
     runId: `run-${normalizedSeed.toString(36)}`,
     seed: normalizedSeed,
+    difficulty,
     nextInstanceNumber: deck.length + 1,
     phase: 1,
     encounterInPhase: 0,

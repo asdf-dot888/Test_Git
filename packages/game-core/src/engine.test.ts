@@ -200,6 +200,7 @@ describe("seeded run setup and random helpers", () => {
   it("produces the same run from the same seed and plans 3 normals plus a boss per phase", () => {
     const first = createRun(1234);
     const second = createRun(1234);
+    expect(first.difficulty).toBe("normal");
     expect(first).toEqual(second);
     expect(first.encounters).toHaveLength(12);
     for (let phase = 1; phase <= 3; phase += 1) {
@@ -217,6 +218,10 @@ describe("seeded run setup and random helpers", () => {
     expect(first.battle).not.toHaveProperty("pendingEnemyCharge");
     expect(first.starterDeck).toHaveLength(30);
     expect(first.deck).toHaveLength(30);
+  });
+
+  it("persists an explicitly selected run difficulty", () => {
+    expect(createRun(1235, "assassin", "hard")).toMatchObject({ playerClass: "assassin", difficulty: "hard" });
   });
 
   it("creates each class deck as 20 shared cards plus 10 class cards, with no ID over two copies", () => {

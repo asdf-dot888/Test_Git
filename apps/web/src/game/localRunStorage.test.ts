@@ -37,12 +37,14 @@ describe("account-scoped local run storage", () => {
 
     const legacyRun = createRun(419);
     delete legacyRun.playerClass;
+    delete (legacyRun as Partial<typeof legacyRun>).difficulty;
     const expectedDeck = structuredClone(legacyRun.deck);
     expect(runs.save("legacy-player", legacyRun)).toEqual({ status: "saved" });
     const loaded = runs.load("legacy-player");
-    expect(loaded).toEqual({ status: "loaded", run: legacyRun });
+    expect(loaded).toEqual({ status: "loaded", run: { ...legacyRun, difficulty: "normal" } });
     if (loaded.status === "loaded") {
       expect(loaded.run.playerClass).toBeUndefined();
+      expect(loaded.run.difficulty).toBe("normal");
       expect(loaded.run.deck).toEqual(expectedDeck);
     }
   });

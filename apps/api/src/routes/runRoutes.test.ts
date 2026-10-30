@@ -88,12 +88,13 @@ describe("authenticated Run API", () => {
     const response = await fetch(`${baseUrl}/api/run`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-run-owner": ownerId },
-      body: JSON.stringify({ seed: 921, userId: "attacker-selected-id" }),
+      body: JSON.stringify({ seed: 921, difficulty: "hard", userId: "attacker-selected-id" }),
     });
     const body = await response.json() as { run: RunState; etag: string };
 
     expect(response.status).toBe(201);
     expect(body.run.seed).toBe(921);
+    expect(body.run.difficulty).toBe("hard");
     expect(body.etag).toBe("etag-1");
     expect(repository.create).toHaveBeenCalledWith(userId, expect.objectContaining({ seed: 921 }), ownerId, instant);
     expect(repository.record?.document.userId).toBe(userId);
@@ -103,11 +104,30 @@ describe("authenticated Run API", () => {
     await expect(replacement.json()).resolves.toMatchObject({ error: { code: "ACTIVE_RUN_EXISTS" } });
   });
 
+  it("defaults omitted difficulty to Normal and rejects unsupported values", async () => {
+    const normal = await fetch(`${baseUrl}/api/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-run-owner": ownerId },
+      body: JSON.stringify({ seed: 922 }),
+    });
+    await expect(normal.json()).resolves.toMatchObject({ run: { difficulty: "normal" } });
+    repository.record = null;
+
+    const invalid = await fetch(`${baseUrl}/api/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-run-owner": ownerId },
+      body: JSON.stringify({ seed: 923, difficulty: "nightmare" }),
+    });
+    expect(invalid.status).toBe(400);
+  });
+
   it("acquires the current lease before returning run data and hides data when locked", async () => {
-    await repository.create(userId, createRun(921), ownerId, instant);
+    const legacyRun = createRun(921);
+    delete (legacyRun as Partial<RunState>).difficulty;
+    await repository.create(userId, legacyRun, ownerId, instant);
     const getResponse = await fetch(`${baseUrl}/api/run`, { headers: { "x-run-owner": ownerId } });
     expect(getResponse.status).toBe(200);
-    await expect(getResponse.json()).resolves.toMatchObject({ run: { seed: 921 }, etag: "etag-acquired", lease: { owned: true } });
+    await expect(getResponse.json()).resolves.toMatchObject({ run: { seed: 921, difficulty: "normal" }, etag: "etag-acquired", lease: { owned: true } });
     expect(repository.acquire).toHaveBeenCalledWith(userId, ownerId, instant);
 
     repository.record = { ...repository.record!, document: { ...repository.record!.document, lease: { ownerId: "other-device", lastActivityAt: instant.toISOString(), expiresAt: new Date(instant.getTime() + 60_000).toISOString() } } };

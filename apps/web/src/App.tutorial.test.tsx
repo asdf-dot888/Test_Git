@@ -37,6 +37,7 @@ describe("first battle tutorial lifecycle", () => {
       schemaVersion: 1, userId: "test-employee", completed: true, completedAt: "2026-10-30T03:00:00.000Z",
     }));
     const sync = makeSync();
+    const saveRunSpy = vi.spyOn(sync, "saveRun");
     renderWithTestAuth(<GameSessionView sync={sync} />);
 
     fireEvent.click(screen.getByRole("button", { name: "게임 방법" }));
@@ -45,7 +46,7 @@ describe("first battle tutorial lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
     expect(await screen.findByRole("button", { name: "게임 방법" })).toBeTruthy();
     const replayRunId = createRun(20261030).runId;
-    expect(sync.saveRun.mock.calls.some(([savedRun]) => savedRun.runId === replayRunId)).toBe(false);
+    expect(saveRunSpy.mock.calls.some(([savedRun]) => savedRun.runId === replayRunId)).toBe(false);
     expect(JSON.parse(window.localStorage.getItem("board-card-roguelike:tutorial:v1:test-employee") ?? "null").completedAt).toBe("2026-10-30T03:00:00.000Z");
   });
 });

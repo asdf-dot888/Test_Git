@@ -829,3 +829,13 @@
 @media (prefers-reduced-motion: reduce) {
   .audio-autoplay-hint { animation: none; }
 }
+
+.difficulty-choice-group { width: 100%; margin: 20px 0 8px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; border: 0; }
+.difficulty-choice-group legend { margin-bottom: 8px; color: var(--gold-bright); font-size: 12px; font-weight: 800; }
+.difficulty-choice { min-width: 0; min-height: 64px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 9px; border: 1px solid var(--line); border-radius: 9px; background: rgb(0 0 0 / 16%); cursor: pointer; }
+.difficulty-choice.is-selected { border-color: var(--gold-bright); box-shadow: inset 0 0 18px rgb(204 159 86 / 10%); }
+.difficulty-choice input { margin-top: 4px; accent-color: var(--gold-bright); }
+.difficulty-choice span { display: grid; gap: 4px; }
+.difficulty-choice strong { color: #fff1d5; font-size: 14px; }
+.difficulty-choice small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.difficulty-choice-hard strong { color: #f2a07e; }

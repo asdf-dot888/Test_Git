@@ -43,8 +43,20 @@ describe("RunClient", () => {
     expect(calls.map((call) => call.method)).toEqual(["POST", "PUT", "POST", "DELETE"]);
     expect(calls[1]?.headers.get("if-match")).toBe("etag-1");
     expect(JSON.parse(calls[0]!.body!).seed).toBe(44);
+    expect(JSON.parse(calls[0]!.body!).difficulty).toBe("normal");
     expect(JSON.parse(calls[3]!.body!).reason).toBe("abandoned");
     expect(calls.every((call) => call.headers.get("authorization") === "Bearer token")).toBe(true);
+  });
+
+  it("sends the selected Hard difficulty when creating a run", async () => {
+    let body = "";
+    const client = new RunClient("", async () => "token", async (_path, init) => {
+      body = String(init?.body);
+      return Response.json({ run: createRun(45, "warrior", "hard"), etag: "etag-hard" }, { status: 201 });
+    });
+
+    await client.createRun(45, ownerId, "hard");
+    expect(JSON.parse(body)).toEqual({ seed: 45, difficulty: "hard" });
   });
 
   it("surfaces structured lock, conflict, and service errors without replacing them with raw JSON", async () => {

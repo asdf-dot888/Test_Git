@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { initialGameSession, reduceGameAction } from "./gameActions.js";
 
 function startSession(seed = 71) {
-  return reduceGameAction(initialGameSession, { type: "start-run", seed, playerClass: "warrior" });
+  return reduceGameAction(initialGameSession, { type: "start-run", seed, playerClass: "warrior", difficulty: "normal" });
 }
 
 function makeMinion(instanceId: string, cardId: string, owner: "player" | "enemy", turn = 0): MinionState {

@@ -33,6 +33,7 @@ function isRunState(value: unknown): value is RunState {
 
   return typeof value.runId === "string"
     && Number.isInteger(value.seed)
+    && (value.difficulty === undefined || value.difficulty === "normal" || value.difficulty === "hard")
     && Number.isInteger(value.nextInstanceNumber)
     && (value.phase === 1 || value.phase === 2 || value.phase === 3)
     && (value.encounterInPhase === 0 || value.encounterInPhase === 1 || value.encounterInPhase === 2 || value.encounterInPhase === 3)
@@ -78,6 +79,7 @@ export function createLocalRunStorage(storage: Storage): LocalRunStorage {
         return { status: "empty" };
       }
 
+      value.run.difficulty ??= "normal";
       value.run.openingHandRedrawAvailable ??= false;
       return { status: "loaded", run: value.run };
     },

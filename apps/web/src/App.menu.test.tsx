@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
@@ -27,8 +27,8 @@ function makeSync(deleteRun = vi.fn(async () => undefined), savedRun: ReturnType
     loaded: true,
     loadVersion: savedRun ? 1 : 0,
     saveRun: vi.fn(async () => undefined),
-    createRun: vi.fn(async (seed: number, playerClass: "warrior" | "assassin" | "demonist") => createRun(seed, playerClass)),
-    replaceRun: vi.fn(async (_reason: "completed" | "abandoned", seed: number, playerClass: "warrior" | "assassin" | "demonist") => createRun(seed, playerClass)),
+    createRun: vi.fn(async (seed: number, playerClass: "warrior" | "assassin" | "demonist", difficulty: "normal" | "hard") => createRun(seed, playerClass, difficulty)),
+    replaceRun: vi.fn(async (_reason: "completed" | "abandoned", seed: number, playerClass: "warrior" | "assassin" | "demonist", difficulty: "normal" | "hard") => createRun(seed, playerClass, difficulty)),
     deleteRun,
     reload: vi.fn(async () => undefined),
     retrySave: vi.fn(async () => undefined),
@@ -51,6 +51,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+beforeEach(() => {
+  window.localStorage.setItem("board-card-roguelike:tutorial:v1:test-employee", JSON.stringify({
+    schemaVersion: 1, userId: "test-employee", completed: true, completedAt: "2026-10-30T03:00:00.000Z",
+  }));
+});
+
 describe("in-game menu flow", () => {
   it("keeps the saved run when class selection is cancelled and passes the chosen class only on confirmation", async () => {
     vi.stubGlobal("Audio", FakeAudio);
@@ -70,7 +76,7 @@ describe("in-game menu flow", () => {
     fireEvent.click(screen.getByRole("radio", { name: /악마술사/ }));
     fireEvent.click(screen.getByRole("button", { name: "이 직업으로 원정 시작" }));
     await screen.findByRole("heading", { name: "원정 경로" });
-    expect(sync.replaceRun).toHaveBeenCalledWith("abandoned", expect.any(Number), "demonist");
+    expect(sync.replaceRun).toHaveBeenCalledWith("abandoned", expect.any(Number), "demonist", "normal");
   });
 
   it("keeps the run until abandonment is confirmed, then returns to the main menu", async () => {
@@ -98,7 +104,7 @@ describe("in-game menu flow", () => {
     fireEvent.click(await screen.findByRole("button", { name: /진행 중/ }));
     await screen.findByRole("button", { name: "메뉴" });
     expect(sync.createRun).toHaveBeenCalledTimes(2);
-    expect(sync.createRun).toHaveBeenLastCalledWith(expect.any(Number), "warrior");
+    expect(sync.createRun).toHaveBeenLastCalledWith(expect.any(Number), "warrior", "normal");
   });
 
   it("retains the battle and dialog if run deletion fails", async () => {

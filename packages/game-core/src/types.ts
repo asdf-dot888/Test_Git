@@ -2,6 +2,7 @@ export type CardKind = "minion" | "spell";
 export type RewardTier = "normal" | "boss";
 export type PlayerSide = "player" | "enemy";
 export type PlayerClass = "warrior" | "assassin" | "demonist";
+export type RunDifficulty = "normal" | "hard";
 
 export type SpellEffect =
   | { kind: "damage"; amount: number; target: "enemyHero" | "enemyMinion" }
@@ -149,6 +150,7 @@ export interface RewardState {
 export interface RunState {
   runId: string;
   seed: number;
+  difficulty: RunDifficulty;
   nextInstanceNumber: number;
   phase: 1 | 2 | 3;
   encounterInPhase: 0 | 1 | 2 | 3;

@@ -18,6 +18,7 @@ import {
   skipReward,
   useHeroPower,
   type PlayerClass,
+  type RunDifficulty,
   type RunState,
   type ResolvedSpellEffect,
   type EnemyTurnPlaybackStep,
@@ -26,7 +27,7 @@ import {
 import { collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
 export type GameAction =
-  | { type: "start-run"; seed: number; playerClass: PlayerClass }
+  | { type: "start-run"; seed: number; playerClass: PlayerClass; difficulty: RunDifficulty }
   | { type: "restore-run"; run: RunState }
   | { type: "redraw-opening-hand" }
   | { type: "set-turn-timer"; timer: TurnTimerState | undefined }
@@ -208,7 +209,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run!), { ...session, autoEndTurnAfterAllAttack: false });
   }
   if (session.enemyTurnPlayback) return session;
-  if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass), session);
+  if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass, action.difficulty), session);
   if (action.type === "restore-run") {
     const run = hydrateRunForCurrentBattle(action.run);
     return { ...sessionForRun(run, session), victoryPresentation: run.pendingVictoryAcknowledgement ? "victory-reveal" : null };
