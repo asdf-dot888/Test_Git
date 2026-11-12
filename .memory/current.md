@@ -7,10 +7,12 @@
 [P01 Quality Gates](./phases/2026-11-12-validation-cleanup/P01-quality-gates/phase.md)
 
 ## Active Task
-[T01 Test Fixtures and Art](./phases/2026-11-12-validation-cleanup/P01-quality-gates/T01-test-fixtures-and-art.md)
+None — all tasks in the validation cleanup plan are complete.
 
 ## Status
-- T01 ready.
+- T01 complete (9ac54f1); full suite 694/694 passed.
+- T02 complete (b5b4aed); lint, full suite, and build passed.
+- T03 complete; default tests, lint, and build passed.
 
 ## Next Step (IMPORTANT)
-Repair the five failing web tests and missing card art, then run the full suite.
+No active task. Deployment remains excluded by user request.
