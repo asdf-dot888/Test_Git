@@ -5,6 +5,8 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { CARD_BY_ID, createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
 import { renderWithTestAuth } from "./App.testUtils.js";
+import { getPlayerSpellSelection } from "./game/spellTargeting.js";
+import { markTutorialCompleted } from "./game/tutorialProgress.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -34,13 +36,7 @@ function makeReadySync(): LocalRunController {
     const candidate = createRun(seed);
     const handSpell = candidate.battle?.hand.find((instance) => {
       const card = CARD_BY_ID.get(instance.cardId);
-      return card?.kind === "spell"
-        && (card.cost <= 5)
-        && !card.spellEffects?.some((effect) =>
-          (effect.kind === "damage" && effect.target === "enemyMinion")
-          || (effect.kind === "heal" && effect.target === "playerMinion")
-          || effect.kind === "buff",
-        );
+      return card?.kind === "spell" && card.cost <= 5 && getPlayerSpellSelection(card) === null;
     });
     if (handSpell) {
       run = candidate;
@@ -121,6 +117,7 @@ describe("audio lifecycle under React StrictMode", () => {
       }
     });
     const sync = makeReadySync();
+    markTutorialCompleted(window.localStorage, "test-employee");
     const view = renderWithTestAuth(<StrictMode><GameSessionView sync={sync} /></StrictMode>);
 
     enterActiveEncounter();
@@ -137,13 +134,7 @@ describe("audio lifecycle under React StrictMode", () => {
 
     const handSpell = sync.run?.battle?.hand.find((instance) => {
       const card = CARD_BY_ID.get(instance.cardId);
-      return card?.kind === "spell"
-        && (card.cost <= 5)
-        && !card.spellEffects?.some((effect) =>
-          (effect.kind === "damage" && effect.target === "enemyMinion")
-          || (effect.kind === "heal" && effect.target === "playerMinion")
-          || effect.kind === "buff",
-        );
+      return card?.kind === "spell" && card.cost <= 5 && getPlayerSpellSelection(card) === null;
     });
     const spell = handSpell ? CARD_BY_ID.get(handSpell.cardId) : undefined;
     expect(spell).toBeDefined();

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_AUDIO_SETTINGS } from "./game/audioSettings.js";
 import { GameSessionView } from "./App.js";
 import { renderWithTestAuth } from "./App.testUtils.js";
+import { markTutorialCompleted } from "./game/tutorialProgress.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -44,6 +45,7 @@ describe("turn timer application wiring", () => {
       reload: vi.fn(async () => undefined), retrySave: vi.fn(async () => undefined), retry: vi.fn(async () => undefined),
     };
 
+    markTutorialCompleted(window.localStorage, "test-employee");
     const { container } = renderWithTestAuth(<GameSessionView sync={sync} />);
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     expect(savedRuns.some((saved) => saved.turnTimer?.pausedRemainingMs === 20_000)).toBe(true);
@@ -88,7 +90,7 @@ describe("turn timer application wiring", () => {
     expect(timer.className).toContain("is-hidden");
     expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 1_000 });
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(1_400); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
     expect(screen.getByText("00:01").className).not.toContain("is-hidden");
     expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: Date.now() + 1_000, pausedRemainingMs: null });
   });

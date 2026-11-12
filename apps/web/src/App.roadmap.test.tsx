@@ -26,6 +26,11 @@ function makeSync(run: ReturnType<typeof createRun> | null = null): LocalRunCont
   };
 }
 
+function startNewRun(): void {
+  fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+  fireEvent.click(screen.getByRole("button", { name: "이 직업으로 원정 시작" }));
+}
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -38,7 +43,7 @@ describe("expedition roadmap navigation", () => {
     const sync = makeSync();
     renderWithTestAuth(<GameSessionView sync={sync} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    startNewRun();
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "메뉴" })).toBeNull();
     expect(screen.getAllByRole("button", { name: /진행 중/ })).toHaveLength(1);
@@ -80,7 +85,7 @@ describe("expedition roadmap navigation", () => {
     vi.stubGlobal("Audio", FakeAudio);
     const sync = makeSync();
     renderWithTestAuth(<GameSessionView sync={sync} />);
-    fireEvent.click(screen.getByRole("button", { name: "새 원정 시작" }));
+    startNewRun();
     expect(await screen.findByRole("heading", { name: "원정 경로" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "메인 메뉴" }));
