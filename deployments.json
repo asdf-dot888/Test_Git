@@ -9,6 +9,11 @@
                          "version":  "1.0.2",
                          "deployedAtUtc":  "2026-10-30T08:16:04.9112009+00:00",
                          "sourceCommit":  "eda9cd2047a4b73610537716c595cfdac90bf03f"
+                     },
+                     {
+                         "version":  "1.0.3",
+                         "deployedAtUtc":  "2026-11-12T12:43:48.5680136+00:00",
+                         "sourceCommit":  "e75559a4dc8ac94e776d0c6f98eeffc679a6af70"
                      }
                  ]
 }
