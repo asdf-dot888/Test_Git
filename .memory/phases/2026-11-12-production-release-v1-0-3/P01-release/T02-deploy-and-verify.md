@@ -1,6 +1,6 @@
 # Task: T02 Deploy and Verify
 
-## Status: pending
+## Status: done
 
 ## Goal
 Publish v1.0.3 to production, record the successful release, push Git metadata, and verify the live site.
@@ -31,11 +31,11 @@ Publish v1.0.3 to production, record the successful release, push Git metadata, 
 - Restore the unrelated local stash and confirm its files remain present.
 
 ## Acceptance Criteria
-- [ ] Azure production deployment reports success.
-- [ ] `package.json`, lock file, and deployment history record v1.0.3.
-- [ ] Release commit is pushed to `origin/main`.
-- [ ] Live site serves v1.0.3.
-- [ ] Unrelated local work is restored.
+- [x] Azure production deployment reports success.
+- [x] `package.json`, lock file, and deployment history record v1.0.3.
+- [x] Release commit is pushed to `origin/main`.
+- [x] Live site serves v1.0.3.
+- [x] Unrelated local work is restored.
 
 ## Validation
 - `npm.cmd run deploy:swa`
@@ -53,6 +53,7 @@ Task: T02-deploy-and-verify
 ```
 
 ## Progress
-- [ ] deployment complete
-- [ ] verification passed
-- commit: pending
+- [x] deployment complete: `https://mango-stone-0631f0d00.5.azurestaticapps.net`
+- [x] verification passed: HTTP 200, live bundle contains v1.0.3, unauthenticated leaderboard returns 401.
+- release commit: `646eb6a20507bdcf6afa72a33135126dce92142c`
+- source commit: `e75559a4dc8ac94e776d0c6f98eeffc679a6af70`

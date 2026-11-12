@@ -6,4 +6,4 @@ Publish the validated game to the existing Azure Static Web Apps production envi
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | Prepare the source and execute the production release | [P01](../phases/2026-11-12-production-release-v1-0-3/P01-release/phase.md) |
+| P01 | `done` | Prepare the source and execute the production release | [P01](../phases/2026-11-12-production-release-v1-0-3/P01-release/phase.md) |
