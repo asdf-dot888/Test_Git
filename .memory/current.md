@@ -7,12 +7,12 @@
 [P01 주문 대상 규칙과 화면 일치](./phases/2026-11-12-spell-target-consistency/P01-spell-targeting/phase.md)
 
 ## Active Task
-[T02 플레이어 주문 대상 선택과 입력 경로 일치](./phases/2026-11-12-spell-target-consistency/P01-spell-targeting/T02-player-spell-selection.md)
+None — 주문 대상 수정의 계획된 두 Task는 구현 및 관련 검증을 마쳤습니다.
 
 ## Status
-- T01 완료 및 검증 통과. 커밋: ab87756.
-- T02 구현 시작 준비 완료.
-- 이전 계획 hard-mode-ramp는 기존 current 기록상 모든 Task 완료 상태였음.
+- T01 완료 및 관련 검증 통과. 커밋: ab87756.
+- T02 구현 완료 및 관련 검증 통과. 커밋: d264dca.
+- 전체 검증 예외: 전체 테스트 5/694 실패, 전체 lint 기존 오류 12건. 자세한 내용은 T02 Validation Results 참조.
 
 ## Next Step (IMPORTANT)
-T02 청사진을 읽고 `apps/web/src/game/spellTargeting.ts`, `apps/web/src/components/GameBoard.tsx`, `apps/web/src/App.tsx`의 플레이어 주문 대상 선택을 구현한다.
+이번 계획의 구현 Task는 모두 완료했다. 전체 테스트·lint의 기존 실패와 누락된 `matron-thornling` 카드 이미지는 별도 범위에서 정리해야 한다.

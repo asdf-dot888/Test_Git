@@ -124,7 +124,7 @@ Task: T02-player-spell-selection
 ## Progress
 - [x] 구현 완료
 - [x] 관련 검증 통과 (전체 검증 예외는 아래 기록)
-- commit: pending
+- commit: d264dca
 
 ## Validation Results
 - 코어 및 전체 프로젝트 빌드 통과. 웹 Vite 빌드는 기존 MSAL import/청크 크기 경고를 출력했으나 성공했다.

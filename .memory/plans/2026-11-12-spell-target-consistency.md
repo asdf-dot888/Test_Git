@@ -10,7 +10,7 @@
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | 주문 실행·컴퓨터 표시와 플레이어 대상 선택 일치 | [P01](../phases/2026-11-12-spell-target-consistency/P01-spell-targeting/phase.md) |
+| P01 | `completed_with_validation_exceptions` | 주문 실행·컴퓨터 표시와 플레이어 대상 선택 일치 | [P01](../phases/2026-11-12-spell-target-consistency/P01-spell-targeting/phase.md) |
 
 ## Execution Order
 1. T01: 엔진의 대상 검증·컴퓨터 행동과 대상 기록·예고·연출을 함께 수정한다.
@@ -37,3 +37,7 @@
 ## Completion Criteria
 - 두 Task가 검증·커밋 완료되고 phase 진행률이 2/2이다.
 - `.memory/current.md`에 이 계획의 미완료 Task가 없음을 기록하고 Plan/Phase를 완료 처리한다.
+
+## Final Validation State
+- 주문 대상 변경의 관련 테스트 70/70, 전체 빌드와 변경 파일 lint는 통과했다.
+- 전체 테스트 694개 중 5개와 전체 lint 기존 오류 12건은 남아 있으므로 전역 검증 완료로 간주하지 않는다. T02 청사진에 실패 목록을 기록했다.
