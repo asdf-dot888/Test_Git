@@ -68,12 +68,13 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const intentTargetIds = intentAction?.type === "attack"
     ? [intentAction.targetId]
     : intentAction?.type === "cast-spell"
-      ? intentAction.effects.map((effect) => effect.targetId).filter((id): id is string => Boolean(id))
+      ? intentAction.effects.map((effect) => effect.targetId).filter((id): id is string => battle.playerBoard.some((minion) => minion.instanceId === id))
       : intentAction?.type === "boss-area" ? intentAction.targetMinionIds : [];
   const intentHeroTarget = intentAction?.type === "attack"
     ? intentAction.targetId === battle.playerHero.id
     : intentAction?.type === "cast-spell"
-      ? intentAction.effects.some((effect) => effect.targetId === battle.playerHero.id || effect.targetId === "player-hero")
+      ? intentAction.effects.some((effect) => effect.targetId === battle.playerHero.id || effect.targetId === "player-hero"
+        || (effect.targetId === null && (effect.kind === "damage" || effect.kind === "randomDamage")))
       : intentAction?.type === "boss-area";
   const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);

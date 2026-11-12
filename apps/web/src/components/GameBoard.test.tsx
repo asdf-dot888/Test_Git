@@ -4,6 +4,18 @@ import { CARD_BY_ID, createRun, gameConstants } from "@board-game/game-core";
 import { GameBoard } from "./GameBoard.js";
 
 describe("GameBoard", () => {
+  it.each(["player-hero", "player", null])("highlights only the player hero for an enemy hero spell with target %s", (targetId) => {
+    const run = createRun(923);
+    run.battle!.playerBoard = [{ instanceId: "survivor", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    const markup = renderToStaticMarkup(
+      <GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: false }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={true} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()}
+        enemyIntentStep={{ action: { type: "cast-spell", cardId: "shadow-bolt", instanceId: "bolt", handSlot: 0, effects: [{ kind: "damage", targetId }] }, beforeRun: run, presentationRun: run }} />,
+    );
+    expect(markup).toContain('class="hero-panel hero-player is-intent-target"');
+    expect(markup).not.toMatch(/class="minion-card[^"]*is-intent-target/);
+    expect(markup).toContain("내 영웅");
+  });
+
   it("shows the opening hand redraw only while it remains available and disables it during resolution", () => {
     const run = createRun(411);
     const renderBoard = (actionsDisabled: boolean) => renderToStaticMarkup(

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { createRun, type RunState } from "@board-game/game-core";
+import { createRun, resolveEnemyTurnWithPlayback, type RunState } from "@board-game/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameSessionView } from "./App.js";
 import { renderWithTestAuth } from "./App.testUtils.js";
 import { EnemyIntentPreview } from "./components/EnemyIntentPreview.js";
+import { collectEnemyActionEffects } from "./game/combatEffects.js";
 import type { LocalRunController } from "./game/useLocalRun.js";
 
 class FakeAudio {
@@ -60,6 +61,29 @@ afterEach(() => {
 });
 
 describe("enemy turn playback in the game screen", () => {
+  it("shows the same hero target in a resolved enemy spell, its intent and its effects", () => {
+    const run = createRun(925);
+    const battle = run.battle!;
+    battle.activeSide = "enemy";
+    battle.turnNumber = 1;
+    battle.enemyBoard = [];
+    battle.playerBoard = [{ instanceId: "blocker", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    battle.enemyMana = { current: 1, max: 10, temporary: 0 };
+    battle.enemyHand = [];
+    battle.enemyDrawPile = [{ instanceId: "bolt", cardId: "shadow-bolt" }];
+    battle.enemyDiscardPile = [];
+    const result = resolveEnemyTurnWithPlayback(run);
+    const step = result.steps[0]!;
+    expect(step.action).toMatchObject({ type: "cast-spell", effects: [{ kind: "damage", targetId: "player-hero" }] });
+    expect(step.presentationRun.battle?.playerHero.health).toBe(28);
+    expect(step.presentationRun.battle?.playerBoard).toEqual(battle.playerBoard);
+    render(<EnemyIntentPreview step={step} />);
+    expect(screen.getByTestId("enemy-intent-preview").querySelector("small")?.textContent).toBe("내 영웅");
+    const effects = collectEnemyActionEffects(step.beforeRun, step.presentationRun, step.action, 1);
+    expect(effects[0]).toMatchObject({ target: { kind: "hero", side: "player" }, damageTarget: "hero", damage: { amount: 2 } });
+    expect(effects[0]!.soundCues).not.toContain("death");
+  });
+
   it("shows a prominent, non-specific warning for a boss area attack", () => {
     const run = createRun(800, "warrior", "hard");
     const step = {

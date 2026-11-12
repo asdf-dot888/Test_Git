@@ -411,6 +411,22 @@ function validateTargetId(targetId: string | undefined): asserts targetId is str
   if (!targetId) fail("INVALID_TARGET", "Select a valid target for this effect.");
 }
 
+type TargetedDamageEffect = Extract<SpellEffect, { kind: "damage" | "randomDamage" | "cleave" }>;
+
+function validateDamageSpellTarget(battle: BattleState, effect: TargetedDamageEffect, targetId: string | undefined, caster: PlayerSide): void {
+  const opposingHero = caster === "player" ? battle.enemyHero : battle.playerHero;
+  const heroTargetId = caster === "player" ? "enemy-hero" : "player-hero";
+  if (effect.kind === "damage" && effect.target === "enemyHero") {
+    if (targetId === undefined || targetId === opposingHero.id || targetId === heroTargetId) return;
+    fail("INVALID_TARGET", "This spell can only target the opposing hero.");
+  }
+  if (effect.kind === "randomDamage" && targetId === heroTargetId) return;
+  const opposingBoard = caster === "player" ? battle.enemyBoard : battle.playerBoard;
+  if (!opposingBoard.some((minion) => minion.instanceId === targetId && minion.health > 0)) {
+    fail("INVALID_TARGET", "Select a living opposing minion or an allowed hero target.");
+  }
+}
+
 function applySpellEffect(
   run: RunState,
   effect: SpellEffect,
@@ -425,10 +441,14 @@ function applySpellEffect(
   const ownBoard = caster === "player" ? battle.playerBoard : battle.enemyBoard;
   const opposingBoard = caster === "player" ? battle.enemyBoard : battle.playerBoard;
 
+  if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
+    validateDamageSpellTarget(battle, effect, targetId, caster);
+  }
   switch (effect.kind) {
     case "damage": {
-      if (caster === "player" && effect.target === "enemyHero") return dealDamageToEnemyHero(run, effect.amount);
-      if (caster === "enemy" && battle.playerBoard.length === 0) return dealDamageToPlayerHero(run, effect.amount, deferDefeat);
+      if (effect.target === "enemyHero") {
+        return caster === "player" ? dealDamageToEnemyHero(run, effect.amount) : dealDamageToPlayerHero(run, effect.amount, deferDefeat);
+      }
       validateTargetId(targetId);
       const target = opposingBoard.find((minion) => minion.instanceId === targetId);
       if (!target) fail("INVALID_TARGET", "The selected opposing minion is unavailable.");
@@ -441,7 +461,7 @@ function applySpellEffect(
       const amount = effect.min + picked.value;
       if (resolved) resolved.amount = amount;
       if (targetId === "enemy-hero" && caster === "player") return dealDamageToEnemyHero(run, amount);
-      if ((!targetId || targetId === "player-hero") && caster === "enemy") return dealDamageToPlayerHero(run, amount, deferDefeat);
+      if (targetId === "player-hero" && caster === "enemy") return dealDamageToPlayerHero(run, amount, deferDefeat);
       const target = opposingBoard.find((minion) => minion.instanceId === targetId);
       if (!target) fail("INVALID_TARGET", "Select an opposing minion or hero for random damage.");
       target.health -= amount;
@@ -586,16 +606,18 @@ function startPlayerTurn(run: RunState): RunState {
 }
 
 function selectEnemySpellTarget(effect: SpellEffect, battle: BattleState, difficulty: RunDifficulty = "normal"): string | undefined {
+  if (effect.kind === "damage" && effect.target === "enemyHero") return "player-hero";
   if (effect.kind === "damage" || effect.kind === "randomDamage") {
-    if (battle.playerBoard.length === 0) return undefined;
+    const targets = battle.playerBoard.filter((minion) => minion.health > 0);
+    if (targets.length === 0) return effect.kind === "randomDamage" ? "player-hero" : undefined;
     const anticipatedDamage = effect.kind === "damage" ? effect.amount : Math.floor((effect.min + effect.max) / 2);
-    return [...battle.playerBoard]
+    return targets
       .sort((left, right) => Number(right.health <= anticipatedDamage) - Number(left.health <= anticipatedDamage)
         || (difficulty === "hard" ? Number(right.attack >= 3) - Number(left.attack >= 3) : 0)
         || right.attack - left.attack || left.health - right.health)[0]?.instanceId;
   }
   if (effect.kind === "cleave") {
-    return [...battle.playerBoard]
+    return battle.playerBoard.filter((minion) => minion.health > 0)
       .sort((left, right) => right.attack - left.attack || left.health - right.health)[0]?.instanceId;
   }
   if (effect.kind === "rootMinion" || effect.kind === "soulHarvest") {
@@ -618,7 +640,9 @@ function isEnemyCardTargetPlayable(card: CardDefinition, battle: BattleState): b
   if (card.kind === "minion") return battle.enemyBoard.length < MAX_BOARD;
   return (card.spellEffects ?? []).every((effect) => {
     if (effect.kind === "summon") return battle.enemyBoard.length < MAX_BOARD;
-    if (effect.kind === "cleave") return battle.playerBoard.length > 0;
+    if (effect.kind === "cleave" || (effect.kind === "damage" && effect.target === "enemyMinion")) {
+      return battle.playerBoard.some((minion) => minion.health > 0);
+    }
     if (effect.kind === "stealFromOpponentDeck") return battle.enemyHand.length < MAX_HAND;
     if (effect.kind === "buff") return battle.enemyBoard.length > 0;
     if (effect.kind === "rootMinion" || effect.kind === "curseAllEnemyMinions" || effect.kind === "damageAllEnemyMinions") return battle.playerBoard.length > 0;
@@ -1235,12 +1259,11 @@ export function castSpellWithResolution(run: RunState, handInstanceId: string, t
     if (effect.kind === "summon" && battle.playerBoard.length >= MAX_BOARD) {
       fail("MAX_BOARD", "The player's board is full.");
     }
-    if ((effect.kind === "buff" || (effect.kind === "heal" && effect.target === "playerMinion") || (effect.kind === "damage" && effect.target === "enemyMinion")) && !targetId) {
+    if ((effect.kind === "buff" || (effect.kind === "heal" && effect.target === "playerMinion")) && !targetId) {
       fail("INVALID_TARGET", "Select a valid target for this spell.");
     }
-    if ((effect.kind === "randomDamage" || effect.kind === "cleave") && !targetId) fail("INVALID_TARGET", "Select a target for this spell.");
-    if (effect.kind === "randomDamage" && targetId !== "enemy-hero" && !battle.enemyBoard.some((minion) => minion.instanceId === targetId)) {
-      fail("INVALID_TARGET", "Select a living enemy minion or the enemy hero.");
+    if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave") {
+      validateDamageSpellTarget(battle, effect, targetId, "player");
     }
   }
 

@@ -81,6 +81,135 @@ function winCurrentBattle(run: RunState): RunState {
   return acknowledgeVictory(attackWithMinion(next, `winner-${next.completedBattles}`, battle.enemyHero.id));
 }
 
+describe("damage spell target restrictions", () => {
+  const heroSpells = ["shadow-bolt", "soul-storm", "eclipse"];
+  const minionSpells = ["soul-lance", "meteor-shard", "warrior-hammerfall", "assassin-shuriken", "demonist-hellfire"];
+
+  function playerSpellRun(cardId: string): RunState {
+    const run = createRun(912);
+    const battle = activeBattle(run);
+    battle.playerMana = { current: 10, max: 10, temporary: 0 };
+    battle.hand = [instance("spell", cardId)];
+    battle.playerBoard = [minion({ instanceId: "friendly", health: 10, maxHealth: 10 })];
+    battle.enemyBoard = [minion({ instanceId: "opposing", owner: "enemy", health: 10, maxHealth: 10 }), minion({ instanceId: "dead", owner: "enemy", health: 0 })];
+    battle.enemyHero.health = 30;
+    battle.enemyHero.maxHealth = 30;
+    return run;
+  }
+
+  it.each(heroSpells)("keeps %s on the hero for every supported player hero target", (cardId) => {
+    const run = playerSpellRun(cardId);
+    const original = copyRun(run);
+    const effect = CARD_BY_ID.get(cardId)!.spellEffects![0]!;
+    if (effect.kind !== "damage") throw new Error("Expected damage spell.");
+    for (const targetId of [undefined, "enemy", "enemy-hero"]) {
+      const result = castSpell(run, "spell", targetId);
+      expect(result.battle?.enemyHero.health).toBe(30 - effect.amount);
+      expect(result.battle?.enemyBoard).toEqual(run.battle!.enemyBoard);
+    }
+    expect(run).toEqual(original);
+  });
+
+  it.each(heroSpells)("rejects explicit non-hero targets for %s without consuming state", (cardId) => {
+    const run = playerSpellRun(cardId);
+    const original = copyRun(run);
+    for (const targetId of ["friendly", "opposing", "player", "player-hero", "missing", ""]) {
+      expect(() => castSpell(run, "spell", targetId)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+      expect(run).toEqual(original);
+    }
+  });
+
+  it.each(minionSpells)("damages only the chosen opposing minion with %s", (cardId) => {
+    const run = playerSpellRun(cardId);
+    const effect = CARD_BY_ID.get(cardId)!.spellEffects![0]!;
+    if (effect.kind !== "damage") throw new Error("Expected damage spell.");
+    const result = castSpell(run, "spell", "opposing");
+    expect(result.battle?.enemyBoard.find((target) => target.instanceId === "opposing")?.health).toBe(10 - effect.amount);
+    expect(result.battle?.enemyHero.health).toBe(30);
+    expect(result.battle?.playerBoard).toEqual(run.battle!.playerBoard);
+  });
+
+  it.each([...minionSpells, "reaper-cleave", "fate-shard"])("rejects unavailable targets for %s before state or random rolls change", (cardId) => {
+    const run = playerSpellRun(cardId);
+    const original = copyRun(run);
+    const invalidTargets = [undefined, "friendly", "dead", "missing", "player-hero", "enemy", ""];
+    if (cardId !== "fate-shard") invalidTargets.push("enemy-hero");
+    for (const targetId of invalidTargets) {
+      expect(() => castSpellWithResolution(run, "spell", targetId)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+      expect(run).toEqual(original);
+    }
+  });
+
+  describe.each(["normal", "hard"] as const)("%s enemy spell targeting", (difficulty) => {
+    function enemySpellRun(cardId: string, board: MinionState[]): RunState {
+      const run = asEnemyTurn(createRun(913, "warrior", difficulty));
+      run.completedBattles = 1;
+      const battle = activeBattle(run);
+      battle.turnNumber = 1;
+      battle.enemyBoard = [];
+      battle.playerBoard = board;
+      battle.playerArmor = 0;
+      battle.enemyMana = { current: CARD_BY_ID.get(cardId)!.cost, max: 10, temporary: 0 };
+      battle.enemyHand = [];
+      battle.enemyDrawPile = [instance("enemy-spell", cardId)];
+      if (cardId === "soul-storm") battle.enemyDrawPile.push(instance("extra-draw", "soul-lance"));
+      battle.enemyDiscardPile = [];
+      return run;
+    }
+
+    it.each(heroSpells)("casts %s on the hero through an occupied board", (cardId) => {
+      const run = enemySpellRun(cardId, [minion({ instanceId: "blocker", health: 10, maxHealth: 10 })]);
+      const original = copyRun(run);
+      const effect = CARD_BY_ID.get(cardId)!.spellEffects![0]!;
+      if (effect.kind !== "damage") throw new Error("Expected damage spell.");
+      const result = resolveEnemyTurnWithPlayback(run);
+      const step = result.steps.find(({ action }) => action.type === "cast-spell" && action.instanceId === "enemy-spell")!;
+      expect(step.action).toMatchObject({ effects: [{ kind: "damage", targetId: "player-hero" }, ...(cardId === "soul-storm" ? [{ kind: "draw", targetId: null }] : [])] });
+      expect(step.presentationRun.battle?.playerHero.health).toBe(30 - effect.amount);
+      expect(step.presentationRun.battle?.playerBoard).toEqual(original.battle!.playerBoard);
+      expect(step.presentationRun.battle?.enemyMana.current).toBe(0);
+      if (cardId === "soul-storm") expect(step.presentationRun.battle?.enemyHand).toContainEqual(instance("extra-draw", "soul-lance"));
+      expect(run).toEqual(original);
+    });
+
+    it.each(["soul-lance", "meteor-shard", "reaper-cleave"])("keeps %s unspent without a living opposing minion", (cardId) => {
+      for (const board of [[], [minion({ instanceId: "dead", health: 0 })]]) {
+        const run = enemySpellRun(cardId, board);
+        const result = resolveEnemyTurnWithPlayback(run);
+        expect(result.steps).toHaveLength(0);
+        expect(result.run.battle?.playerHero.health).toBe(30);
+        expect(result.run.battle?.enemyHand).toContainEqual(instance("enemy-spell", cardId));
+        expect(result.run.battle?.enemyMana.current).toBe(CARD_BY_ID.get(cardId)!.cost);
+        expect(result.run.battle?.enemyDiscardPile).toHaveLength(0);
+      }
+    });
+
+    it.each(["soul-lance", "meteor-shard"])("casts %s only on a living opposing minion", (cardId) => {
+      const run = enemySpellRun(cardId, [minion({ instanceId: "target", health: 10, maxHealth: 10 }), minion({ instanceId: "dead", attack: 0, health: 0 })]);
+      const result = resolveEnemyTurnWithPlayback(run);
+      expect(result.steps[0]?.action).toMatchObject({ effects: [{ kind: "damage", targetId: "target" }] });
+      expect(result.run.battle?.playerHero.health).toBe(30);
+      expect(result.run.battle?.playerBoard.find((target) => target.instanceId === "target")?.health).toBe(cardId === "soul-lance" ? 7 : 5);
+    });
+
+    it("preserves Fate Shard minion priority and records its hero fallback explicitly", () => {
+      for (const board of [[], [minion({ instanceId: "target", health: 10, maxHealth: 10 })]]) {
+        const run = enemySpellRun("fate-shard", board);
+        const result = resolveEnemyTurnWithPlayback(run);
+        expect(result).toEqual(resolveEnemyTurnWithPlayback(run));
+        const action = result.steps[0]!.action;
+        if (action.type !== "cast-spell") throw new Error("Expected a spell action.");
+        const effect = action.effects[0]!;
+        expect(effect.targetId).toBe(board.length ? "target" : "player-hero");
+        expect(effect.amount).toBeGreaterThanOrEqual(0);
+        expect(effect.amount).toBeLessThanOrEqual(5);
+        expect(result.run.battle?.playerHero.health).toBe(board.length ? 30 : 30 - effect.amount!);
+        if (board.length) expect(result.run.battle?.playerBoard[0]?.health).toBe(10 - effect.amount!);
+      }
+    });
+  });
+});
+
 describe("card and enemy catalog", () => {
   it("provides unique themed art keys for every phase encounter", () => {
     for (const [phase, enemies] of Object.entries(NORMAL_ENEMIES_BY_PHASE)) {
@@ -1064,13 +1193,15 @@ describe("player actions and battle rules", () => {
     ];
     battle.enemyStarterDeck = Array.from({ length: 30 }, (_, index) => instance(`enemy-high-${index}`, "eclipse"));
     battle.enemyDrawPile = [];
+    battle.playerBoard = [minion({ instanceId: "meteor-target", attack: 1, health: 6, maxHealth: 6 })];
 
     const resolution = resolveEnemyTurnWithPlayback(run);
     const cardActions = resolution.steps.flatMap(({ action }) => action.type === "cast-spell" ? [action.cardId] : []);
     expect(cardActions).toEqual(["soul-bargain", "meteor-shard"]);
     const bargainStep = resolution.steps.find((step) => step.action.type === "cast-spell" && step.action.cardId === "soul-bargain");
     expect(bargainStep?.presentationRun.battle?.enemyMana).toEqual({ current: 5, max: 10, temporary: 3 });
-    expect(resolution.run.battle?.playerHero.health).toBe(25);
+    expect(resolution.run.battle?.playerHero.health).toBe(30);
+    expect(resolution.run.battle?.playerBoard[0]).toMatchObject({ instanceId: "meteor-target", health: 1 });
     expect(resolution.run.battle?.enemyMana).toEqual({ current: 0, max: 10, temporary: 0 });
   });
 

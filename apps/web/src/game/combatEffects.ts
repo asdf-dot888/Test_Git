@@ -196,15 +196,10 @@ function playerSpellTarget(battle: NonNullable<RunState["battle"]>, effect: Spel
 
 function enemySpellTarget(battle: NonNullable<RunState["battle"]>, effect: SpellEffect, targetId?: string): CombatAnchor {
   if (effect.kind === "gainMana" || effect.kind === "gainTemporaryMana") return { kind: "hero", side: "enemy" };
-  if (effect.kind === "randomDamage") {
-    return targetId
-      ? { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId)) }
-      : { kind: "hero", side: "player" };
-  }
-  if (effect.kind === "damage") {
-    return targetId
-      ? { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId)) }
-      : { kind: "hero", side: "player" };
+  if (effect.kind === "randomDamage" || effect.kind === "damage") {
+    return targetId === undefined || targetId === "player-hero" || targetId === battle.playerHero.id
+      ? { kind: "hero", side: "player" }
+      : { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId)) };
   }
   if (effect.kind === "cleave") return { kind: "minion", side: "player", slot: Math.max(0, slotOf(battle.playerBoard, targetId ?? "")) };
   if (effect.kind === "burnEnemyHero") return { kind: "hero", side: "player" };
@@ -249,7 +244,8 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
         const causesDamage = effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave" || effect.kind === "damageAllEnemyMinions" || effect.kind === "soulHarvest";
         if (causesDamage) {
           cues.push("damage");
-          if (logged.targetId && !next.playerBoard.some((minion) => minion.instanceId === logged.targetId)) cues.push("death");
+          if (previous.playerBoard.some((minion) => minion.instanceId === logged.targetId)
+            && !next.playerBoard.some((minion) => minion.instanceId === logged.targetId)) cues.push("death");
         } else if (effect.kind === "heal") cues.push("heal");
         const target = enemySpellTarget(previous, effect, logged.targetId ?? undefined);
         const deathAnchors = previous.playerBoard

@@ -3,6 +3,24 @@ import { createRun } from "@board-game/game-core";
 import { initialGameSession, reduceGameAction } from "./gameActions.js";
 
 describe("reduceGameAction timer snapshots", () => {
+  it.each([
+    ["shadow-bolt", "opposing"], ["soul-lance", "enemy-hero"],
+    ["reaper-cleave", "enemy-hero"], ["fate-shard", "friendly"],
+  ])("rejects %s at %s without changing game state or creating effects", (cardId, targetId) => {
+    const run = createRun(924);
+    run.battle!.playerMana = { current: 10, max: 10, temporary: 0 };
+    run.battle!.hand = [{ instanceId: "spell", cardId }];
+    run.battle!.enemyBoard = [{ instanceId: "opposing", cardId: "ash-wolf", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    run.battle!.playerBoard = [{ instanceId: "friendly", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    const session = reduceGameAction(initialGameSession, { type: "restore-run", run });
+    const original = structuredClone(session.run);
+    const result = reduceGameAction(session, { type: "cast-spell", instanceId: "spell", targetId });
+    expect(result.run).toEqual(original);
+    expect(result.run).toBe(session.run);
+    expect(result.error).toBe("현재 선택할 수 없는 대상입니다.");
+    expect(result.combatEffects).toHaveLength(0);
+  });
+
   it("passes the exact random spell roll into transient combat damage metadata", () => {
     const run = createRun(549);
     run.battle!.enemyHero.health = 30;

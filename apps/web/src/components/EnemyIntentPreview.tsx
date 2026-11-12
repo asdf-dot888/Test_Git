@@ -35,10 +35,10 @@ function intentDetails(step: EnemyTurnPlaybackStep): { title: string; descriptio
     title: `${card?.name ?? "적 주문"} 시전`,
     description: card?.description ?? "적 주문을 시전합니다.",
     target: action.effects.map((effect) => {
-      if (effect.targetId === "player-hero") return "내 영웅";
+      if (effect.targetId === "player-hero" || effect.targetId === battle?.playerHero.id) return "내 영웅";
       const minion = battle?.playerBoard.find((item) => item.instanceId === effect.targetId);
       if (minion) return CARD_BY_ID.get(minion.cardId)?.name ?? "아군 하수인";
-      if (!effect.targetId && (effect.kind === "damage" || effect.kind === "randomDamage") && battle?.playerBoard.length === 0) return "내 영웅";
+      if (effect.targetId === null && (effect.kind === "damage" || effect.kind === "randomDamage")) return "내 영웅";
       if (effect.kind === "summon" || effect.kind === "heal" || effect.kind === "buff") return "적 필드";
       return "아군 필드";
     }).filter((value, index, values) => values.indexOf(value) === index).join(", ") || "효과 대상 확인 중",

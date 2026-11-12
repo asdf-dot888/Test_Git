@@ -9,6 +9,42 @@ function withBattle(run: RunState, update: (run: RunState) => void): RunState {
 }
 
 describe("collectCombatEffectEvents", () => {
+  it.each(["player-hero", "player", null])("anchors enemy hero damage at the hero for target %s without a minion death cue", (targetId) => {
+    const before = createRun(920);
+    before.battle!.playerBoard = [{ instanceId: "survivor", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    const after = withBattle(before, (run) => { run.battle!.playerHero.health -= 2; });
+    const events = collectEnemyActionEffects(before, after, {
+      type: "cast-spell", cardId: "shadow-bolt", instanceId: "bolt", handSlot: 0,
+      effects: [{ kind: "damage", targetId }],
+    }, 1);
+    expect(events[0]).toMatchObject({ target: { kind: "hero", side: "player" }, damageTarget: "hero", damage: { amount: 2, outcome: "hit" } });
+    expect(events[0]!.soundCues).not.toContain("death");
+    expect(events[0]!.deathAnchors ?? []).toHaveLength(0);
+  });
+
+  it("keeps a zero Fate Shard hero roll as a miss without a death cue", () => {
+    const run = createRun(921);
+    const events = collectEnemyActionEffects(run, run, {
+      type: "cast-spell", cardId: "fate-shard", instanceId: "shard", handSlot: 0,
+      effects: [{ kind: "randomDamage", targetId: "player-hero", amount: 0 }],
+    }, 1);
+    expect(events[0]).toMatchObject({ target: { kind: "hero", side: "player" }, damageTarget: "hero", damage: { amount: 0, outcome: "miss" } });
+    expect(events[0]!.soundCues).not.toContain("death");
+  });
+
+  it("retains death cues for a real opposing minion killed by an enemy spell", () => {
+    const before = createRun(922);
+    before.battle!.playerBoard = [{ instanceId: "victim", cardId: "ash-wolf", owner: "player", attack: 2, health: 2, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    const after = withBattle(before, (run) => { run.battle!.playerBoard = []; });
+    const events = collectEnemyActionEffects(before, after, {
+      type: "cast-spell", cardId: "soul-lance", instanceId: "lance", handSlot: 0,
+      effects: [{ kind: "damage", targetId: "victim" }],
+    }, 1);
+    expect(events[0]).toMatchObject({ target: { kind: "minion", side: "player", slot: 0 }, damageTarget: "minion" });
+    expect(events[0]!.soundCues).toContain("death");
+    expect(events[0]!.deathAnchors).toEqual([{ kind: "minion", side: "player", slot: 0 }]);
+  });
+
   it("maps damage into distinct presentation tiers", () => {
     expect([0, 1, 2, 3, 4, 5].map(combatImpactTier)).toEqual([null, "light", "light", "medium", "medium", "heavy"]);
   });
