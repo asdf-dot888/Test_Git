@@ -21,12 +21,11 @@ export function EnemyHeroDefeatEffect({ onComplete }: EnemyHeroDefeatEffectProps
     }
     const board = document.querySelector<HTMLElement>(".battle-board");
     board?.classList.add("is-enemy-defeat");
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const timer = window.setTimeout(() => {
       if (completed.current) return;
       completed.current = true;
       callback.current();
-    }, reducedMotion ? 100 : 2_200);
+    }, 2_200);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);

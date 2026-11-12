@@ -636,7 +636,6 @@
   100% { opacity: 0; transform: scale(1.8); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .victory-card h1, .victory-light { animation: none; }
   .turn-timer.is-critical { animation: none; }
 }
 .game-guide-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(5 5 5 / 78%); }
