@@ -143,7 +143,7 @@ Task: T01-engine-and-enemy-targets
 ## Progress
 - [x] 구현 완료
 - [x] 검증 통과
-- commit: pending
+- commit: ab87756
 
 ## Validation Results
 - 2026-11-12: 코어 TypeScript 빌드 및 웹 TypeScript/Vite 빌드 성공.
