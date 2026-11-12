@@ -4,6 +4,34 @@ import { CARD_BY_ID, createRun, gameConstants } from "@board-game/game-core";
 import { GameBoard } from "./GameBoard.js";
 
 describe("GameBoard", () => {
+  it.each([
+    ["fate-shard", true, true, false],
+    ["reaper-cleave", true, false, false],
+    ["soul-lance", true, false, false],
+    ["life-thread", false, false, true],
+    ["rune-surge", false, false, true],
+  ] as const)("offers the correct manual targets for %s", (cardId, enemyMinion, enemyHero, friendlyMinion) => {
+    const run = createRun(930);
+    const battle = run.battle!;
+    battle.hand = [{ instanceId: "spell", cardId }];
+    battle.playerMana = { current: 10, max: 10, temporary: 0 };
+    battle.enemyBoard = [{ instanceId: "enemy-target", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 10, maxHealth: 10, summonedTurn: battle.turnNumber, hasAttacked: true }];
+    battle.playerBoard = [{ instanceId: "friendly-target", cardId: "ash-wolf", owner: "player", attack: 1, health: 10, maxHealth: 10, summonedTurn: battle.turnNumber, hasAttacked: true }];
+    const render = () => renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId="spell" selectedAttackerId={null} targetMode="spell" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    const markup = render();
+    const enemyLane = markup.match(/<section class="minion-lane lane-enemy"[\s\S]*?<\/section>/)?.[0] ?? "";
+    const friendlyLane = markup.match(/<section class="minion-lane lane-player"[\s\S]*?<\/section>/)?.[0] ?? "";
+    expect(enemyLane.includes("minion-enemy is-targetable")).toBe(enemyMinion);
+    expect(friendlyLane.includes("minion-friendly is-targetable")).toBe(friendlyMinion);
+    expect(markup.includes("hero-target-button")).toBe(enemyHero);
+    battle.enemyBoard = [];
+    const emptyMarkup = render();
+    const handCard = emptyMarkup.match(/<button[^>]*data-effect-instance-id="spell"[^>]*>/)?.[0];
+    expect(handCard).toContain("card-spell");
+    expect(handCard?.includes('disabled=""')).toBe(cardId === "reaper-cleave" || cardId === "soul-lance");
+    if (cardId === "fate-shard") expect(emptyMarkup).toContain("hero-target-button");
+  });
+
   it.each(["player-hero", "player", null])("highlights only the player hero for an enemy hero spell with target %s", (targetId) => {
     const run = createRun(923);
     run.battle!.playerBoard = [{ instanceId: "survivor", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];

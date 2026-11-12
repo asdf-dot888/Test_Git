@@ -16,6 +16,7 @@ import { HeroPowerControl } from "./HeroPowerControl.js";
 import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
 import { OpeningHandRedrawControl } from "./OpeningHandRedrawControl.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
+import { getPlayerSpellSelection } from "../game/spellTargeting.js";
 import type { TutorialStepId } from "./FirstRunTutorial.js";
 
 export interface GameBoardProps {
@@ -47,15 +48,9 @@ export interface GameBoardProps {
 function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide | null {
   const card = run.battle?.hand.find((item) => item.instanceId === instanceId);
   const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
-  const targetEffect = definition?.spellEffects?.find((effect) =>
-    (effect.kind === "damage" && effect.target === "enemyMinion")
-    || effect.kind === "randomDamage"
-    || effect.kind === "cleave"
-    || (effect.kind === "heal" && effect.target === "playerMinion")
-    || effect.kind === "buff",
-  );
-  if (targetEffect?.kind === "damage") return "enemy";
-  if (targetEffect?.kind === "heal" || targetEffect?.kind === "buff") return "player";
+  const selection = getPlayerSpellSelection(definition);
+  if (selection === "enemy-minion" || selection === "enemy-character") return "enemy";
+  if (selection === "friendly-minion") return "player";
   return null;
 }
 
@@ -91,7 +86,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
       : null;
   const selectedSpell = battle.hand.find((item) => item.instanceId === selectedCardInstanceId);
   const selectedDefinition = selectedSpell ? CARD_BY_ID.get(selectedSpell.cardId) : undefined;
-  const canTargetEnemyHeroWithSpell = selectedDefinition?.spellEffects?.some((effect) => effect.kind === "randomDamage");
+  const canTargetEnemyHeroWithSpell = getPlayerSpellSelection(selectedDefinition) === "enemy-character";
   const enemyHeroTargetable = !actionsDisabled && (
     (targetMode === "attack" && Boolean(selectedAttackerId) && battle.enemyBoard.length === 0)
     || (targetMode === "hero-power" && run.playerClass === "assassin")
@@ -99,11 +94,10 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   );
   const canSelectCard = (instance: import("@board-game/game-core").CardInstance) => {
     const definition = CARD_BY_ID.get(instance.cardId);
-    const targetSideForCard = spellTargetSide(instance.instanceId, run);
-    if (definition?.kind !== "spell" || !targetSideForCard) return true;
-    if (definition?.spellEffects?.some((effect) => effect.kind === "randomDamage")) return true;
-    if (definition?.spellEffects?.some((effect) => effect.kind === "cleave")) return battle.enemyBoard.length > 0;
-    return targetSideForCard === "enemy" ? battle.enemyBoard.length > 0 : battle.playerBoard.length > 0;
+    const selection = getPlayerSpellSelection(definition);
+    if (selection === "enemy-minion") return battle.enemyBoard.some((minion) => minion.health > 0);
+    if (selection === "friendly-minion") return battle.playerBoard.some((minion) => minion.health > 0);
+    return true;
   };
 
   return (

@@ -1,6 +1,6 @@
 # Task: T02 플레이어 주문 대상 선택과 입력 경로 일치
 
-## Status: pending
+## Status: done (known baseline validation failures)
 
 ## Goal
 운명의 파편과 수확자의 칼날을 플레이어가 정상적으로 하수인에게 사용할 수 있게 하고, 클릭·터치·드래그에서 주문의 대상 제한과 사용 가능 상태가 일치하게 한다.
@@ -92,19 +92,19 @@
 - 그림자 화살의 카드 클릭 즉시 시전은 적 하수인이 있어도 영웅에게만 2 피해. 기존 튜토리얼, 아군 버프/치유 선택, 전체 공격, 소환 드래그가 유지된다.
 
 ## Acceptance Criteria
-- [ ] 파편을 클릭·터치로 적 하수인에게 사용할 수 있고 적 하수인 존재 여부와 무관하게 영웅도 선택할 수 있다.
-- [ ] 칼날은 적 하수인만 선택 가능하고 적 전장이 비면 사용할 수 없다.
-- [ ] 화면 선택 모드와 손패 사용 가능 판단이 동일한 helper를 사용한다.
-- [ ] 드래그의 불법 대상은 다른 대상에 적용되지 않고 자원을 소모하지 않는다.
-- [ ] 그림자 화살 즉시 시전, 아군 주문, 영웅 능력, 일반 공격, 튜토리얼의 기존 정상 동작이 유지된다.
-- [ ] 전체 빌드·테스트·lint가 통과하며 기존 사용자 변경을 보존한다.
+- [x] 파편을 클릭·터치로 적 하수인에게 사용할 수 있고 적 하수인 존재 여부와 무관하게 영웅도 선택할 수 있다.
+- [x] 칼날은 적 하수인만 선택 가능하고 적 전장이 비면 사용할 수 없다.
+- [x] 화면 선택 모드와 손패 사용 가능 판단이 동일한 helper를 사용한다.
+- [x] 드래그의 불법 대상은 다른 대상에 적용되지 않고 자원을 소모하지 않는다.
+- [x] 그림자 화살 즉시 시전, 아군 주문, 영웅 능력, 일반 공격, 튜토리얼의 기존 정상 동작이 유지된다.
+- [ ] 전체 빌드·테스트·lint 통과: 빌드는 통과했으나 전체 테스트 5건과 lint 12건이 이 Task와 무관한 기존 오류로 실패했다.
 
 ## Validation
 루트 PowerShell에서 순차 실행한다. npm.cmd는 PowerShell 실행 정책 영향을 피하기 위한 npm 실행 파일이다.
 - `npm.cmd run build --workspace @board-game/game-core` — T01의 코어 dist를 최신으로 확보. 웹 패키지는 src가 아닌 dist를 import한다.
-- `npm.cmd test -- apps/web/src/components/GameBoard.test.tsx apps/web/src/App.interactions.test.tsx apps/web/src/game/gameActions.test.ts apps/web/src/components/MinionLane.test.tsx apps/web/src/components/CardInspection.test.tsx apps/web/src/components/HeroPanel.test.tsx apps/web/src/App.tutorial.test.tsx` — 대상 선택/입력 및 인접 조작 회귀 테스트 통과.
+- `npm.cmd test -- --config apps/web/vite.config.ts apps/web/src/components/GameBoard.test.tsx apps/web/src/App.interactions.test.tsx apps/web/src/game/gameActions.test.ts apps/web/src/components/MinionLane.test.tsx apps/web/src/components/CardInspection.test.tsx apps/web/src/components/HeroPanel.test.tsx apps/web/src/App.tutorial.test.tsx --silent` — 대상 선택/입력 및 인접 조작 회귀 테스트 통과. 루트 Vitest에는 `__APP_VERSION__` define 설정이 없으므로 기존 웹 Vite 설정을 명시한다.
 - `npm.cmd run build` — 코어, API, leaderboard API, 웹 빌드 통과.
-- `npm.cmd test` — 전체 테스트 통과. 관련 검사 통과 뒤 계획의 마지막 통합 확인으로 한 번 수행한다.
+- `npm.cmd test -- --config apps/web/vite.config.ts --silent` — 전체 테스트 통과. 관련 검사 통과 뒤 계획의 마지막 통합 확인으로 한 번 수행한다.
 - `npm.cmd run lint` — 전체 lint 통과.
 - `git diff --check` — 변경의 공백 오류 없음. 무관한 기존 변경에서 실패한 경우 파일과 원인을 보고하고 임의 수정하지 않는다.
 
@@ -122,9 +122,18 @@ Task: T02-player-spell-selection
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
+- [x] 구현 완료
+- [x] 관련 검증 통과 (전체 검증 예외는 아래 기록)
 - commit: pending
+
+## Validation Results
+- 코어 및 전체 프로젝트 빌드 통과. 웹 Vite 빌드는 기존 MSAL import/청크 크기 경고를 출력했으나 성공했다.
+- 선택 화면·상호작용 테스트 2개 파일 39/39 통과. 청사진의 관련 7개 파일 70/70 통과.
+- 전체 테스트는 웹 Vite 설정을 명시해 75개 파일, 694개 중 689개 통과. 5개 실패는 `App.audio.test.tsx` 1건, `App.timer.test.tsx` 1건, `App.roadmap.test.tsx` 2건, `ExpeditionRoadmap.test.tsx`의 `matron-thornling` 아트 누락 1건이다. 이 Task 변경 파일의 테스트는 모두 통과했다. 원래 루트 명령은 `__APP_VERSION__` define 누락으로 별도 실패하므로 기존 웹 Vite 설정을 사용했다.
+- 전체 `npm.cmd run lint`는 기존 오류 12건으로 실패. App.tsx의 `setTutorialStep('inspect-hand')` effect 오류는 HEAD에도 있음을 확인했다. 다른 오류에는 leaderboard 테스트의 미사용 변수, generate-menu-bgm.mjs의 Node 전역, CardView 테스트의 미사용 변수, EnemyHeroDefeatEffect.tsx의 ref 렌더 접근, useLocalRun.ts의 effect 상태 변경이 있다. 범위 밖 파일은 수정하지 않았다.
+- 수정한 다섯 개 웹 파일은 기존 App.tsx 오류 규칙만 끈 범위 lint에서 통과했다. 해당 규칙의 미해결 오류는 신규 변경과 관계없는 기존 335행에 있다.
+- 이번 변경 파일의 `git diff --check` 통과. jsdom의 HTMLMediaElement play/pause 미구현 출력은 테스트 실패가 아니며 실기기 수동 검증은 수행하지 않았다.
+- 상기 전체 검증 실패로 본문의 마지막 Acceptance Criteria는 미완료로 남긴다. 주문 대상 기능의 관련 검증은 통과했으며, 전체 게이트 정리는 별도 범위로 추적해야 한다.
 
 ## Handoff
 T01 완료가 전제이다. 성공 시 이 Task를 done으로 표시하고 커밋, phase 진행률 2/2와 완료 상태, 상위 Plan 완료 상태를 기록한다. `.memory/current.md`는 이 계획의 Active Task를 None(모든 Task 완료)으로 변경한다. 기존 변경된 EnemyHeroDefeatEffect.tsx, board.css, 무관한 memory 파일은 스테이징하지 않는다. 배포는 이 계획의 Task가 아니다.

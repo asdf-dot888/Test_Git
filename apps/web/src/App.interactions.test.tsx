@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, createEvent, fireEvent, screen, waitFor } from "@testing-library/react";
 import { createRun } from "@board-game/game-core";
 import { GameSessionView } from "./App.js";
@@ -83,6 +83,12 @@ function enterActiveEncounter(): void {
   fireEvent.click(activeEncounter);
 }
 
+beforeEach(() => {
+  window.localStorage.setItem("board-card-roguelike:tutorial:v1:test-employee", JSON.stringify({
+    schemaVersion: 1, userId: "test-employee", completed: true, completedAt: new Date().toISOString(),
+  }));
+});
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -91,6 +97,117 @@ afterEach(() => {
 });
 
 describe("game pointer and keyboard interactions", () => {
+  function spellRun(cardId: string, enemyCount = 1) {
+    const run = createRun(940);
+    const battle = run.battle!;
+    battle.hand = [{ instanceId: "spell", cardId }];
+    battle.playerMana = { current: 10, max: 10, temporary: 0 };
+    battle.enemyHero.health = 30;
+    battle.enemyHero.maxHealth = 30;
+    battle.enemyBoard = Array.from({ length: enemyCount }, (_, index) => ({ instanceId: `enemy-${index}`, cardId: "ash-wolf", owner: "enemy" as const, attack: 1, health: 10, maxHealth: 10, summonedTurn: 0, hasAttacked: false }));
+    battle.playerBoard = [{ instanceId: "friendly", cardId: "ash-wolf", owner: "player", attack: 1, health: 10, maxHealth: 10, summonedTurn: 0, hasAttacked: false }];
+    return run;
+  }
+
+  it.each(["minion", "hero"] as const)("lets Fate Shard target an enemy %s by clicking while a minion blocks", async (kind) => {
+    const sync = makeReadySync(spellRun("fate-shard"));
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    fireEvent.click(await screen.findByRole("button", { name: /운명의 파편/ }));
+    const target = kind === "hero" ? document.querySelector(".hero-enemy .hero-target-button") : document.querySelector(".lane-enemy .minion-card");
+    expect(target).toBeTruthy();
+    fireEvent.click(target!);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /운명의 파편/ })).toBeNull());
+    expect(document.querySelector(".player-toolbar .mana-display")?.getAttribute("aria-label")).toBe("마나 8/10");
+    const heroHealth = Number(document.querySelector(".hero-enemy .health-value")?.textContent?.match(/\d+/)?.[0]);
+    const minionHealth = Number(document.querySelector(".lane-enemy .minion-card .minion-stats b:last-child")?.textContent?.match(/\d+/)?.[0]);
+    if (kind === "hero") {
+      expect(heroHealth).toBeGreaterThanOrEqual(25);
+      expect(heroHealth).toBeLessThanOrEqual(30);
+      expect(minionHealth).toBe(10);
+    } else {
+      expect(heroHealth).toBe(30);
+      expect(minionHealth).toBeGreaterThanOrEqual(5);
+      expect(minionHealth).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it("accepts touch activation for Fate Shard and its opposing minion", async () => {
+    const sync = makeReadySync(spellRun("fate-shard"));
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    const card = await screen.findByRole("button", { name: /운명의 파편/ });
+    fireEvent.pointerDown(card, { pointerType: "touch" });
+    fireEvent.pointerUp(card, { pointerType: "touch" });
+    fireEvent.click(card);
+    const target = document.querySelector(".lane-enemy .minion-card")!;
+    expect(target.classList.contains("is-targetable")).toBe(true);
+    fireEvent.pointerDown(target, { pointerType: "touch" });
+    fireEvent.pointerUp(target, { pointerType: "touch" });
+    fireEvent.click(target);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /운명의 파편/ })).toBeNull());
+    expect(document.querySelector(".player-toolbar .mana-display")?.getAttribute("aria-label")).toBe("마나 8/10");
+  });
+
+  it("cleaves the chosen minion and its two neighbors by clicking", async () => {
+    const sync = makeReadySync(spellRun("reaper-cleave", 3));
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    fireEvent.click(await screen.findByRole("button", { name: /수확자의 칼날/ }));
+    const targets = document.querySelectorAll(".lane-enemy .minion-card");
+    expect(targets).toHaveLength(3);
+    fireEvent.click(targets[1]!);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /수확자의 칼날/ })).toBeNull());
+    expect(Array.from(document.querySelectorAll(".lane-enemy .minion-card .minion-stats b:last-child")).map((stat) => Number(stat.textContent?.match(/\d+/)?.[0]))).toEqual([8, 6, 8]);
+    expect(document.querySelector(".hero-enemy .health-value")?.textContent).toContain("30");
+  });
+
+  it("still casts Shadow Bolt immediately onto the hero through an occupied board", async () => {
+    const sync = makeReadySync(spellRun("shadow-bolt"));
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    fireEvent.click(await screen.findByRole("button", { name: /그림자 화살/ }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: /그림자 화살/ })).toBeNull());
+    expect(document.querySelector(".hero-enemy .health-value")?.textContent).toContain("28");
+    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("10");
+  });
+
+  it.each([
+    ["fate-shard", "enemy"], ["fate-shard", "hero"], ["reaper-cleave", "enemy"],
+    ["shadow-bolt", "hero"],
+  ] as const)("casts %s when dragged to the legal %s target", async (cardId, side) => {
+    const sync = makeReadySync(spellRun(cardId));
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    const card = await screen.findByRole("button", { name: new RegExp(cardId === "fate-shard" ? "운명의 파편" : cardId === "reaper-cleave" ? "수확자의 칼날" : "그림자 화살") });
+    const dataTransfer = { effectAllowed: "", setData: vi.fn(), getData: vi.fn((type: string) => type === "application/x-ashen-expedition" ? JSON.stringify({ kind: "card", instanceId: "spell" }) : "card:spell") } as unknown as DataTransfer;
+    fireEvent.dragStart(card, { dataTransfer });
+    const target = document.querySelector(side === "hero" ? ".hero-enemy" : ".lane-enemy .lane-slot.is-occupied")!;
+    fireEvent.drop(target, { dataTransfer });
+    await waitFor(() => expect(screen.queryByRole("button", { name: /운명의 파편|수확자의 칼날|그림자 화살/ })).toBeNull());
+    expect(document.querySelector(".player-toolbar .mana-display")?.getAttribute("aria-label")).toBe(cardId === "reaper-cleave" ? "마나 6/10" : cardId === "fate-shard" ? "마나 8/10" : "마나 9/10");
+  });
+
+  it.each([
+    ["shadow-bolt", ".lane-enemy .lane-slot.is-occupied"],
+    ["soul-lance", ".hero-enemy"],
+    ["reaper-cleave", ".hero-enemy"],
+    ["fate-shard", ".lane-player .lane-slot.is-occupied"],
+  ] as const)("rejects invalid %s drop to %s without spending resources", async (cardId, selector) => {
+    const sync = makeReadySync(spellRun(cardId));
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    const card = document.querySelector(".hand-cards .game-card")!;
+    const dataTransfer = { effectAllowed: "", setData: vi.fn(), getData: vi.fn((type: string) => type === "application/x-ashen-expedition" ? JSON.stringify({ kind: "card", instanceId: "spell" }) : "card:spell") } as unknown as DataTransfer;
+    fireEvent.dragStart(card, { dataTransfer });
+    fireEvent.drop(document.querySelector(selector)!, { dataTransfer });
+    expect(document.querySelector(".game-error")?.textContent).toContain("현재 선택할 수 없는 대상입니다.");
+    expect(document.querySelector(".hand-cards .game-card")).toBeTruthy();
+    expect(document.querySelector(".player-toolbar .mana-display")?.getAttribute("aria-label")).toBe("마나 10/10");
+    expect(document.querySelector(".hero-enemy .health-value")?.textContent).toContain("30");
+    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("10");
+  });
+
   it("plays a hand minion when it is dragged to an empty board slot", async () => {
     const run = createRun(15);
     run.battle!.hand = [{ instanceId: "drag-iron-hound", cardId: "iron-hound" }];

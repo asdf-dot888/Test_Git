@@ -28,6 +28,7 @@ import { combatEventSounds } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
 import { loadTutorialProgress, markTutorialCompleted } from "./game/tutorialProgress.js";
 import { restoreTutorialPlayerHealth } from "./game/tutorialHealth.js";
+import { getPlayerSpellSelection } from "./game/spellTargeting.js";
 import { createRun as createGameRun, type RunState } from "@board-game/game-core";
 
 const INTERACTIVE_AUDIO_SELECTOR = "button, a[href], input, select, textarea, label[for], [role='button'], [role='option'], [data-pointer-interaction]";
@@ -545,14 +546,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       dispatch({ type: "play-minion", instanceId });
       return;
     }
-    const targetEffect = card.spellEffects?.find((effect) =>
-      (effect.kind === "damage" && effect.target === "enemyMinion")
-      || effect.kind === "randomDamage"
-      || effect.kind === "cleave"
-      || (effect.kind === "heal" && effect.target === "playerMinion")
-      || effect.kind === "buff",
-    );
-    if (targetEffect) {
+    if (getPlayerSpellSelection(card) !== null) {
       dispatch({ type: "select-card", instanceId });
       return;
     }
@@ -570,7 +564,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     if (session.targetMode === "spell" && session.selectedCardInstanceId) {
       const selected = battle.hand.find(({ instanceId }) => instanceId === session.selectedCardInstanceId);
       const definition = selected ? CARD_BY_ID.get(selected.cardId) : undefined;
-      const normalizedTargetId = definition?.spellEffects?.some((effect) => effect.kind === "randomDamage") && targetId === battle.enemyHero.id
+      const normalizedTargetId = getPlayerSpellSelection(definition) === "enemy-character" && targetId === battle.enemyHero.id
         ? "enemy-hero"
         : targetId;
       dispatch({ type: "cast-spell", instanceId: session.selectedCardInstanceId, targetId: normalizedTargetId });
@@ -622,7 +616,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       }
       if (definition.kind === "spell" && target.kind === "hero" && target.side === "enemy") {
         if (tutorialMode !== "inactive") advanceTutorial("play-card");
-        const targetId = definition.spellEffects?.some((effect) => effect.kind === "randomDamage") ? "enemy-hero" : battle.enemyHero.id;
+        const targetId = getPlayerSpellSelection(definition) === "enemy-character" ? "enemy-hero" : battle.enemyHero.id;
         dispatch({ type: "cast-spell", instanceId: payload.instanceId, targetId });
       }
       return;
