@@ -1,5 +1,7 @@
+import { Buffer } from "node:buffer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 // Deterministic menu/map loop: 80 BPM, D minor, 24 seconds, mono 22.05 kHz PCM16.

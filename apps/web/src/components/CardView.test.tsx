@@ -47,7 +47,6 @@ describe("CardView", () => {
     } as DOMRect);
     const definition = CARD_BY_ID.get("ash-wolf")!;
     const { container } = render(<CardView instance={{ instanceId: "wolf-hover", cardId: "ash-wolf" }} selected={false} disabled={false} onSelect={vi.fn()} />);
-    const button = screen.getByRole("button");
 
     Object.defineProperty(window, "matchMedia", { configurable: true, value: () => ({ matches: true }) });
     fireEvent.mouseEnter(container.querySelector(".hand-card-inspection")!);

@@ -16,6 +16,8 @@ function record(overrides: Partial<LeaderboardRecord> = {}): LeaderboardRecord {
 function legacyRecord(overrides: Partial<LeaderboardRecord> = {}) {
   const modern = record(overrides);
   const { difficulty: _difficulty, schemaVersion: _schemaVersion, ...legacy } = modern;
+  void _difficulty;
+  void _schemaVersion;
   return { ...legacy, schemaVersion: 1 as const };
 }
 

@@ -13,6 +13,7 @@ describe("EnemyHeroDefeatEffect", () => {
     vi.useFakeTimers();
     const complete = vi.fn();
     render(<><div className="battle-board"><section data-effect-anchor="hero:enemy" /></div><EnemyHeroDefeatEffect onComplete={complete} /></>);
+    await act(async () => { await Promise.resolve(); });
     const effect = document.body.querySelector<HTMLElement>(".enemy-hero-defeat");
 
     expect(effect).not.toBeNull();

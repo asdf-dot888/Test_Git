@@ -332,8 +332,16 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       result = { status: "error" as const, error };
     }
     if (result.status !== "completed") {
-      setTutorialStep("inspect-hand");
-      setTutorialMode("first-run");
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setTutorialStep("inspect-hand");
+        setTutorialMode("first-run");
+      });
+      return () => {
+        cancelled = true;
+        if (tutorialCheckedKey.current === key) tutorialCheckedKey.current = null;
+      };
     }
   }, [auth.userId, run, screen, tutorialMode]);
 

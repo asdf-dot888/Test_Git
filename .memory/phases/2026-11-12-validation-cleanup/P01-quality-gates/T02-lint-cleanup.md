@@ -1,6 +1,6 @@
 # Task: T02 Lint Cleanup
 
-## Status: pending
+## Status: done
 
 ## Goal
 Clear twelve ESLint errors while preserving current behavior and user edits.
@@ -20,10 +20,11 @@ Clear twelve ESLint errors while preserving current behavior and user edits.
 - `apps/leaderboard-api/src/leaderboard/cosmosLeaderboardRepository.test.ts` :: `legacyRecord`; avoid unused destructured names.
 - `apps/web/scripts/generate-menu-bgm.mjs` :: import Node `Buffer` and `process`.
 - `apps/web/src/components/CardView.test.tsx` :: remove unused `button` local.
+- `apps/web/src/components/EnemyHeroDefeatEffect.test.tsx` :: wait for the deferred portrait bounds render before asserting the portal.
 
 ## Acceptance Criteria
-- [ ] ESLint exits zero.
-- [ ] Full tests and build pass.
+- [x] ESLint exits zero.
+- [x] Full tests and build pass.
 
 ## Validation
 - `npm.cmd run lint`
@@ -40,6 +41,6 @@ Task: T02-lint-cleanup
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: lint 0 errors, 694 tests, build successful.
+- commit: see Git history

@@ -16,7 +16,7 @@ import {
   playMinion,
   redrawOpeningHand,
   skipReward,
-  useHeroPower,
+  useHeroPower as applyHeroPower,
   type PlayerClass,
   type RunDifficulty,
   type RunState,
@@ -254,7 +254,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
       return { ...next, autoEndTurnAfterAllAttack: Boolean(battle && battle.status === "active" && battle.enemyHero.health > 0) };
     }
     if (action.type === "fuse-minions") return sessionForAction(fuseMinions(session.run, action.firstMinionId, action.secondMinionId), session, action);
-    if (action.type === "use-hero-power") return sessionForAction(useHeroPower(session.run, action.targetId), session, action);
+    if (action.type === "use-hero-power") return sessionForAction(applyHeroPower(session.run, action.targetId), session, action);
     if (action.type === "end-turn") return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run), session);
     if (action.type === "discard-before-draw") return sessionForRun(discardBeforeDraw(session.run, action.instanceId), session);
     if (action.type === "choose-reward") return sessionForRun(chooseReward(session.run, action.cardId), session);

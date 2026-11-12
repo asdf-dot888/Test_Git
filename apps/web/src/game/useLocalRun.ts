@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createRun as createGameRun, type PlayerClass, type RunDifficulty, type RunState } from "@board-game/game-core";
 import { useAuth } from "../auth/useAuth.js";
 import { createLocalRunStorage, type LocalRunStorage } from "./localRunStorage.js";
@@ -67,7 +67,7 @@ export function useLocalRun(): LocalRunController {
     }
   }, [userId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { queueMicrotask(() => { void load(); }); }, [load]);
 
   const saveRun = useCallback(async (run: RunState) => {
     if (!userId) return;
@@ -87,9 +87,10 @@ export function useLocalRun(): LocalRunController {
     return run;
   }, [saveRun]);
 
-  const replaceRun = useCallback(async (_reason: "completed" | "abandoned", seed: number, playerClass: PlayerClass, difficulty: RunDifficulty) => createRun(seed, playerClass, difficulty), [createRun]);
+  const replaceRun = useCallback(async (...[, seed, playerClass, difficulty]: Parameters<LocalRunController["replaceRun"]>) => createRun(seed, playerClass, difficulty), [createRun]);
 
   const deleteRun = useCallback(async (_reason: "completed" | "abandoned") => {
+    void _reason;
     if (!userId) return;
     let warning: string | null = null;
     try {

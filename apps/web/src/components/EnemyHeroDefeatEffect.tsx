@@ -9,11 +9,16 @@ export function EnemyHeroDefeatEffect({ onComplete }: EnemyHeroDefeatEffectProps
   const [bounds, setBounds] = useState<DOMRect | null>(null);
   const completed = useRef(false);
   const callback = useRef(onComplete);
-  callback.current = onComplete;
+
+  useEffect(() => { callback.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
     const portrait = document.querySelector<HTMLElement>('[data-effect-anchor="hero:enemy"]');
-    if (portrait) setBounds(portrait.getBoundingClientRect());
+    let cancelled = false;
+    if (portrait) {
+      const nextBounds = portrait.getBoundingClientRect();
+      queueMicrotask(() => { if (!cancelled) setBounds(nextBounds); });
+    }
     const board = document.querySelector<HTMLElement>(".battle-board");
     board?.classList.add("is-enemy-defeat");
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -23,6 +28,7 @@ export function EnemyHeroDefeatEffect({ onComplete }: EnemyHeroDefeatEffectProps
       callback.current();
     }, reducedMotion ? 100 : 2_200);
     return () => {
+      cancelled = true;
       window.clearTimeout(timer);
       board?.classList.remove("is-enemy-defeat");
     };
