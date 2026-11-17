@@ -1,6 +1,6 @@
 # Task: T02 Iteration and Normal Phase Curve
 
-## Status: todo
+## Status: done
 
 ## Goal
 If the class gap is still above ±5pp after round 1, run another tuning round. Separately, adjust Normal-mode enemy phase difficulty only if measurements show it is clearly too easy or too hard.
@@ -47,6 +47,9 @@ Task: T02-iteration-and-normal-phase-curve
 ```
 
 ## Progress
-- [ ] implementation complete (or skipped with evidence)
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete: round 2 applied 3 numeric edits (imp-caller cost 2->3, pit-ritualist cost 3->4, summoner cost 5->6). Report: `docs/balance/2026-11-17-round2.md`.
+- [x] validation passed: 736 tests, lint clean, build clean.
+- Result: Hard completion warrior 15.8% / assassin 14.0% / demonist 16.2% (gap 2.2pp, target met). Normal saturated (>= 98.8% for all classes).
+- Normal phase curve (I03): NOT changed. The bot clears ~100% of every Normal encounter, but no target difficulty for Normal was ever agreed and the bot is not a human proxy for casual play. Recorded as an open item for the user in the round-2 report and in the final report (T03).
+- Stopped after one extra round (not two): the goal was already met.
+- commit: see Git history
