@@ -1,7 +1,7 @@
 # Decisions: Difficulty Uplift Follow-up (Hard class gap)
 
 - Date: 2026-11-17
-- Status: Proposed (needs the user's choice)
+- Status: Confirmed (option A chosen by the user)
 - Related: `2026-11-17-difficulty-uplift.md`, `docs/balance/2026-11-17-uplift-final.md`
 
 ## Situation
@@ -20,4 +20,6 @@ The standard error of the gap at this sample size is about 1.1pp, so 5.3pp is no
 - **C. Relax the gap target for Hard to 6pp**: documents that low completion rates amplify relative differences; no code change.
 
 ## Decision
-Pending. Nothing was changed after the final measurement, to avoid tuning against the verification seed.
+- **Chosen: A. Accept as is.** The 5.3pp Hard class gap is treated as within statistical error of the 5pp target; no further tuning, and the difficulty uplift plan is closed.
+- Nothing was changed after the final measurement, to avoid tuning against the verification seed.
+- Revisit only if players report that the assassin is clearly weaker on Hard (final boss); option B (revert `assassin-shadow-duelist` cost to 3) is the first lever to try.

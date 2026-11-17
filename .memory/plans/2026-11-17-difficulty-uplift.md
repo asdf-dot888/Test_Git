@@ -2,7 +2,7 @@
 
 - Date: 2026-11-17
 - Decisions: [2026-11-17-difficulty-uplift](../decisions/2026-11-17-difficulty-uplift.md)
-- Status: done (2026-11-17) with one open follow-up: Hard class gap measured 5.3pp vs the 5pp target on the independent seed; see `.memory/decisions/2026-11-17-difficulty-uplift-followup.md`.
+- Status: done (2026-11-17) Hard class gap measured 5.3pp vs the 5pp target on the independent seed; the user accepted it as within statistical error (`.memory/decisions/2026-11-17-difficulty-uplift-followup.md`, option A).
 
 ## Goal
 Make enemies clearly stronger on both difficulties. Calibrate with the existing balance simulation so the average bot completion rate lands at Normal 55-65% and Hard 6-10%, with class gap <= 5pp on each difficulty, without touching the first battle.
