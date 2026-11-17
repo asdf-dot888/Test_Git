@@ -1,6 +1,6 @@
 # Task: T03 CLI, Report, and Baseline
 
-## Status: todo
+## Status: done
 
 ## Goal
 Expose the simulator through an npm script, render a Markdown balance report, and record the unmodified baseline measurement that P02 tunes against.
@@ -52,6 +52,10 @@ Task: T03-cli-and-baseline
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: full suite 734 tests (before the added classGap test), lint clean, `npm run build` clean, `playBotTurn` absent from `apps/web/dist`, `apps/api/dist`, `apps/leaderboard-api/dist`.
+- Baseline: 500 runs per cell (~0.15 s per run, ~8.5 min for all 6 cells), base seed 20261117, saved to `docs/balance/2026-11-17-baseline.md`.
+- Baseline results: Normal completion 99.6% / 98.8% / 100% (warrior / assassin / demonist; saturated, so the classes are indistinguishable and Normal is very easy for the bot). Hard completion 7.8% / 14.0% / 31.8% (gap 24.0pp, over the 5pp target). Hard per-encounter: warrior drops hardest at E9 (54.4%).
+- Deviation: `game-core/tsconfig.json` gained `"types": ["node"]` so the CLI can use `node:` modules (same setting as `apps/api`).
+- Deviation: saturation thresholds changed from 10%/90% to 2%/98% after the first baseline hid the Hard gap (documented in the plan); a test covers the 7.8% vs 31.8% case.
+- commit: see Git history

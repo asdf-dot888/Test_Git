@@ -22,13 +22,14 @@ Build a headless simulation bot on the pure-function engine, measure class win r
 
 ## Metrics and judging rule
 - Per (class, difficulty): expedition completion rate, mean battles cleared (0-12), per-battle win rate, per-encounter win rate (12 encounters), mean turns per battle, with 95% Wilson intervals.
-- Primary judge: completion-rate gap ≤ 5pp between classes. If any class completes <10% or >90% (metric saturated), judge by per-battle win rate instead and record that choice in the report. Success is judged per difficulty.
+- Primary judge: completion-rate gap ≤ 5pp between classes. If any class completes <2% or >98% (metric saturated, almost no information), judge by per-battle win rate instead and record that choice in the report. Success is judged per difficulty.
+- Rule correction (2026-11-17, during P01-T03): the first draft used 10%/90%. The baseline showed Hard completion of 7.8% / 14.0% / 31.8% (a 24pp gap) that the 10% threshold wrongly hid behind per-battle rates, so the thresholds were tightened to 2%/98%.
 - Seeds are paired: run `i` uses the same seed for every class.
 
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `todo` | Build the simulation bot, batch runner, CLI, and baseline report | [P01](../phases/2026-11-17-class-balance-simulation/P01-simulation-harness/phase.md) |
+| P01 | `done` | Build the simulation bot, batch runner, CLI, and baseline report | [P01](../phases/2026-11-17-class-balance-simulation/P01-simulation-harness/phase.md) |
 | P02 | `todo` | Tune numeric values from measurements and verify the ±5pp goal | [P02](../phases/2026-11-17-class-balance-simulation/P02-balance-tuning/phase.md) |
 
 ## Risks

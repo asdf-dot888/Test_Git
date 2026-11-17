@@ -20,8 +20,10 @@ const TOTAL_ENCOUNTERS = 12;
 const CLASS_REWARD_BONUS = 0.5;
 const FUSION_REWARD_BONUS = 1.0;
 
-export const SATURATION_LOW = 0.1;
-export const SATURATION_HIGH = 0.9;
+// Completion rates this close to 0% or 100% carry almost no class information.
+// (A first draft used 10%/90%, which wrongly hid a 7.8% vs 31.8% Hard-mode gap.)
+export const SATURATION_LOW = 0.02;
+export const SATURATION_HIGH = 0.98;
 
 // ---------------------------------------------------------------------------
 // Reward policy

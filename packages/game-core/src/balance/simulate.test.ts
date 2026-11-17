@@ -128,11 +128,21 @@ describe("classGap", () => {
 
   it("switches to the per-battle rate when a completion rate is saturated", () => {
     const cells = [
-      cell({ playerClass: "warrior", difficulty: "hard", completionRate: 0.02, perBattleWinRate: 0.7 }),
+      cell({ playerClass: "warrior", difficulty: "hard", completionRate: 0.01, perBattleWinRate: 0.7 }),
       cell({ playerClass: "assassin", difficulty: "hard", completionRate: 0.3, perBattleWinRate: 0.75 }),
     ];
     const gap = classGap(cells, "hard");
     expect(gap.metric).toBe("perBattle");
     expect(gap.gapPp).toBeCloseTo(5, 6);
+  });
+
+  it("keeps the completion rate for low but informative values such as 7.8%", () => {
+    const cells = [
+      cell({ playerClass: "warrior", difficulty: "hard", completionRate: 0.078, perBattleWinRate: 0.896 }),
+      cell({ playerClass: "demonist", difficulty: "hard", completionRate: 0.318, perBattleWinRate: 0.934 }),
+    ];
+    const gap = classGap(cells, "hard");
+    expect(gap.metric).toBe("completion");
+    expect(gap.gapPp).toBeCloseTo(24, 6);
   });
 });
