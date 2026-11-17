@@ -1,6 +1,6 @@
 # Task: T02 Run Simulator
 
-## Status: todo
+## Status: done
 
 ## Goal
 Simulate a full 12-encounter expedition with the bot (battle play, victory acknowledgement, reward selection, advancing) and aggregate results over many seeds, classes, and difficulties.
@@ -56,6 +56,8 @@ Task: T02-run-simulator
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: balance tests 16/16, lint clean, game-core build clean.
+- Measured speed: about 0.14 s per simulated run (used to size the T03 baseline).
+- Extra exports beyond the blueprint: `summarizeCell`, `SATURATION_LOW/HIGH`, `BatchOptions.onCellDone` (progress callback for the CLI), `CellSummary.perEncounterAttempts`.
+- commit: see Git history
