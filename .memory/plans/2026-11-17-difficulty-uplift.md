@@ -21,7 +21,7 @@ Make enemies clearly stronger on both difficulties. Calibrate with the existing 
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `todo` | Mechanics: Normal turn planner, per-difficulty stat tables, report target check (no balance change by default) | [P01](../phases/2026-11-17-difficulty-uplift/P01-mechanics/phase.md) |
+| P01 | `done` | Mechanics: Normal turn planner, per-difficulty stat tables, report target check (no balance change by default) | [P01](../phases/2026-11-17-difficulty-uplift/P01-mechanics/phase.md) |
 | P02 | `todo` | Calibrate with simulation to the target ranges, then verify on an independent seed | [P02](../phases/2026-11-17-difficulty-uplift/P02-calibration/phase.md) |
 
 ## Risks

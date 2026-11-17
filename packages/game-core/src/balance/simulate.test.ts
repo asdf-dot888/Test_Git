@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createRun } from "../engine.js";
 import type { CardInstance, PlayerClass, RunDifficulty, RunState } from "../types.js";
 import {
+  averageCompletion,
   chooseBotReward,
   classGap,
   simulateBatch,
@@ -144,5 +145,22 @@ describe("classGap", () => {
     const gap = classGap(cells, "hard");
     expect(gap.metric).toBe("completion");
     expect(gap.gapPp).toBeCloseTo(24, 6);
+  });
+});
+
+describe("averageCompletion", () => {
+  it("averages one difficulty and ignores the others", () => {
+    const cells = [
+      cell({ playerClass: "warrior", difficulty: "normal", completionRate: 0.5 }),
+      cell({ playerClass: "assassin", difficulty: "normal", completionRate: 0.7 }),
+      cell({ playerClass: "warrior", difficulty: "hard", completionRate: 0.1 }),
+    ];
+    expect(averageCompletion(cells, "normal")).toBeCloseTo(0.6, 10);
+    expect(averageCompletion(cells, "hard")).toBeCloseTo(0.1, 10);
+  });
+
+  it("is null when no cell matches", () => {
+    expect(averageCompletion([], "normal")).toBeNull();
+    expect(averageCompletion([cell({ playerClass: "warrior", difficulty: "hard" })], "normal")).toBeNull();
   });
 });

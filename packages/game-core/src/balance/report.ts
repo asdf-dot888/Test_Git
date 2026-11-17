@@ -1,5 +1,5 @@
 import type { PlayerClass, RunDifficulty } from "../types.js";
-import { classGap, type CellSummary } from "./simulate.js";
+import { averageCompletion, classGap, type CellSummary } from "./simulate.js";
 
 /** Dev-only Markdown report renderer. Not exported from the package index. */
 
@@ -11,6 +11,12 @@ export interface ReportMeta {
 }
 
 export const TARGET_GAP_PP = 5;
+
+/** Accepted range for the average completion rate of the three classes (difficulty uplift decision D02). */
+export const COMPLETION_TARGETS: Record<RunDifficulty, readonly [number, number]> = {
+  normal: [0.55, 0.65],
+  hard: [0.06, 0.1],
+};
 
 const CLASS_NAMES: Record<PlayerClass, string> = {
   warrior: "전사",
@@ -79,6 +85,15 @@ export function renderReport(cells: readonly CellSummary[], meta: ReportMeta): s
     const metricName = gap.metric === "completion" ? "완주율" : "전투 승률(완주율이 포화되어 대체)";
     const verdict = gap.gapPp <= TARGET_GAP_PP ? "목표 달성" : "목표 초과";
     lines.push(`- ${DIFFICULTY_NAMES[difficulty]}: 지표 ${metricName}, 최대 격차 ${gap.gapPp.toFixed(1)}%p (목표 ${TARGET_GAP_PP}%p 이내) → ${verdict}`);
+  }
+
+  lines.push("", "## 난이도 목표 판정", "");
+  for (const difficulty of difficultiesIn(cells)) {
+    const average = averageCompletion(cells, difficulty);
+    if (average === null) continue;
+    const [low, high] = COMPLETION_TARGETS[difficulty];
+    const position = average < low ? "범위보다 어려움" : average > high ? "범위보다 쉬움" : "범위 안";
+    lines.push(`- ${DIFFICULTY_NAMES[difficulty]}: 직업 평균 완주율 ${percent(average)}, 목표 ${percent(low)} ~ ${percent(high)} → ${position}`);
   }
   lines.push("");
   return lines.join("\n");

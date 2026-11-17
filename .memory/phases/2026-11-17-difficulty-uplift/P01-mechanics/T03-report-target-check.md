@@ -1,6 +1,6 @@
 # Task: T03 Report Target Check
 
-## Status: todo
+## Status: done
 
 ## Goal
 Make the balance report state whether the average completion rate hits the difficulty targets, alongside the existing class-gap verdict.
@@ -42,6 +42,6 @@ Task: T03-report-target-check
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete: `averageCompletion`, `COMPLETION_TARGETS`, "난이도 목표 판정" report section.
+- [x] validation passed: 786 tests, lint clean, build clean.
+- commit: see Git history

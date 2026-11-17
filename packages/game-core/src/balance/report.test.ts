@@ -56,3 +56,24 @@ describe("renderReport", () => {
     expect(renderReport([sparse], META)).toContain("| -");
   });
 });
+
+describe("renderReport difficulty targets", () => {
+  it("reports where the average completion sits against each target range", () => {
+    const easy = renderReport([cell("warrior", "normal", 1), cell("assassin", "normal", 1), cell("warrior", "hard", 0.08)], META);
+    expect(easy).toContain("## 난이도 목표 판정");
+    expect(easy).toContain("일반: 직업 평균 완주율 100.0%, 목표 55.0% ~ 65.0% → 범위보다 쉬움");
+    expect(easy).toContain("하드: 직업 평균 완주율 8.0%, 목표 6.0% ~ 10.0% → 범위 안");
+
+    const inside = renderReport([cell("warrior", "normal", 0.6), cell("assassin", "normal", 0.6)], META);
+    expect(inside).toContain("→ 범위 안");
+
+    const harder = renderReport([cell("warrior", "hard", 0.03)], META);
+    expect(harder).toContain("하드: 직업 평균 완주율 3.0%, 목표 6.0% ~ 10.0% → 범위보다 어려움");
+  });
+
+  it("keeps the earlier sections", () => {
+    const report = renderReport([cell("warrior", "normal", 0.6)], META);
+    expect(report).toContain("## 직업 격차 판정");
+    expect(report).toContain("### 인카운터별 승률");
+  });
+});

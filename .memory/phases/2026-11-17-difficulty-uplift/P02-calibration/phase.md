@@ -8,4 +8,4 @@
 | T03 | `todo` | Independent-seed verification, docs, close-out | [T03](./T03-final-verification.md) |
 
 ## Progress
-- done: 0/3 (active: none; blocked until P01 completes)
+- done: 0/3 (active: T01)

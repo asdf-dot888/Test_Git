@@ -266,6 +266,12 @@ export function simulateBatch(options: BatchOptions): CellSummary[] {
   return summaries;
 }
 
+export function averageCompletion(cells: readonly CellSummary[], difficulty: RunDifficulty): number | null {
+  const relevant = cells.filter((cell) => cell.difficulty === difficulty);
+  if (relevant.length === 0) return null;
+  return relevant.reduce((total, cell) => total + cell.completionRate, 0) / relevant.length;
+}
+
 export interface ClassGap {
   metric: "completion" | "perBattle";
   gapPp: number;
