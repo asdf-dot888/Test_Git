@@ -23,6 +23,7 @@ const MAX_BOARD = 6;
 const HERO_HEALTH = 30;
 const INITIAL_MANA = 5;
 const MAX_MANA = 10;
+const SOUL_SHARD_HERO_POWER_COST = 3;
 const HARD_PHASE_HERO_HEALTH_BONUS: Record<RunState["phase"], number> = { 1: 0, 2: 8, 3: 16 };
 const HARD_PHASE_MINION_STAT_BONUS: Record<RunState["phase"], number> = { 1: 0, 2: 1, 3: 2 };
 
@@ -1143,7 +1144,9 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
     }
   }
   if (next.playerClass === "demonist") {
-    if (battle.soulShards < 3) fail("INVALID_ACTION", "Demonist needs 3 soul shards to use this power.");
+    if (battle.soulShards < SOUL_SHARD_HERO_POWER_COST) {
+      fail("INVALID_ACTION", `Demonist needs ${SOUL_SHARD_HERO_POWER_COST} soul shards to use this power.`);
+    }
     if (battle.playerBoard.length >= MAX_BOARD) fail("MAX_BOARD", "The player board is full.");
   }
 
@@ -1156,7 +1159,7 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
     return consumeOpeningHandRedraw(removeDeadMinions(next, "enemy"));
   }
   if (next.playerClass === "warrior") {
-    battle.playerArmor += 2;
+    battle.playerArmor += 3;
     return consumeOpeningHandRedraw(next);
   }
 
@@ -1165,7 +1168,7 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
     const picked = pickIndex(demonIds.length, battle.rngState);
     battle.rngState = picked.state;
     const cardId = demonIds[picked.value]!;
-    battle.soulShards -= 3;
+    battle.soulShards -= SOUL_SHARD_HERO_POWER_COST;
     const summoned = createMinion(next, cardId, "player", battle.turnNumber);
     summoned.run.battle!.playerBoard.push(summoned.minion);
     return consumeOpeningHandRedraw(summoned.run);
@@ -1507,5 +1510,6 @@ export const gameConstants = {
   heroHealth: HERO_HEALTH,
   initialMana: INITIAL_MANA,
   maxMana: MAX_MANA,
+  soulShardHeroPowerCost: SOUL_SHARD_HERO_POWER_COST,
   hardAiBeamWidth,
 } as const;

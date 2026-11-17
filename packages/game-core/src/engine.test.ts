@@ -548,10 +548,10 @@ describe("class hero powers and battle resources", () => {
 
   it("grants warrior armor and absorbs full and partial hero damage before health", () => {
     let run = useHeroPower(createRun(1210, "warrior"));
-    expect(run.battle?.playerArmor).toBe(2);
+    expect(run.battle?.playerArmor).toBe(3);
     expect(run.battle?.playerMana.current).toBe(3);
 
-    for (const [index, attack] of [2, 5].entries()) {
+    for (const [index, attack] of [3, 5].entries()) {
       const battle = activeBattle(run);
       battle.enemyHand = [];
       battle.enemyBoard = [{ instanceId: `armor-test-${index}`, cardId: "ash-wolf", owner: "enemy", attack, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false }];

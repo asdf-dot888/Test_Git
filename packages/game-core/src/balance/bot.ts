@@ -340,7 +340,7 @@ function heroPowerPhase(ctx: TurnContext): void {
   if (playerClass === "warrior") {
     attempt(ctx, (run) => useHeroPower(run));
   } else if (playerClass === "demonist") {
-    if (battle.soulShards >= 3 && battle.playerBoard.length < gameConstants.maxBoard) attempt(ctx, (run) => useHeroPower(run));
+    if (battle.soulShards >= gameConstants.soulShardHeroPowerCost && battle.playerBoard.length < gameConstants.maxBoard) attempt(ctx, (run) => useHeroPower(run));
   } else {
     const target = bestKillTarget(battle.enemyBoard, 2);
     const targetId = target?.instanceId ?? ENEMY_HERO_ID;

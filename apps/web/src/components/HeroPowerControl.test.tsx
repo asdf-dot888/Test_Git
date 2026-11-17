@@ -31,7 +31,7 @@ describe("HeroPowerControl", () => {
 
     expect(onActivate).toHaveBeenCalledOnce();
     expect(container.querySelector(".hero-power-cost-badge.is-mana")?.textContent).toContain("2");
-    expect(screen.getByText(/방어도 2/)).toBeTruthy();
+    expect(screen.getByText(/방어도 3/)).toBeTruthy();
   });
 
   it("shows the Demonist's mana, soul-shard cost, and current shard count", () => {

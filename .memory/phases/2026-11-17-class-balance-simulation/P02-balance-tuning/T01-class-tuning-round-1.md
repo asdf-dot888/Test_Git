@@ -1,6 +1,6 @@
 # Task: T01 Class Tuning Round 1
 
-## Status: todo
+## Status: done
 
 ## Goal
 Use the baseline report to apply a first, small set of numeric changes that move the class gap toward ±5pp.
@@ -49,6 +49,9 @@ Task: T01-class-tuning-round-1
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete (6 numeric edits; see `docs/balance/2026-11-17-round1.md`)
+- [x] validation passed: 736 tests, lint clean, build clean.
+- Result: Hard completion gap 24.0pp -> 11.8pp (warrior 15.8%, assassin 14.0%, demonist 25.8%). Normal stays saturated.
+- Findings used: hero-power shard cost (3 -> 4) barely moved the demonist (-2pp), so it was not adopted; demonist card health nerfs moved it -7.6pp; warrior armor +1 and two attack +1 moved it +7.6pp. The warrior was weakest, not over-efficient as first hypothesized.
+- Code note: `gameConstants.soulShardHeroPowerCost` added (value 3); bot reads it. Updated `engine.test.ts` armor test (armor 3, first hit 3) and `HeroPowerControl.test.tsx` (방어도 3).
+- commit: see Git history
