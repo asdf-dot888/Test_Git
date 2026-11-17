@@ -1,17 +1,18 @@
 ﻿# Current Context
 
 ## Active Plan
-[Production Release v1.0.3](./plans/2026-11-12-production-release-v1-0-3.md)
+[Class/Card/Enemy Balance via Simulation Bot](./plans/2026-11-17-class-balance-simulation.md)
 
 ## Active Phase
-[P01 Production Release](./phases/2026-11-12-production-release-v1-0-3/P01-release/phase.md)
+[P01 Simulation Harness](./phases/2026-11-17-class-balance-simulation/P01-simulation-harness/phase.md)
 
 ## Active Task
-None — production release v1.0.3 is complete.
+[P01-T02 Run Simulator](./phases/2026-11-17-class-balance-simulation/P01-simulation-harness/T02-run-simulator.md)
 
 ## Status
-- T01 complete; 694 tests, lint, and build passed.
-- T02 complete; v1.0.3 deployed, verified, recorded, and pushed.
+- Decision: [2026-11-17-class-balance-simulation](./decisions/2026-11-17-class-balance-simulation.md) confirmed.
+- P01-T01 complete: `packages/game-core/src/balance/bot.ts` + tests; 5 bot tests, lint, and build passed.
+- User instruction: continue executing tasks in order without asking for confirmation.
 
 ## Next Step (IMPORTANT)
-No active task. Production is serving v1.0.3.
+Implement P01-T02: create `packages/game-core/src/balance/simulate.ts` and `simulate.test.ts` per the blueprint, run validation, commit, mark done, update `phase.md`, and advance this pointer to P01-T03.
