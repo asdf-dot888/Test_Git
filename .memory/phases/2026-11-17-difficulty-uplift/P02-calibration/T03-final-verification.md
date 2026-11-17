@@ -1,6 +1,6 @@
 # Task: T03 Final Verification
 
-## Status: todo
+## Status: done
 
 ## Goal
 Confirm the targets on an independent seed with a larger sample, run all quality gates, update docs, and close the plan.
@@ -43,6 +43,7 @@ Task: T03-final-verification
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete: `docs/balance/2026-11-17-uplift-final.md` (seed 20281117, 1000 runs per cell) plus summary; README difficulty-target section added; UI text checked (no change needed).
+- [x] validation passed: 788 tests, lint clean, build clean, `playBotTurn` absent from web/api/leaderboard bundles.
+- Result: Normal avg 62.9% (61.5 / 64.8 / 62.3), gap 3.3pp - met. Hard avg 6.3% (8.8 / 3.5 / 6.7) in range, gap 5.3pp - 0.3pp over the 5pp target (within statistical error, SE about 1.1pp). Recorded as a follow-up decision rather than tuned further: `.memory/decisions/2026-11-17-difficulty-uplift-followup.md`.
+- commit: see Git history
