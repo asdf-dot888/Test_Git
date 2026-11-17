@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   BOSSES,
@@ -1944,3 +1945,143 @@ describe("Hard expedition enemy health and tactical AI", () => {
   });
 });
 
+
+describe("enemy turn characterization (first battle and Hard planner stay unchanged)", () => {
+  // Hashes were captured from the engine before the Normal turn planner was added.
+  const GOLDEN_HASHES: Record<string, string> = {
+    "normal-first-9101": "86f8d8b9555d",
+    "normal-first-9102": "652364184c4f",
+    "normal-first-9103": "d0a08427ab45",
+    "normal-first-9104": "25b524ce4bd7",
+    "normal-first-9105": "ac462d6829b9",
+    "hard-first-9201": "ff716818aecc",
+    "hard-first-9202": "bace8e48b0e9",
+    "hard-first-9203": "b9b445199362",
+    "hard-second-9301": "252b28f994e5",
+    "hard-second-9302": "454baf62468a",
+    "hard-second-9303": "dc7184f09568",
+  };
+
+  function summarize(run: RunState) {
+    const battle = run.battle;
+    if (!battle) return { status: run.status };
+    return {
+      turn: battle.turnNumber,
+      status: battle.status,
+      heroHealth: battle.playerHero.health,
+      enemyHeroHealth: battle.enemyHero.health,
+      enemyBoard: battle.enemyBoard.map((entry) => `${entry.cardId}:${entry.attack}/${entry.health}`),
+      enemyHand: battle.enemyHand.map((card) => card.cardId),
+    };
+  }
+
+  function playThreeEnemyTurns(seed: number, difficulty: "normal" | "hard", completedBattles: number): string {
+    let run = createRun(seed, "warrior", difficulty);
+    run.completedBattles = completedBattles;
+    const snapshots = [];
+    for (let turn = 0; turn < 3; turn += 1) {
+      run = endPlayerTurn(run);
+      snapshots.push(summarize(run));
+    }
+    return createHash("sha1").update(JSON.stringify(snapshots)).digest("hex").slice(0, 12);
+  }
+
+  it.each([
+    ["normal-first-9101", 9101, "normal", 0], ["normal-first-9102", 9102, "normal", 0], ["normal-first-9103", 9103, "normal", 0],
+    ["normal-first-9104", 9104, "normal", 0], ["normal-first-9105", 9105, "normal", 0],
+    ["hard-first-9201", 9201, "hard", 0], ["hard-first-9202", 9202, "hard", 0], ["hard-first-9203", 9203, "hard", 0],
+    ["hard-second-9301", 9301, "hard", 1], ["hard-second-9302", 9302, "hard", 1], ["hard-second-9303", 9303, "hard", 1],
+  ] as const)("%s plays three enemy turns exactly as before", (key, seed, difficulty, completedBattles) => {
+    expect(playThreeEnemyTurns(seed, difficulty, completedBattles)).toBe(GOLDEN_HASHES[key]);
+  });
+});
+
+describe("Normal enemy turn planner (second battle onward, no hidden information)", () => {
+  function firstPlayed(run: RunState): string | undefined {
+    const action = resolveEnemyTurnWithPlayback(run).steps[0]?.action;
+    return action?.type === "play-minion" || action?.type === "cast-spell" ? action.cardId : undefined;
+  }
+
+  function secondBattleChoiceRun(
+    difficulty: "normal" | "hard",
+    options: { playerHand?: CardInstance[]; playerDraws?: CardInstance[]; enemyCards?: [string, string] },
+  ) {
+    const [firstCard, secondCard] = options.enemyCards ?? ["thorn-brute", "moon-stag"];
+    const run = asEnemyTurn(createRun(8802, "warrior", difficulty));
+    run.completedBattles = 1;
+    const battle = activeBattle(run);
+    battle.enemyId = "boss-grave-king";
+    battle.enemyMana.current = 5;
+    battle.enemyHand = [instance("choice-one", firstCard), instance("choice-two", secondCard)];
+    battle.enemyBoard = [minion({ instanceId: "enemy-board", owner: "enemy", attack: 2, health: 8, maxHealth: 8, summonedTurn: 0 })];
+    battle.enemyStarterDeck = [];
+    battle.enemyDrawPile = [];
+    battle.hand = options.playerHand ?? [];
+    battle.drawPile = options.playerDraws ?? [];
+    return run;
+  }
+
+  it("ramps the Normal beam width separately from Hard", () => {
+    expect(gameConstants.normalAiBeamWidth(0)).toBe(4);
+    expect(gameConstants.normalAiBeamWidth(1)).toBe(5);
+    expect(gameConstants.normalAiBeamWidth(12)).toBe(16);
+    expect(gameConstants.normalAiBeamWidth(40)).toBe(16);
+    expect(gameConstants.normalAiBeamWidth(12)).toBeLessThan(gameConstants.hardAiBeamWidth(12));
+  });
+
+  it("plans a legal multi-card sequence from the second battle", () => {
+    const firstBattle = asEnemyTurn(createRun(8810, "warrior", "normal"));
+    const state = activeBattle(firstBattle);
+    state.enemyMana.current = 2;
+    state.enemyHand = [instance("plan-shadow", "shadow-bolt"), instance("plan-imp", "cinder-imp")];
+    state.enemyStarterDeck = [];
+    state.enemyDrawPile = [];
+    const laterBattle = copyRun(firstBattle);
+    laterBattle.completedBattles = 1;
+    const plays = resolveEnemyTurnWithPlayback(laterBattle).steps
+      .flatMap(({ action }) => action.type === "cast-spell" || action.type === "play-minion" ? [action.cardId] : []);
+    expect(plays).toEqual(expect.arrayContaining(["shadow-bolt", "cinder-imp"]));
+    expect(plays).toHaveLength(2);
+  });
+
+  it("does not change its card choice when the player's hand or draw order changes", () => {
+    const empty = firstPlayed(secondBattleChoiceRun("normal", {}));
+    const withHiddenClear = firstPlayed(secondBattleChoiceRun("normal", { playerHand: [instance("known-board-clear", "soul-lance")] }));
+    const withHiddenDraws = firstPlayed(secondBattleChoiceRun("normal", { playerDraws: [instance("large-next-draw", "moon-stag"), instance("removal-draw", "meteor-shard")] }));
+    expect(empty).toBeDefined();
+    expect(withHiddenClear).toBe(empty);
+    expect(withHiddenDraws).toBe(empty);
+  });
+
+  it("keeps Hard's hidden-information scoring in the planner", () => {
+    const enemyCards: [string, string] = ["iron-hound", "rune-smith"];
+    const clearSpell = [instance("known-board-clear", "soul-lance")];
+    const hardEmpty = firstPlayed(secondBattleChoiceRun("hard", { enemyCards }));
+    const hardWithClear = firstPlayed(secondBattleChoiceRun("hard", { enemyCards, playerHand: clearSpell }));
+    expect(hardEmpty).toBe("iron-hound");
+    expect(hardWithClear).toBe("rune-smith");
+    // The same cards under Normal ignore the hidden spell.
+    const normalEmpty = firstPlayed(secondBattleChoiceRun("normal", { enemyCards }));
+    expect(firstPlayed(secondBattleChoiceRun("normal", { enemyCards, playerHand: clearSpell }))).toBe(normalEmpty);
+  });
+
+  it("never overspends mana or exceeds the board cap across seeds and turns", () => {
+    for (let seed = 9400; seed < 9420; seed += 1) {
+      let run = createRun(seed, "assassin", "normal");
+      run.completedBattles = 2;
+      for (let turn = 0; turn < 3 && run.status === "active" && run.battle?.status === "active"; turn += 1) {
+        run = endPlayerTurn(run);
+        const battle = run.battle;
+        if (!battle) break;
+        expect(battle.enemyMana.current).toBeGreaterThanOrEqual(0);
+        expect(battle.enemyBoard.length).toBeLessThanOrEqual(gameConstants.maxBoard);
+      }
+    }
+  });
+
+  it("is deterministic for identical input", () => {
+    const run = asEnemyTurn(createRun(9450, "demonist", "normal"));
+    run.completedBattles = 3;
+    expect(JSON.stringify(resolveEnemyTurnWithPlayback(run).run)).toBe(JSON.stringify(resolveEnemyTurnWithPlayback(run).run));
+  });
+});

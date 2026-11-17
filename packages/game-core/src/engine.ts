@@ -862,11 +862,19 @@ function hardAiBeamWidth(completedBattles: number): number {
   return Math.min(32, 8 + 2 * completedBattles);
 }
 
-function planHardEnemyTurn(run: RunState, enemy: EnemyDefinition): string[] {
+function normalAiBeamWidth(completedBattles: number): number {
+  return Math.min(16, 4 + completedBattles);
+}
+
+// Plans a whole enemy turn from the second battle onward. Hard keeps its hidden-information scoring;
+// Normal scores with its own difficulty (so it never reads the player's hand or draw pile) and
+// re-seeds each simulated step so the plan cannot rely on the real random outcomes.
+function planEnemyTurn(run: RunState, enemy: EnemyDefinition): string[] {
   const initialBattle = run.battle;
   if (!initialBattle || run.completedBattles === 0) return [];
   const initialSlots = new Map(initialBattle.enemyHand.map((instance, index) => [instance.instanceId, index]));
-  const beamWidth = hardAiBeamWidth(run.completedBattles);
+  const isHard = run.difficulty === "hard";
+  const beamWidth = isHard ? hardAiBeamWidth(run.completedBattles) : normalAiBeamWidth(run.completedBattles);
   let beam: HardPlanNode[] = [{ run: cloneRun(run), sequence: [], score: 0, tieBreak: [] }];
   let best: HardPlanNode = beam[0]!;
   const maxDepth = Math.min(30, initialBattle.enemyHand.length + initialBattle.enemyDrawPile.length + 1);
@@ -882,9 +890,10 @@ function planHardEnemyTurn(run: RunState, enemy: EnemyDefinition): string[] {
         .sort((left, right) => left.handSlot - right.handSlot || left.instance.instanceId.localeCompare(right.instance.instanceId));
       for (const { instance, handSlot } of candidates) {
         const card = getCard(instance.cardId);
-        const transitionScore = scoreEnemyCard(card, battle, enemy, "hard", run.completedBattles);
+        const transitionScore = scoreEnemyCard(card, battle, enemy, run.difficulty, run.completedBattles);
         const simulated = playEnemyCard(cloneRun(node.run), instance.instanceId, true);
         if (!simulated.battle) continue;
+        if (!isHard) simulated.battle.rngState = normalizeSeed(simulated.battle.rngState ^ 0x9e3779b9);
         const candidate: HardPlanNode = {
           run: simulated,
           sequence: [...node.sequence, instance.instanceId],
@@ -1376,12 +1385,12 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   const drawn = takeEnemyDraw(next, battle);
   if (drawn) battle.enemyHand.push(drawn);
 
-  const hardPlan = next.difficulty === "hard" && next.completedBattles > 0 ? planHardEnemyTurn(next, enemy) : null;
+  const turnPlan = next.completedBattles > 0 ? planEnemyTurn(next, enemy) : null;
   let plays = 0;
   while (plays < 30 && next.status === "active" && next.battle?.playerHero.health !== 0) {
     battle = next.battle!;
-    const selected = hardPlan
-      ? battle.enemyHand.find((instance) => instance.instanceId === hardPlan[plays]) ?? null
+    const selected = turnPlan
+      ? battle.enemyHand.find((instance) => instance.instanceId === turnPlan[plays]) ?? null
       : selectEnemyCard(battle, enemy, next.difficulty, next.completedBattles);
     if (!selected) break;
     const beforeHandSize = battle.enemyHand.length;
@@ -1512,4 +1521,5 @@ export const gameConstants = {
   maxMana: MAX_MANA,
   soulShardHeroPowerCost: SOUL_SHARD_HERO_POWER_COST,
   hardAiBeamWidth,
+  normalAiBeamWidth,
 } as const;
