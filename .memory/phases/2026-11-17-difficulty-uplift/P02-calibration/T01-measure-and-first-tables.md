@@ -1,6 +1,6 @@
 # Task: T01 Measure and First Tables
 
-## Status: todo
+## Status: done
 
 ## Goal
 Measure how much the Normal planner alone raises difficulty, then set a first guess for the Normal and Hard bonus tables.
@@ -46,6 +46,8 @@ Task: T01-measure-and-first-tables
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete: AI-only report `docs/balance/2026-11-17-uplift-ai-only.md` (Normal 99.4%, Hard 15.3%; ~7 minutes for 3000 runs, no slowdown); first tables found by experiments; round-1 report `docs/balance/2026-11-17-uplift-round1.md` (Normal 66.0% / gap 13.8pp, Hard 9.0% / gap 2.0pp).
+- [x] validation passed: 788 tests, lint clean, build clean.
+- Finding: hero health bonuses and beam width have no measurable effect; minion stat bonuses are the only strong lever, and +1 steps are too coarse, so the table was split into `minionAttack` / `minionHealth` (structure change beyond the blueprint, numbers only).
+- Committed together with T02 (the table values and class corrections are entangled in the same files).
+- commit: see T02

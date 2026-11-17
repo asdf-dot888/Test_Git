@@ -184,7 +184,7 @@ const BOSS_CARD_CATALOG: readonly CardDefinition[] = [
 const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
   forClass(minion("warrior-vanguard", "전위병", 1, 1, 4), "warrior"),
   forClass(minion("warrior-shield-maiden", "방패 여전사", 2, 2, 4, "normal", { kind: "battlecryBuff", attack: 0, health: 1, target: "self" }), "warrior"),
-  forClass(minion("warrior-stonewall", "돌벽 수호자", 3, 3, 6), "warrior"),
+  forClass(minion("warrior-stonewall", "돌벽 수호자", 3, 2, 6), "warrior"),
   forClass(minion("warrior-banner-captain", "깃발 대장", 3, 3, 3, "normal", { kind: "battlecryBuff", attack: 1, health: 1, target: "otherFriendly" }), "warrior"),
   forClass(minion("warrior-oath-knight", "맹세의 기사", 4, 4, 6), "warrior"),
   forClass(minion("warrior-iron-ram", "철갑 돌격수", 4, 4, 4), "warrior"),
@@ -196,7 +196,7 @@ const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
   forClass(minion("assassin-quickblade", "쾌검 암살자", 1, 3, 1), "assassin"),
   forClass(minion("assassin-night-knife", "밤의 비수", 2, 3, 2), "assassin"),
   forClass(minion("assassin-venom-dancer", "맹독 무희", 3, 4, 2, "normal", { kind: "battlecryBuff", attack: 1, health: 0, target: "self" }), "assassin"),
-  forClass(minion("assassin-shadow-duelist", "그림자 결투가", 3, 3, 2, "normal", { kind: "deathSummon", cardId: "bone-rat", count: 1 }), "assassin"),
+  forClass(minion("assassin-shadow-duelist", "그림자 결투가", 4, 3, 2, "normal", { kind: "deathSummon", cardId: "bone-rat", count: 1 }), "assassin"),
   forClass(minion("assassin-silk-stalker", "비단 추적자", 4, 5, 2), "assassin"),
   forClass(minion("assassin-blood-viper", "핏빛 독사", 4, 4, 3), "assassin"),
   forClass(minion("assassin-executioner", "처형인", 5, 6, 2), "assassin"),
@@ -207,10 +207,10 @@ const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
   forClass(minion("demonist-imp-caller", "임프 소환사", 3, 1, 3, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 1 }), "demonist"),
   forClass(minion("demonist-hellbound-adept", "지옥에 묶인 수련자", 2, 2, 2), "demonist", "demon"),
   forClass(minion("demonist-pit-ritualist", "구덩이 의식술사", 4, 2, 3, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
-  forClass(minion("demonist-demon-houndmaster", "악마 사냥개 조련사", 4, 4, 3), "demonist"),
-  forClass(minion("demonist-infernal-guardian", "지옥불 수호자", 4, 3, 5), "demonist", "demon"),
+  forClass(minion("demonist-demon-houndmaster", "악마 사냥개 조련사", 5, 4, 3), "demonist"),
+  forClass(minion("demonist-infernal-guardian", "지옥불 수호자", 5, 3, 5), "demonist", "demon"),
   forClass(minion("demonist-summoner", "심연의 소환사", 6, 4, 4, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
-  forClass(minion("demonist-abyssal-matriarch", "심연의 여군주", 6, 5, 5, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
+  forClass(minion("demonist-abyssal-matriarch", "심연의 여군주", 7, 5, 5, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
   forClass(spell("demonist-dark-rite", "어둠의 의식", 2, [{ kind: "summon", cardId: "demon-lesser-imp", count: 1 }]), "demonist"),
   forClass(spell("demonist-hellfire", "지옥불 작렬", 4, [{ kind: "damage", amount: 3, target: "enemyMinion" }]), "demonist"),
   forClass(spell("demonist-soul-bond", "영혼 결속", 2, [{ kind: "buff", attack: 1, health: 2, target: "playerMinion" }]), "demonist"),
@@ -258,7 +258,7 @@ const STARTER_CLASS_CARD_IDS: Readonly<Record<PlayerClass, readonly string[]>> =
 const classCards = (classId: PlayerClass): readonly string[] => STARTER_CLASS_CARD_IDS[classId];
 
 export const PLAYER_CLASS_DEFINITIONS: readonly PlayerClassDefinition[] = [
-  { id: "warrior", name: "전사", archetype: "체력과 방어력이 높은 하수인", heroPowerName: "방패 다지기", heroPowerDescription: "영웅에게 방어도 3을 부여합니다.", starterCardIds: classCards("warrior") },
+  { id: "warrior", name: "전사", archetype: "체력과 방어력이 높은 하수인", heroPowerName: "방패 다지기", heroPowerDescription: "영웅에게 방어도 4를 부여합니다.", starterCardIds: classCards("warrior") },
   { id: "assassin", name: "암살자", archetype: "공격력과 특수 효과가 강한 하수인", heroPowerName: "그림자 습격", heroPowerDescription: "선택한 적 하수인 또는 적 영웅에게 피해 2를 줍니다.", starterCardIds: classCards("assassin") },
   { id: "demonist", name: "악마술사", archetype: "악마 소환과 하수인 연계", heroPowerName: "하급 악마 소환", heroPowerDescription: "하급 임프 1마리를 소환합니다.", starterCardIds: classCards("demonist") },
 ];

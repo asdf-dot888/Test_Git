@@ -27,14 +27,23 @@ const SOUL_SHARD_HERO_POWER_COST = 3;
 type PhaseTable = Record<RunState["phase"], number>;
 interface EnemyPhaseBonus {
   heroHealth: PhaseTable;
-  minionStat: PhaseTable;
+  minionAttack: PhaseTable;
+  minionHealth: PhaseTable;
 }
 
 // Per-difficulty enemy bonuses by expedition phase. They never apply to the first battle of a run
 // (phase 1 with no completed battles; later phases always follow completed battles in real runs).
 const ENEMY_PHASE_BONUS: Record<RunDifficulty, EnemyPhaseBonus> = {
-  normal: { heroHealth: { 1: 0, 2: 0, 3: 0 }, minionStat: { 1: 0, 2: 0, 3: 0 } },
-  hard: { heroHealth: { 1: 0, 2: 8, 3: 16 }, minionStat: { 1: 0, 2: 1, 3: 2 } },
+  normal: {
+    heroHealth: { 1: 0, 2: 4, 3: 8 },
+    minionAttack: { 1: 1, 2: 1, 3: 1 },
+    minionHealth: { 1: 1, 2: 1, 3: 1 },
+  },
+  hard: {
+    heroHealth: { 1: 0, 2: 8, 3: 16 },
+    minionAttack: { 1: 1, 2: 1, 3: 2 },
+    minionHealth: { 1: 2, 2: 1, 3: 2 },
+  },
 };
 
 function enemyPhaseBonus(difficulty: RunDifficulty, phase: RunState["phase"], completedBattles: number, kind: keyof EnemyPhaseBonus): number {
@@ -193,16 +202,17 @@ function createMinion(
 
   const instance = fromCard ?? makeInstance(run, cardId, "summon");
   const nextRun = fromCard ? run : { ...run, nextInstanceNumber: run.nextInstanceNumber + 1 };
-  const statBonus = owner === "enemy" ? enemyPhaseBonus(run.difficulty, run.phase, run.completedBattles, "minionStat") : 0;
+  const attackBonus = owner === "enemy" ? enemyPhaseBonus(run.difficulty, run.phase, run.completedBattles, "minionAttack") : 0;
+  const healthBonus = owner === "enemy" ? enemyPhaseBonus(run.difficulty, run.phase, run.completedBattles, "minionHealth") : 0;
   return {
     run: nextRun,
     minion: {
       instanceId: instance.instanceId,
       cardId,
       owner,
-      attack: definition.minion.attack + statBonus,
-      health: definition.minion.maxHealth + statBonus,
-      maxHealth: definition.minion.maxHealth + statBonus,
+      attack: definition.minion.attack + attackBonus,
+      health: definition.minion.maxHealth + healthBonus,
+      maxHealth: definition.minion.maxHealth + healthBonus,
       summonedTurn: turnNumber,
       hasAttacked: false,
     },
@@ -1183,7 +1193,7 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
     return consumeOpeningHandRedraw(removeDeadMinions(next, "enemy"));
   }
   if (next.playerClass === "warrior") {
-    battle.playerArmor += 3;
+    battle.playerArmor += 4;
     return consumeOpeningHandRedraw(next);
   }
 

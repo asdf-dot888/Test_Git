@@ -1,6 +1,6 @@
 # Task: T02 Iterate to Targets
 
-## Status: todo
+## Status: done
 
 ## Goal
 Adjust numbers until both difficulties are inside the target ranges and class parity holds on both.
@@ -46,6 +46,8 @@ Task: T02-iterate-to-targets
 ```
 
 ## Progress
-- [ ] implementation complete (or skipped because T01 already met the targets, with evidence)
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete: rounds 2-4 (reports `docs/balance/2026-11-17-uplift-round2.md` .. `round4.md`). Final measured state (500 runs per cell, seed 20261117): Normal 60.6% / 65.2% / 64.8% (avg 63.5%, gap 4.6pp), Hard 9.4% / 5.2% / 6.6% (avg 7.1%, gap 4.2pp). Both difficulties inside the target ranges with class gap <= 5pp.
+- Deviation: 4 measurement rounds instead of the planned maximum of 3; round 3 met both averages but missed class parity, so one convergence round was added (recorded in the round-4 report). Not exceeded further.
+- Deviation: class numbers changed beyond hero powers/costs of the earlier plan only by one stat (`warrior-stonewall` attack 3 -> 2, a revert of an earlier buff).
+- [x] validation passed: 788 tests, lint clean, build clean.
+- commit: see Git history
