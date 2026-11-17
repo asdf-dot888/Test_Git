@@ -2085,3 +2085,72 @@ describe("Normal enemy turn planner (second battle onward, no hidden information
     expect(JSON.stringify(resolveEnemyTurnWithPlayback(run).run)).toBe(JSON.stringify(resolveEnemyTurnWithPlayback(run).run));
   });
 });
+
+describe("per-difficulty enemy phase bonus tables", () => {
+  function startAtEnemy(enemyId: string, difficulty: "normal" | "hard", phase: 1 | 2 | 3, completedBattles: number) {
+    const run = copyRun(createRun(8801, "warrior", difficulty));
+    run.battle = null;
+    run.completedBattles = completedBattles;
+    run.encounters[0]!.status = "pending";
+    run.encounters[0]!.enemyId = enemyId;
+    run.encounters[0]!.phase = phase;
+    return startBattle(run, enemyId);
+  }
+
+  function summonedAshWolf(run: RunState): MinionState | undefined {
+    const next = asEnemyTurn(run);
+    const battle = activeBattle(next);
+    battle.enemyMana.current = 5;
+    battle.enemyHand = [instance("table-ash-wolf", "ash-wolf")];
+    battle.enemyStarterDeck = [];
+    battle.enemyDrawPile = [];
+    return resolveEnemyTurn(next).battle?.enemyBoard.find(({ cardId }) => cardId === "ash-wolf");
+  }
+
+  it("exposes the tables read-only to callers and keeps Hard's numbers", () => {
+    expect(gameConstants.enemyPhaseBonus.hard.heroHealth).toEqual({ 1: 0, 2: 8, 3: 16 });
+    expect(gameConstants.enemyPhaseBonus.hard.minionStat).toEqual({ 1: 0, 2: 1, 3: 2 });
+    expect(gameConstants.enemyPhaseBonus.normal.heroHealth[3]).toBe(0);
+    expect(gameConstants.enemyPhaseBonus.normal.minionStat[2]).toBe(0);
+  });
+
+  it("leaves Normal enemy hero health and minions at their base values in every phase", () => {
+    expect(startAtEnemy("fallen-elf-scout", "normal", 3, 8).battle?.enemyHero).toMatchObject({ health: 19, maxHealth: 19 });
+    expect(startAtEnemy("boss-grave-king", "normal", 2, 3).battle?.enemyHero).toMatchObject({ health: 40, maxHealth: 40 });
+    expect(summonedAshWolf(startAtEnemy("fallen-elf-scout", "normal", 3, 8))).toMatchObject({ attack: 2, health: 1, maxHealth: 1 });
+  });
+
+  it("keeps Hard's phase bonuses for hero health and minions", () => {
+    expect(startAtEnemy("fallen-elf-scout", "hard", 2, 4).battle?.enemyHero).toMatchObject({ health: 30, maxHealth: 30 });
+    expect(startAtEnemy("fallen-elf-scout", "hard", 3, 8).battle?.enemyHero).toMatchObject({ health: 38, maxHealth: 38 });
+    expect(summonedAshWolf(startAtEnemy("fallen-elf-scout", "hard", 3, 8))).toMatchObject({ attack: 4, health: 3, maxHealth: 3 });
+  });
+
+  it("applies table values to Normal enemies after the first battle but never in the first battle", () => {
+    const normal = gameConstants.enemyPhaseBonus.normal;
+    const original = { heroPhase1: normal.heroHealth[1], statPhase1: normal.minionStat[1], heroPhase3: normal.heroHealth[3], statPhase3: normal.minionStat[3] };
+    try {
+      normal.heroHealth[1] = 5;
+      normal.minionStat[1] = 1;
+      normal.heroHealth[3] = 8;
+      normal.minionStat[3] = 1;
+      // First battle (phase 1, no completed battles): no bonus even with a non-zero phase-1 value.
+      expect(startAtEnemy("fallen-elf-scout", "normal", 1, 0).battle?.enemyHero).toMatchObject({ health: 19, maxHealth: 19 });
+      expect(summonedAshWolf(startAtEnemy("fallen-elf-scout", "normal", 1, 0))).toMatchObject({ attack: 2, health: 1 });
+      // Second battle in phase 1 gets the phase-1 value.
+      expect(startAtEnemy("fallen-elf-scout", "normal", 1, 1).battle?.enemyHero).toMatchObject({ health: 24, maxHealth: 24 });
+      expect(summonedAshWolf(startAtEnemy("fallen-elf-scout", "normal", 1, 1))).toMatchObject({ attack: 3, health: 2, maxHealth: 2 });
+      // Phase 3 uses its own value; player minions are never scaled.
+      expect(startAtEnemy("fallen-elf-scout", "normal", 3, 8).battle?.enemyHero).toMatchObject({ health: 27, maxHealth: 27 });
+      const playerRun = startAtEnemy("fallen-elf-scout", "normal", 3, 8);
+      activeBattle(playerRun).hand = [instance("player-table-wolf", "ash-wolf")];
+      activeBattle(playerRun).playerMana.current = 5;
+      expect(playMinion(playerRun, "player-table-wolf").battle?.playerBoard[0]).toMatchObject({ attack: 2, health: 1, maxHealth: 1 });
+    } finally {
+      normal.heroHealth[1] = original.heroPhase1;
+      normal.minionStat[1] = original.statPhase1;
+      normal.heroHealth[3] = original.heroPhase3;
+      normal.minionStat[3] = original.statPhase3;
+    }
+  });
+});

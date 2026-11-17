@@ -24,8 +24,22 @@ const HERO_HEALTH = 30;
 const INITIAL_MANA = 5;
 const MAX_MANA = 10;
 const SOUL_SHARD_HERO_POWER_COST = 3;
-const HARD_PHASE_HERO_HEALTH_BONUS: Record<RunState["phase"], number> = { 1: 0, 2: 8, 3: 16 };
-const HARD_PHASE_MINION_STAT_BONUS: Record<RunState["phase"], number> = { 1: 0, 2: 1, 3: 2 };
+type PhaseTable = Record<RunState["phase"], number>;
+interface EnemyPhaseBonus {
+  heroHealth: PhaseTable;
+  minionStat: PhaseTable;
+}
+
+// Per-difficulty enemy bonuses by expedition phase. They never apply to the first battle of a run
+// (phase 1 with no completed battles; later phases always follow completed battles in real runs).
+const ENEMY_PHASE_BONUS: Record<RunDifficulty, EnemyPhaseBonus> = {
+  normal: { heroHealth: { 1: 0, 2: 0, 3: 0 }, minionStat: { 1: 0, 2: 0, 3: 0 } },
+  hard: { heroHealth: { 1: 0, 2: 8, 3: 16 }, minionStat: { 1: 0, 2: 1, 3: 2 } },
+};
+
+function enemyPhaseBonus(difficulty: RunDifficulty, phase: RunState["phase"], completedBattles: number, kind: keyof EnemyPhaseBonus): number {
+  return phase === 1 && completedBattles === 0 ? 0 : ENEMY_PHASE_BONUS[difficulty][kind][phase];
+}
 
 function fail(code: ConstructorParameters<typeof GameRuleError>[0], message: string): never {
   throw new GameRuleError(code, message);
@@ -179,15 +193,16 @@ function createMinion(
 
   const instance = fromCard ?? makeInstance(run, cardId, "summon");
   const nextRun = fromCard ? run : { ...run, nextInstanceNumber: run.nextInstanceNumber + 1 };
+  const statBonus = owner === "enemy" ? enemyPhaseBonus(run.difficulty, run.phase, run.completedBattles, "minionStat") : 0;
   return {
     run: nextRun,
     minion: {
       instanceId: instance.instanceId,
       cardId,
       owner,
-      attack: definition.minion.attack + (owner === "enemy" && run.difficulty === "hard" ? HARD_PHASE_MINION_STAT_BONUS[run.phase] : 0),
-      health: definition.minion.maxHealth + (owner === "enemy" && run.difficulty === "hard" ? HARD_PHASE_MINION_STAT_BONUS[run.phase] : 0),
-      maxHealth: definition.minion.maxHealth + (owner === "enemy" && run.difficulty === "hard" ? HARD_PHASE_MINION_STAT_BONUS[run.phase] : 0),
+      attack: definition.minion.attack + statBonus,
+      health: definition.minion.maxHealth + statBonus,
+      maxHealth: definition.minion.maxHealth + statBonus,
       summonedTurn: turnNumber,
       hasAttacked: false,
     },
@@ -1052,7 +1067,7 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
   const shuffled = shuffle(run.deck, battleSeed);
   const enemyDeck = createEnemyDeck(enemy, shuffled.state, `${run.runId}-enemy-${encounterIndex + 1}`, run.difficulty);
   const existingHardBonus = run.difficulty === "hard" ? (enemy.kind === "boss" ? 5 : 3) : 0;
-  const phaseHealthBonus = run.difficulty === "hard" ? HARD_PHASE_HERO_HEALTH_BONUS[encounter.phase] : 0;
+  const phaseHealthBonus = enemyPhaseBonus(run.difficulty, encounter.phase, run.completedBattles, "heroHealth");
   const enemyMaxHealth = enemy.maxHealth + existingHardBonus + phaseHealthBonus;
   const nextRun = { ...run, phase: encounter.phase, battle: null } as RunState;
   const battle: BattleState = {
@@ -1522,4 +1537,5 @@ export const gameConstants = {
   soulShardHeroPowerCost: SOUL_SHARD_HERO_POWER_COST,
   hardAiBeamWidth,
   normalAiBeamWidth,
+  enemyPhaseBonus: ENEMY_PHASE_BONUS,
 } as const;

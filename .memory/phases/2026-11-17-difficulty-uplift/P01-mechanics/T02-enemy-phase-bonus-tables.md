@@ -1,6 +1,6 @@
 # Task: T02 Enemy Phase Bonus Tables
 
-## Status: todo
+## Status: done
 
 ## Goal
 Replace the two Hard-only phase bonus constants with a per-difficulty table so Normal can get bonuses too, with no balance change yet (Hard keeps today's numbers, Normal starts at zero).
@@ -56,6 +56,8 @@ Task: T02-enemy-phase-bonus-tables
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete: `ENEMY_PHASE_BONUS`, `enemyPhaseBonus(...)`, exposed as `gameConstants.enemyPhaseBonus`.
+- [x] validation passed: 778 tests, lint clean, build clean.
+- Deviation from the blueprint: the first-battle exemption is `phase === 1 && completedBattles === 0` instead of `completedBattles === 0`. In real runs they are identical (later phases always follow completed battles), but existing Hard tests build phase 2/3 battles with `completedBattles = 0` and would otherwise need rewriting.
+- Tests mutate the Normal table temporarily (restored in `finally`) to prove the exemption and the table lookup.
+- commit: see Git history
