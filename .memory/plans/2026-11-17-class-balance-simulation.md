@@ -2,7 +2,7 @@
 
 - Date: 2026-11-17
 - Decisions: [2026-11-17-class-balance-simulation](../decisions/2026-11-17-class-balance-simulation.md)
-- Status: planned (no code written yet)
+- Status: done (2026-11-17). Hard class gap 24.0pp -> 1.7pp on an independent seed; see `docs/balance/2026-11-17-final.md`.
 
 ## Goal
 Build a headless simulation bot on the pure-function engine, measure class win rates for Normal and Hard difficulty, then tune numeric values only so the three classes land within ±5 percentage points of each other.
@@ -30,7 +30,7 @@ Build a headless simulation bot on the pure-function engine, measure class win r
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
 | P01 | `done` | Build the simulation bot, batch runner, CLI, and baseline report | [P01](../phases/2026-11-17-class-balance-simulation/P01-simulation-harness/phase.md) |
-| P02 | `todo` | Tune numeric values from measurements and verify the ±5pp goal | [P02](../phases/2026-11-17-class-balance-simulation/P02-balance-tuning/phase.md) |
+| P02 | `done` | Tune numeric values from measurements and verify the ±5pp goal | [P02](../phases/2026-11-17-class-balance-simulation/P02-balance-tuning/phase.md) |
 
 ## Risks
 - A weak bot could produce ~0% completion and hide differences. Mitigation: per-battle win rate and per-encounter breakdown; improve bot heuristics in T01/T02 before tuning.

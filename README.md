@@ -37,6 +37,25 @@ npm run build
 
 빌드는 게임 엔진, 기존 API 호스트, 랭킹 Functions API, React 앱을 생성합니다. Azure 자격 증명이 없어도 빌드할 수 있습니다.
 
+## 밸런스 시뮬레이션
+
+카드·직업·적 수치를 바꾼 뒤에는 시뮬레이션 봇으로 직업별 승률을 측정할 수 있습니다. 봇은 게임 엔진의 공개 함수만 사용해 원정 전체를 자동으로 플레이하며, 개발 전용이라 웹 번들에는 포함되지 않습니다. 봇은 사람보다 약하므로 절대 승률이 아니라 직업·난이도 간 상대 차이를 비교하는 용도입니다.
+
+```bash
+npm run balance:sim -- --runs 500 --label my-change --out docs/balance/my-change.md
+```
+
+| 옵션 | 설명 |
+| :--- | :--- |
+| `--runs <n>` | 직업·난이도 조합마다 시뮬레이션할 원정 수 (기본 500, 런당 약 0.15초) |
+| `--seed <n>` | 기본 시드 (기본 20261117). 모든 직업이 같은 시드를 사용합니다 |
+| `--class <warrior\|assassin\|demonist\|all>` | 측정할 직업 (기본 all) |
+| `--difficulty <normal\|hard\|all>` | 측정할 난이도 (기본 all) |
+| `--out <경로>` | Markdown 리포트를 파일로 저장 (생략하면 화면에 출력) |
+| `--label <이름>` | 리포트 제목에 표시할 이름 |
+
+리포트에는 완주율, 전투 승률, 인카운터별 승률과 직업 간 격차 판정이 들어갑니다. 완주율이 0%나 100%에 가까워 직업을 비교할 수 없을 때는 전투 승률로 대체해 판정합니다. 변경 기록과 측정 결과는 `docs/balance/`에 있습니다. 샘플 수가 300런이면 오차가 약 ±5%p이므로 작은 차이를 판단할 때는 500런 이상을 사용하세요.
+
 ## Azure Static Web Apps 수동 배포
 
 기존 Static Web App에 SPA와 관리형 Functions API를 함께 배포하려면 [Azure 설정 및 운영 안내](docs/azure-setup.md)를 따릅니다. 배포 전 `.env`에 Entra 공개 식별자와 `SWA_CLI_DEPLOYMENT_TOKEN` 또는 SWA CLI 로그인을 준비한 뒤 아래 명령을 사용합니다.

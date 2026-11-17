@@ -1,6 +1,6 @@
 # Task: T03 Final Verification
 
-## Status: todo
+## Status: done
 
 ## Goal
 Confirm the ±5pp goal with a larger, independent sample, run the full quality gates, and close out documentation.
@@ -43,6 +43,8 @@ Task: T03-final-verification
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete: final report `docs/balance/2026-11-17-final.md` (seed 20271117, 1000 runs per cell, 2x the tuning sample), README "밸런스 시뮬레이션" section added.
+- [x] validation passed: 736 tests, lint clean, build clean, `playBotTurn` absent from web/api bundles.
+- Result: Hard completion warrior 16.9% / assassin 16.6% / demonist 18.3%, gap 1.7pp (target 5pp). Normal saturated (>= 99.7%).
+- Open items recorded in the final report: Normal difficulty target/curve (not changed), assassin final-boss win rate lower than other classes.
+- commit: see Git history

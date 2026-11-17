@@ -1,20 +1,19 @@
 ﻿# Current Context
 
 ## Active Plan
-[Class/Card/Enemy Balance via Simulation Bot](./plans/2026-11-17-class-balance-simulation.md)
+[Class/Card/Enemy Balance via Simulation Bot](./plans/2026-11-17-class-balance-simulation.md) — complete.
 
 ## Active Phase
-[P02 Balance Tuning](./phases/2026-11-17-class-balance-simulation/P02-balance-tuning/phase.md)
+None — P01 and P02 are complete.
 
 ## Active Task
-[P02-T03 Final Verification](./phases/2026-11-17-class-balance-simulation/P02-balance-tuning/T03-final-verification.md)
+None — class balance simulation plan is complete.
 
 ## Status
-- P01 complete. P02-T01 and P02-T02 complete.
-- Hard completion gap: baseline 24.0pp -> round 1 11.8pp -> round 2 2.2pp (warrior 15.8 / assassin 14.0 / demonist 16.2). Reports in `docs/balance/`.
-- Normal difficulty is saturated for the bot (>= 98.8% for every class); not changed (no agreed target). Open item to report to the user.
-- 9 numeric edits total (round 1: 6, round 2: 3).
-- User instruction: run the whole plan to the end without asking; no push notifications.
+- P01 complete (bot, simulator, CLI, baseline); P02 complete (2 tuning rounds, final verification).
+- Final (independent seed 20271117, 1000 runs per cell): Hard completion warrior 16.9% / assassin 16.6% / demonist 18.3%, gap 1.7pp (target 5pp). Baseline gap was 24.0pp.
+- 736 tests, lint, and build pass; the bot is not in any bundle.
+- Open items (see `docs/balance/2026-11-17-final.md`): Normal difficulty is saturated for the bot and was deliberately not changed (no agreed target); assassin has a lower final-boss win rate than the other classes.
 
 ## Next Step (IMPORTANT)
-P02-T03: run the independent-seed final measurement (`--seed 20271117`, `--runs 1000`, both difficulties, ~17 min, background), write `docs/balance/2026-11-17-final.md` with the baseline-vs-final table and full change list, add the README "Balance simulation" section, run `npm test`, `npm run lint`, `npm run build`, check the bot is absent from bundles, commit, then close the plan and set this file to "No active task".
+No active task. Start a new feature with `/grill-me <feature>`. Candidate follow-up: decide a target difficulty for Normal mode.
