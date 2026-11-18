@@ -14,16 +14,6 @@
                          "version":  "1.0.3",
                          "deployedAtUtc":  "2026-11-12T12:43:48.5680136+00:00",
                          "sourceCommit":  "e75559a4dc8ac94e776d0c6f98eeffc679a6af70"
-                     },
-                     {
-                         "version":  "1.0.4",
-                         "deployedAtUtc":  "2026-11-17T13:15:44.3047634+00:00",
-                         "sourceCommit":  "9bd67155b5cf521bb0cebb1606bd2bfde9b05dac"
-                     },
-                     {
-                         "version":  "1.0.5",
-                         "deployedAtUtc":  "2026-11-18T12:45:40.0009563+00:00",
-                         "sourceCommit":  "c2db4a2121fa522de792ad04261bc90851e3b505"
                      }
                  ]
 }
