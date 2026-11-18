@@ -1,3 +1,5 @@
+import { HERO_AND_CLASS_RECIPES } from "./spellEffects/heroAndClass.js";
+
 /**
  * Synthesized sound layers for spell and hero power effects. A recipe is a short list of oscillator or
  * noise layers (pitch glide, envelope, optional filter) rendered with Web Audio at play time. The
@@ -39,8 +41,12 @@ export interface SoundRecipe {
 export const SYNTH_LIMITS = { maxLayers: 6, maxGain: 0.6, maxTotalMs: 2000, minHz: 20, maxHz: 16000 } as const;
 export const DEFAULT_ATTACK_MS = 12;
 
-/** Registered recipes. Content tasks add one entry per effect id. */
-export const SOUND_RECIPES: Readonly<Record<string, SoundRecipe>> = {};
+const ALL_SOUND_RECIPES: readonly SoundRecipe[] = [...HERO_AND_CLASS_RECIPES];
+
+/** Registered recipes, one entry per effect id (content batches live in `./spellEffects/`). */
+export const SOUND_RECIPES: Readonly<Record<string, SoundRecipe>> = Object.fromEntries(
+  ALL_SOUND_RECIPES.map((recipe) => [recipe.id, recipe]),
+);
 
 let activeRecipes: Readonly<Record<string, SoundRecipe>> = SOUND_RECIPES;
 

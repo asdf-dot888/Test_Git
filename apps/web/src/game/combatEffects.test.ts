@@ -453,6 +453,7 @@ describe("spell visual tagging", () => {
   }
 
   it("leaves casts without a registered visual untagged but records the spell effect kind", () => {
+    __setSpellVisualSpecsForTest({});
     const before = handRun(940, "shadow-bolt");
     const [event] = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
     expect(event?.visualId).toBeUndefined();
@@ -524,6 +525,7 @@ describe("spell visual tagging", () => {
   });
 
   it("tags hero power events by class and leaves them untagged without a visual", () => {
+    __setSpellVisualSpecsForTest({});
     const warrior = createRun(947, "warrior");
     const untagged = collectCombatEffectEvents(warrior, warrior, { type: "use-hero-power" }, 1);
     expect(untagged[0]?.effectKind).toBe("hero-power");

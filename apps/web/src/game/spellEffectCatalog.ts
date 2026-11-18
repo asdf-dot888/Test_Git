@@ -1,4 +1,5 @@
 import { CARD_CATALOG, type PlayerClass, type SpellEffect } from "@board-game/game-core";
+import { HERO_AND_CLASS_SPECS } from "./spellEffects/heroAndClass.js";
 
 export type SpellVisualWeight = "normal" | "large";
 
@@ -27,8 +28,12 @@ export interface SpellVisualSpec {
 
 export const SPELL_VISUAL_LIMITS = { normalMs: 1200, largeMs: 2000, minHitTailMs: 450, minImpactAtMs: 300 } as const;
 
-/** Registered effects. Content tasks add one entry per effect id. */
-export const SPELL_VISUAL_SPECS: Readonly<Record<string, SpellVisualSpec>> = {};
+const ALL_SPELL_VISUAL_SPECS: readonly SpellVisualSpec[] = [...HERO_AND_CLASS_SPECS];
+
+/** Registered effects, one entry per effect id (content batches live in `./spellEffects/`). */
+export const SPELL_VISUAL_SPECS: Readonly<Record<string, SpellVisualSpec>> = Object.fromEntries(
+  ALL_SPELL_VISUAL_SPECS.map((spec) => [spec.id, spec]),
+);
 
 let activeSpecs: Readonly<Record<string, SpellVisualSpec>> = SPELL_VISUAL_SPECS;
 
