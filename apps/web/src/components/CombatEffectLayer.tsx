@@ -2,11 +2,15 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { createPortal } from "react-dom";
 import { gameConstants } from "@board-game/game-core";
 import { CARD_COMBAT_VISUAL_PROFILES, combatImpactTier, type CombatAnchor, type CombatEffectEvent } from "../game/combatEffects.js";
+import { getSpellVisualSpec, type SpellVisualSpec } from "../game/spellEffectCatalog.js";
+import { SpellEffectVisual } from "./SpellEffectVisual.js";
 
 interface CombatEffectLayerProps {
   events: CombatEffectEvent[];
   paused?: boolean;
   onComplete(eventId: number): void;
+  /** Resolves the registered visual for an event; defaults to the spell visual registry. */
+  resolveSpec?: (id: string | null | undefined) => SpellVisualSpec | undefined;
 }
 
 interface Point {
@@ -89,8 +93,12 @@ function anchorPoint(anchor: CombatAnchor, event: CombatEffectEvent, isSource: b
   return element ? centerOf(element) : fallbackPoint(anchor);
 }
 
-function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffectEvent; index: number; paused: boolean; onComplete(id: number): void }) {
+function EffectSprite({ event, index, paused, onComplete, resolveSpec }: { event: CombatEffectEvent; index: number; paused: boolean; onComplete(id: number): void; resolveSpec: (id: string | null | undefined) => SpellVisualSpec | undefined }) {
   const profile = event.assetCardId ? CARD_COMBAT_VISUAL_PROFILES[event.assetCardId] : undefined;
+  // Tagged spell and hero power events use their registered visual; everything else keeps the generic presentation.
+  const spec = event.visualId && event.visualRole ? resolveSpec(event.visualId) : undefined;
+  const isPrimaryVisual = spec !== undefined && event.visualRole === "primary";
+  const hitDelayMs = spec ? spec.impactAtMs : 930;
   const [geometry, setGeometry] = useState<EffectGeometry | null>(null);
   const completeRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
@@ -126,7 +134,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     if (completeRef.current) return;
     if (event.bossArea) return;
     const motionScale = event.slowMotion ? 2 : 1;
-    const baseDuration = Math.max(1_400, 1_010 + (profile?.durationMs ?? 390));
+    const baseDuration = spec ? spec.totalMs : Math.max(1_400, 1_010 + (profile?.durationMs ?? 390));
     if (remainingMs.current === null) remainingMs.current = (baseDuration + Math.min(index, 8) * 120) * motionScale;
     if (paused) {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
@@ -154,7 +162,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         deadline.current = null;
       }
     };
-  }, [event.bossArea, event.id, event.slowMotion, index, paused, profile?.durationMs]);
+  }, [event.bossArea, event.id, event.slowMotion, index, paused, profile?.durationMs, spec]);
 
   useEffect(() => {
     if (!event.bossArea || !bossStage || completeRef.current) return;
@@ -222,7 +230,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     const board = document.querySelector<HTMLElement>(".battle-board");
     if (!board) return;
     const shakeDuration = event.bossArea ? 900 : event.areaImpact ? 500 : impactTier === "heavy" ? 1_000 : impactTier === "medium" ? 700 : 500;
-    if (shakeRemainingMs.current === null) shakeRemainingMs.current = (event.bossArea ? 900 : event.areaImpact ? 500 : 930 + shakeDuration) + Math.min(index, 8) * 120;
+    if (shakeRemainingMs.current === null) shakeRemainingMs.current = (event.bossArea ? 900 : event.areaImpact ? 500 : hitDelayMs + shakeDuration) + Math.min(index, 8) * 120;
     board.style.animationPlayState = paused ? "paused" : "running";
     if (paused) {
       if (shakeTimeout.current !== null) window.clearTimeout(shakeTimeout.current);
@@ -251,7 +259,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
         shakeDeadline.current = null;
       }
     };
-  }, [event.areaImpact, event.bossArea, event.damageTarget, event.id, index, impactTier, paused, shakeClass]);
+  }, [event.areaImpact, event.bossArea, event.damageTarget, event.id, hitDelayMs, index, impactTier, paused, shakeClass]);
 
   useEffect(() => {
     if (!event.bossArea || !bossStage) return;
@@ -289,7 +297,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   const areaWidth = Math.min(window.innerWidth * (event.bossArea ? 0.78 : 0.64), event.bossArea ? 760 : 520);
   const areaHeight = Math.min(window.innerHeight * (event.bossArea ? 0.5 : 0.35), event.bossArea ? 340 : 220);
   const bossImpactDelay = BOSS_STAGE_DURATION_MS.warning + BOSS_STAGE_DURATION_MS.cast;
-  const impactDelay = (delay + (event.bossArea ? bossImpactDelay : 930)) * motionScale;
+  const impactDelay = (delay + (event.bossArea ? bossImpactDelay : hitDelayMs)) * motionScale;
   const impactStyle = event.areaImpact && boardBounds
     ? { left: boardBounds.left + (boardBounds.width - areaWidth) / 2, top: boardBounds.top + (boardBounds.height - areaHeight) / 2, animationDelay: `${impactDelay}ms`, ...(event.bossArea ? { animationDuration: `${BOSS_STAGE_DURATION_MS.impact * motionScale}ms` } : {}) }
     : { left: geometry.target.x, top: geometry.target.y, animationDelay: `${impactDelay}ms` };
@@ -317,7 +325,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   const targetStyle = {
     left: geometry.target.x,
     top: geometry.target.y,
-    animationDelay: `${(delay + 930) * motionScale}ms`,
+    animationDelay: `${(delay + hitDelayMs) * motionScale}ms`,
     animationPlayState: paused ? "paused" as const : "running" as const,
     "--effect-dx": `${geometry.target.x - geometry.source.x}px`,
     "--effect-dy": `${geometry.target.y - geometry.source.y}px`,
@@ -329,13 +337,13 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   };
 
   return <>
-    <span
+    {(!spec || event.damage || event.areaImpact) && <span
       className={`combat-effect-impact effect-${event.effectKind}${event.areaImpact ? " is-area-impact" : ""}${event.bossArea ? " is-boss-area" : ""}${hitClass}${tierClass}${outcomeClass}${event.damage?.retaliation ? " is-retaliation" : ""}${visualClass}${slowClass}`}
       style={{ ...profileStyle, ...impactStyle, animationPlayState: paused ? "paused" : "running" }}
-      onAnimationEnd={finish}
+      onAnimationEnd={spec ? undefined : finish}
       aria-hidden="true"
-    />
-    {!event.bossArea && cardArt && !isMinionAttack ? <>
+    />}
+    {spec ? (isPrimaryVisual ? <SpellEffectVisual spec={spec} source={geometry.source} target={geometry.target} paused={paused} delayMs={delay * motionScale} slowMotion={Boolean(event.slowMotion)} /> : null) : !event.bossArea && cardArt && !isMinionAttack ? <>
       <span
         className={`combat-effect-sprite combat-effect-card-frame effect-${event.effectKind}${visualClass}${slowClass}`}
         data-effect-card={event.assetCardId}
@@ -374,11 +382,11 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
       style={bossSequenceStyle}
       aria-hidden="true"
     />}
-    {isMiss && <span className="combat-effect-miss-fragments" style={{ ...targetStyle, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /><i /></span>}
-    {isArmorBlock && <span className="combat-effect-armor-spark" style={{ ...targetStyle, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /></span>}
+    {isMiss && <span className="combat-effect-miss-fragments" style={{ ...targetStyle, animationDelay: `${(delay + hitDelayMs) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /><i /></span>}
+    {isArmorBlock && <span className="combat-effect-armor-spark" style={{ ...targetStyle, animationDelay: `${(delay + hitDelayMs) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /></span>}
     {event.affectedTargets?.filter(({ damage }) => damage.outcome === "armor-block").map(({ target }, blockIndex) => {
       const point = anchorPoint(target, event, false);
-      return <span key={`${event.id}-block-${blockIndex}`} className="combat-effect-armor-spark is-area-block-spark" style={{ left: point.x, top: point.y, animationDelay: `${(delay + 930) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /></span>;
+      return <span key={`${event.id}-block-${blockIndex}`} className="combat-effect-armor-spark is-area-block-spark" style={{ left: point.x, top: point.y, animationDelay: `${(delay + hitDelayMs) * motionScale}ms` }} aria-hidden="true"><i /><i /><i /></span>;
     })}
     {event.damageTarget === "minion" && hasHit && <span
       className={`combat-effect-blood-splatter${tierClass}${event.damage?.retaliation ? " is-retaliation" : ""}`}
@@ -387,7 +395,7 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
     />}
     {event.damageTarget === "hero" && hasHit && <span
       className={`combat-effect-hero-hit-flash${tierClass}${slowClass}`}
-      style={{ animationDelay: `${(delay + 930) * motionScale}ms`, animationPlayState: paused ? "paused" : "running" }}
+      style={{ animationDelay: `${(delay + hitDelayMs) * motionScale}ms`, animationPlayState: paused ? "paused" : "running" }}
       aria-hidden="true"
     />}
     {event.source.kind === "minion" && event.target.kind === "hero" && hasHit && !event.bossArea && <span
@@ -407,11 +415,11 @@ function EffectSprite({ event, index, paused, onComplete }: { event: CombatEffec
   </>;
 }
 
-export function CombatEffectLayer({ events, paused = false, onComplete }: CombatEffectLayerProps) {
+export function CombatEffectLayer({ events, paused = false, onComplete, resolveSpec = getSpellVisualSpec }: CombatEffectLayerProps) {
   if (typeof document === "undefined" || events.length === 0) return null;
   return createPortal(
     <div className={`combat-effect-layer${paused ? " is-paused" : ""}`} aria-hidden="true">
-      {events.map((event, index) => <EffectSprite key={event.id} event={event} index={index} paused={paused} onComplete={onComplete} />)}
+      {events.map((event, index) => <EffectSprite key={event.id} event={event} index={index} paused={paused} onComplete={onComplete} resolveSpec={resolveSpec} />)}
     </div>,
     document.body,
   );

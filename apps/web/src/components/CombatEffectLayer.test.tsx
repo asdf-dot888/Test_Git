@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CombatEffectLayer } from "./CombatEffectLayer.js";
 import { CARD_COMBAT_VISUAL_PROFILES } from "../game/combatEffects.js";
+import type { SpellVisualSpec } from "../game/spellEffectCatalog.js";
 
 afterEach(() => {
   cleanup();
@@ -307,5 +308,142 @@ describe("CombatEffectLayer", () => {
     expect(document.querySelector<HTMLElement>(".battle-board")?.dataset.bossStage).toBe("impact");
     view.unmount();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("CombatEffectLayer with registered spell visuals", () => {
+  const spec: SpellVisualSpec = {
+    id: "shadow-bolt",
+    weight: "normal",
+    impactAtMs: 520,
+    totalMs: 1100,
+    palette: { primary: "#8a5cff", secondary: "#2b1654", glow: "#c9b4ff" },
+    motifs: { start: "gather", travel: "bolt", burst: "shatter" },
+    glyph: "shadow-bolt",
+  };
+  const resolveSpec = (id: string | null | undefined) => (id === "shadow-bolt" ? spec : undefined);
+  const hit = { amount: 2, armorBlocked: 0, outcome: "hit" as const, retaliation: false };
+
+  function stubFrames() {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+  }
+
+  it("replaces the flying card with the registered visual and delays hit consequences to its impact time", async () => {
+    stubFrames();
+    const onComplete = vi.fn();
+    render(<CombatEffectLayer resolveSpec={resolveSpec} onComplete={onComplete} events={[{
+      id: 11, assetCardId: "shadow-bolt", effectKind: "damage", damageTarget: "hero", damage: hit, soundCues: [],
+      visualId: "shadow-bolt", visualRole: "primary", spellEffectKind: "damage",
+      source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" },
+    }]} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(document.body.querySelector(".spell-fx[data-spell-fx='shadow-bolt']")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-card-frame")).toBeNull();
+    expect(document.body.querySelector(".combat-effect-impact-art")).toBeNull();
+    expect(document.body.querySelector<HTMLElement>(".combat-effect-hero-hit-flash")?.style.animationDelay).toBe("520ms");
+    expect(document.body.querySelector<HTMLElement>(".combat-effect-impact.impact-tier-light")?.style.animationDelay).toBe("520ms");
+
+    fireEvent.animationEnd(document.body.querySelector(".combat-effect-impact")!);
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_099); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(11);
+  });
+
+  it("keeps hit consequences but draws no sprite for follow-up events", async () => {
+    stubFrames();
+    render(<div className="battle-board"><CombatEffectLayer resolveSpec={resolveSpec} onComplete={vi.fn()} events={[{
+      id: 12, assetCardId: "shadow-bolt", effectKind: "damage", damageTarget: "minion", damage: hit, soundCues: [],
+      visualId: "shadow-bolt", visualRole: "follow-up", spellEffectKind: "damage",
+      source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "minion", side: "enemy", slot: 1 },
+    }]} /></div>);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(document.body.querySelector(".spell-fx")).toBeNull();
+    expect(document.body.querySelector(".combat-effect-card-frame")).toBeNull();
+    expect(document.body.querySelector<HTMLElement>(".combat-effect-blood-splatter")?.style.animationDelay).toBe("520ms");
+  });
+
+  it("does not draw the generic impact box for a registered non-damage effect", async () => {
+    stubFrames();
+    render(<CombatEffectLayer resolveSpec={resolveSpec} onComplete={vi.fn()} events={[{
+      id: 13, assetCardId: "shadow-bolt", effectKind: "heal", soundCues: [],
+      visualId: "shadow-bolt", visualRole: "primary", spellEffectKind: "heal",
+      source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "hero", side: "player" },
+    }]} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelector(".spell-fx")).not.toBeNull();
+    expect(document.body.querySelector(".combat-effect-impact")).toBeNull();
+  });
+
+  it("falls back to the flying card when a tagged event has no resolvable visual", async () => {
+    stubFrames();
+    const onComplete = vi.fn();
+    render(<CombatEffectLayer resolveSpec={() => undefined} onComplete={onComplete} events={[{
+      id: 14, assetCardId: "shadow-bolt", effectKind: "damage", soundCues: [],
+      visualId: "shadow-bolt", visualRole: "primary", spellEffectKind: "damage",
+      source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" },
+    }]} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelector(".spell-fx")).toBeNull();
+    expect(document.body.querySelector(".combat-effect-card-frame img")?.getAttribute("src")).toBe("/art/cards/shadow-bolt.png");
+    const legacy = Math.max(1_400, 1_010 + CARD_COMBAT_VISUAL_PROFILES["shadow-bolt"]!.durationMs);
+    await act(async () => { await vi.advanceTimersByTimeAsync(legacy - 1); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledWith(14);
+  });
+
+  it("leaves untagged events on the generic presentation even when a resolver is provided", async () => {
+    stubFrames();
+    render(<CombatEffectLayer resolveSpec={resolveSpec} onComplete={vi.fn()} events={[{
+      id: 15, assetCardId: "shadow-bolt", effectKind: "damage", soundCues: [],
+      source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" },
+    }]} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelector(".spell-fx")).toBeNull();
+    expect(document.body.querySelector(".combat-effect-card-frame")).not.toBeNull();
+  });
+
+  it("doubles the visual and completion timing in slow motion", async () => {
+    stubFrames();
+    const onComplete = vi.fn();
+    render(<CombatEffectLayer resolveSpec={resolveSpec} onComplete={onComplete} events={[{
+      id: 16, assetCardId: "shadow-bolt", effectKind: "damage", damageTarget: "hero", damage: hit, soundCues: [], slowMotion: true,
+      visualId: "shadow-bolt", visualRole: "primary", spellEffectKind: "damage",
+      source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" },
+    }]} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(document.body.querySelector(".spell-fx")?.classList.contains("is-slow-motion")).toBe(true);
+    expect(document.body.querySelector<HTMLElement>(".combat-effect-hero-hit-flash")?.style.animationDelay).toBe("1040ms");
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_199); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledWith(16);
+  });
+
+  it("pauses the visual with the layer", async () => {
+    stubFrames();
+    const event = {
+      id: 17, assetCardId: "shadow-bolt", effectKind: "damage" as const, soundCues: [],
+      visualId: "shadow-bolt", visualRole: "primary" as const, spellEffectKind: "damage" as const,
+      source: { kind: "hand" as const, side: "player" as const, slot: 0 }, target: { kind: "hero" as const, side: "enemy" as const },
+    };
+    const onComplete = vi.fn();
+    const view = render(<CombatEffectLayer resolveSpec={resolveSpec} onComplete={onComplete} events={[event]} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    view.rerender(<CombatEffectLayer resolveSpec={resolveSpec} onComplete={onComplete} events={[event]} paused />);
+    expect(document.body.querySelector<HTMLElement>(".spell-fx")?.style.getPropertyValue("--fx-play")).toBe("paused");
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(onComplete).not.toHaveBeenCalled();
+    view.rerender(<CombatEffectLayer resolveSpec={resolveSpec} onComplete={onComplete} events={[event]} paused={false} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(799); });
+    expect(onComplete).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(onComplete).toHaveBeenCalledOnce();
   });
 });

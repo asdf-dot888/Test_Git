@@ -6,6 +6,7 @@ import { buildMsalConfig, readAuthConfig } from "./auth/authConfig.js";
 import { GameErrorBoundary } from "./components/GameErrorBoundary.js";
 import "./styles/tokens.css";
 import "./styles/board.css";
+import "./styles/spellEffects.css";
 
 const rootElement = document.getElementById("root");
 

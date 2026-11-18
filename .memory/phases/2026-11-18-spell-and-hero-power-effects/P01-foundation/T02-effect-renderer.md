@@ -1,6 +1,6 @@
 # Task: T02 Effect Renderer
 
-## Status: todo
+## Status: done
 
 ## Goal
 Render a spec-driven SVG/CSS effect for primary events and integrate it into `CombatEffectLayer`, replacing the card-art flight for tagged spells and hero powers, with the old presentation as fallback.
@@ -54,6 +54,6 @@ Task: T02-effect-renderer
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 850 tests, lint clean, build clean. Added SpellEffectVisual, spellEffectMotifs (8 start / 7 travel / 10 burst motifs, GLYPHS map), spellEffects.css, and the CombatEffectLayer integration (resolveSpec prop, hit delay = spec.impactAtMs, completion = spec.totalMs, fallback unchanged). Spec gained an optional startAt field. Lessons: a comment containing '*/' ended the CSS comment early and broke the lightningcss minifier; local helper components in a file that exports non-components fail the react-refresh lint rule, so the dot helper is a plain function.
+- commit: see Git history

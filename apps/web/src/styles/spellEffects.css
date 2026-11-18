@@ -1,0 +1,157 @@
+/*
+ * Spell and hero power effects (procedural CSS/SVG).
+ * - Only transform and opacity are animated.
+ * - No prefers-reduced-motion overrides: the full effects always play (see the combat impact decision).
+ * - Timing and colors come from CSS variables set by SpellEffectVisual:
+ *   --fx-t-start/travel/burst and --fx-d-start/travel/burst (duration and delay per phase), --fx-dx/--fx-dy/--fx-len/--fx-angle (geometry),
+ *   --fx-primary/--fx-secondary/--fx-glow (palette), --fx-play (animation-play-state).
+ */
+.spell-fx { position: fixed; z-index: 31; width: 0; height: 0; pointer-events: none; }
+.spell-fx__start, .spell-fx__travel, .spell-fx__burst { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.spell-fx__start { --fx-dur: var(--fx-t-start); --fx-del: var(--fx-d-start); }
+.spell-fx__start.is-at-target { transform: translate(var(--fx-dx, 0px), var(--fx-dy, 0px)); }
+.spell-fx__travel { --fx-dur: var(--fx-t-travel); --fx-del: var(--fx-d-travel); }
+.spell-fx__burst { --fx-dur: var(--fx-t-burst); --fx-del: var(--fx-d-burst); transform: translate(var(--fx-dx, 0px), var(--fx-dy, 0px)); }
+
+.spell-fx i, .spell-fx b, .spell-fx svg {
+  position: absolute; left: 0; top: 0; display: block; opacity: 0; pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation-duration: var(--fx-dur, 600ms);
+  animation-delay: calc(var(--fx-del, 0ms) + var(--i, 0) * 30ms);
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+  animation-play-state: var(--fx-play, running);
+  will-change: transform, opacity;
+}
+
+/* ---------- glyph (unique SVG per effect, shown in the start phase) ---------- */
+.fx-glyph { color: var(--fx-primary); fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; filter: none; animation-name: fx-glyph; }
+@keyframes fx-glyph { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.5) rotate(-12deg); } 30% { opacity: .95; transform: translate(-50%, -50%) scale(1.1) rotate(0); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.45) rotate(8deg); } }
+
+/* ---------- start motifs ---------- */
+.fx-gather { width: 7px; height: 7px; border-radius: 50%; background: var(--fx-primary); box-shadow: 0 0 10px 3px var(--fx-glow); animation-name: fx-gather; animation-timing-function: ease-in; }
+@keyframes fx-gather {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(54px) scale(.5); }
+  25% { opacity: 1; }
+  85% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--a)) translateX(4px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(0) scale(1.7); }
+}
+
+.fx-circle { width: 78px; height: 78px; border: 2px dashed var(--fx-primary); border-radius: 50%; box-shadow: 0 0 14px var(--fx-glow), inset 0 0 12px var(--fx-glow); animation-name: fx-circle; }
+.fx-circle--inner { width: 46px; height: 46px; border-style: solid; animation-name: fx-circle-reverse; }
+@keyframes fx-circle { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(.3); } 30% { opacity: .95; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(140deg) scale(1.15); } }
+@keyframes fx-circle-reverse { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(1.1); } 30% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(-160deg) scale(.5); } }
+.fx-tick { width: 3px; height: 10px; background: var(--fx-glow); border-radius: 2px; animation-name: fx-tick; }
+@keyframes fx-tick { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateY(-44px) scaleY(.4); } 35% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--a)) translateY(-40px) scaleY(1); } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--a) + 90deg)) translateY(-30px) scaleY(.5); } }
+
+.fx-rise { width: 6px; height: 11px; border-radius: 4px; background: linear-gradient(var(--fx-glow), var(--fx-primary)); animation-name: fx-rise; }
+@keyframes fx-rise { 0% { opacity: 0; transform: translate(calc(-50% + var(--x, 0px)), 28px) scale(.6); } 30% { opacity: .95; } 100% { opacity: 0; transform: translate(calc(-50% + var(--x, 0px)), -58px) scale(1.1); } }
+
+.fx-sweep { width: 92px; height: 92px; border: 0 solid transparent; border-top: 5px solid var(--fx-primary); border-radius: 50%; box-shadow: 0 -4px 12px var(--fx-glow); animation-name: fx-sweep; }
+.fx-sweep--echo { width: 66px; height: 66px; border-top-width: 3px; animation-delay: calc(var(--fx-del) + 70ms); }
+@keyframes fx-sweep { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(-90deg) scale(.7); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(80deg) scale(1.1); } }
+
+.fx-shimmer { width: 15px; height: 15px; background: var(--fx-glow); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation-name: fx-shimmer; }
+@keyframes fx-shimmer { 0% { opacity: 0; transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(0) rotate(0); } 45% { opacity: 1; transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1.15) rotate(40deg); } 100% { opacity: 0; transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(.2) rotate(90deg); } }
+
+.fx-flare { width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle, #fff 0, var(--fx-glow) 28%, transparent 68%); animation-name: fx-flare; }
+@keyframes fx-flare { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 35% { opacity: .95; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); } }
+.fx-ray { width: 3px; height: 54px; background: linear-gradient(transparent, var(--fx-primary), transparent); animation-name: fx-ray; }
+@keyframes fx-ray { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) scaleY(.2); } 40% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--a) + 40deg)) scaleY(1.2); } }
+
+.fx-sigil { width: 104px; height: 104px; border: 2px dashed var(--fx-primary); border-radius: 50%; box-shadow: 0 0 12px var(--fx-glow); animation-name: fx-sigil; }
+.fx-sigil--inner { width: 64px; height: 64px; border-style: solid; animation-name: fx-sigil-reverse; }
+@keyframes fx-sigil { 0% { opacity: 0; transform: translate(-50%, -50%) translateY(26px) scaleY(.42) rotate(0) scale(.4); } 30% { opacity: .95; } 100% { opacity: 0; transform: translate(-50%, -50%) translateY(26px) scaleY(.42) rotate(160deg) scale(1.1); } }
+@keyframes fx-sigil-reverse { 0% { opacity: 0; transform: translate(-50%, -50%) translateY(26px) scaleY(.42) rotate(0) scale(1.1); } 30% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%, -50%) translateY(26px) scaleY(.42) rotate(-170deg) scale(.5); } }
+.fx-sigil-tick { width: 4px; height: 12px; background: var(--fx-glow); animation-name: fx-sigil-tick; }
+@keyframes fx-sigil-tick { 0% { opacity: 0; transform: translate(-50%, -50%) translateY(26px) scaleY(.42) rotate(var(--a)) translateY(-52px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) translateY(26px) scaleY(.42) rotate(calc(var(--a) + 100deg)) translateY(-46px); } }
+
+.fx-unfurl { width: 28px; height: 70px; background: linear-gradient(var(--fx-primary), var(--fx-secondary)); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%); transform-origin: 50% 0; animation-name: fx-unfurl; }
+@keyframes fx-unfurl { 0% { opacity: 0; transform: translate(-50%, -80%) scaleY(0); } 35% { opacity: 1; transform: translate(-50%, -80%) scaleY(1); } 100% { opacity: 0; transform: translate(-50%, -88%) scaleY(1.08); } }
+.fx-unfurl-wave { width: 70px; height: 70px; border: 0 solid transparent; border-top: 3px solid var(--fx-glow); border-radius: 50%; animation-name: fx-unfurl-wave; }
+.fx-unfurl-wave--late { animation-delay: calc(var(--fx-del) + 120ms); }
+@keyframes fx-unfurl-wave { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 35% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); } }
+
+/* ---------- travel motifs ---------- */
+.fx-bolt { width: 56px; height: 7px; border-radius: 4px; background: linear-gradient(90deg, transparent, var(--fx-primary) 55%, #fff); box-shadow: 0 0 12px 3px var(--fx-glow); animation-name: fx-travel; animation-timing-function: cubic-bezier(.4, 0, .9, .6); }
+.fx-bolt--trail { width: 38px; height: 4px; box-shadow: none; filter: none; }
+.fx-lance { width: 78px; height: 4px; background: linear-gradient(90deg, transparent, var(--fx-primary) 60%, #fff); clip-path: polygon(0 20%, 82% 20%, 100% 50%, 82% 80%, 0 80%); box-shadow: 0 0 10px var(--fx-glow); animation-name: fx-travel; animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+.fx-lance--trail { width: 50px; opacity: 0; }
+@keyframes fx-travel {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--fx-angle, 0deg)); }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--fx-dx, 0px), var(--fx-dy, 0px)) rotate(var(--fx-angle, 0deg)); }
+}
+
+.fx-arc-x { opacity: 1; width: 0; height: 0; animation-name: fx-arc-x; animation-timing-function: linear; }
+@keyframes fx-arc-x { 0% { transform: translate(0, 0); } 100% { transform: translate(var(--fx-dx, 0px), 0); } }
+.fx-arc-y { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #fff, var(--fx-primary) 55%, transparent 75%); box-shadow: 0 0 12px var(--fx-glow); animation-name: fx-arc-y; animation-timing-function: ease-in-out; }
+.fx-arc-y--trail { width: 11px; height: 11px; opacity: 0; --i: 2; }
+@keyframes fx-arc-y {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(.6); }
+  12% { opacity: 1; }
+  45% { transform: translate(-50%, calc(-50% + var(--fx-dy-mid, -58px))) rotate(180deg) scale(1.1); }
+  88% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% + var(--fx-dy, 0px))) rotate(360deg) scale(.9); }
+}
+
+.fx-fall { width: 9px; height: 84px; border-radius: 6px; background: linear-gradient(transparent, var(--fx-primary) 70%, #fff); box-shadow: 0 0 14px var(--fx-glow); animation-name: fx-fall; animation-timing-function: cubic-bezier(.55, 0, 1, .6); }
+.fx-fall-head { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle, #fff, var(--fx-primary) 60%, transparent 78%); animation-name: fx-fall-head; animation-timing-function: cubic-bezier(.55, 0, 1, .6); }
+@keyframes fx-fall { 0% { opacity: 0; transform: translate(-50%, -50%) translate(var(--fx-dx, 0px), calc(var(--fx-dy, 0px) - 300px)); } 15% { opacity: 1; } 100% { opacity: 1; transform: translate(-50%, -50%) translate(var(--fx-dx, 0px), calc(var(--fx-dy, 0px) - 30px)); } }
+@keyframes fx-fall-head { 0% { opacity: 0; transform: translate(-50%, -50%) translate(var(--fx-dx, 0px), calc(var(--fx-dy, 0px) - 260px)); } 15% { opacity: 1; } 100% { opacity: 1; transform: translate(-50%, -50%) translate(var(--fx-dx, 0px), var(--fx-dy, 0px)); } }
+
+.fx-thread { width: var(--fx-len, 0px); height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--fx-primary), var(--fx-glow)); box-shadow: 0 0 8px var(--fx-glow); transform-origin: 0 50%; animation-name: fx-thread; animation-timing-function: ease-in-out; }
+.fx-thread--thin { height: 1px; background: #fff; box-shadow: none; --i: 2; }
+@keyframes fx-thread { 0% { opacity: 0; transform: translate(0, -50%) rotate(var(--fx-angle, 0deg)) scaleX(0); } 20% { opacity: .95; } 75% { opacity: .9; transform: translate(0, -50%) rotate(var(--fx-angle, 0deg)) scaleX(1); } 100% { opacity: 0; transform: translate(0, -50%) rotate(var(--fx-angle, 0deg)) scaleX(1); } }
+
+.fx-stream { width: 8px; height: 8px; border-radius: 50%; background: var(--fx-primary); box-shadow: 0 0 10px 2px var(--fx-glow); animation-name: fx-stream; animation-timing-function: ease-in-out; }
+@keyframes fx-stream { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--fx-dx, 0px), var(--fx-dy, 0px)) scale(.9); } }
+
+/* ---------- burst motifs (the burst layer is already translated to the target) ---------- */
+.fx-ring { width: 40px; height: 40px; border: 3px solid var(--fx-glow); border-radius: 50%; box-shadow: 0 0 14px var(--fx-primary), inset 0 0 8px var(--fx-primary); animation-name: fx-ring; }
+.fx-ring--late { border-color: var(--fx-primary); animation-delay: calc(var(--fx-del) + 90ms); }
+@keyframes fx-ring { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 18% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); } }
+
+.fx-shard { width: 10px; height: 17px; background: linear-gradient(var(--fx-glow), var(--fx-primary)); clip-path: polygon(50% 0, 100% 100%, 0 100%); animation-name: fx-shard; }
+@keyframes fx-shard { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(4px) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--a) + 90deg)) translateX(64px) scale(1); } }
+.fx-core { width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle, #fff 0, var(--fx-primary) 36%, transparent 72%); animation-name: fx-core; }
+.fx-core--soft { background: radial-gradient(circle, #fff 0, var(--fx-glow) 30%, transparent 70%); }
+@keyframes fx-core { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); } }
+
+.fx-slash { width: 78px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, transparent, #fff 45%, var(--fx-primary) 80%, transparent); box-shadow: 0 0 10px var(--fx-glow); animation-name: fx-slash; animation-timing-function: cubic-bezier(.1, .9, .2, 1); }
+.fx-slash--cross { animation-name: fx-slash-cross; animation-delay: calc(var(--fx-del) + 80ms); }
+@keyframes fx-slash { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(-38deg) scaleX(.1); } 20% { opacity: 1; transform: translate(-50%, -50%) rotate(-38deg) scaleX(1); } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(-38deg) scaleX(1.1); } }
+@keyframes fx-slash-cross { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(34deg) scaleX(.1); } 20% { opacity: 1; transform: translate(-50%, -50%) rotate(34deg) scaleX(1); } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(34deg) scaleX(1.1); } }
+
+.fx-column { width: 34px; height: 130px; border-radius: 18px 18px 4px 4px; background: linear-gradient(transparent, var(--fx-primary) 35%, var(--fx-glow) 75%, #fff); box-shadow: 0 0 22px var(--fx-primary); transform-origin: 50% 100%; animation-name: fx-column; }
+@keyframes fx-column { 0% { opacity: 0; transform: translate(-50%, -100%) scaleY(0) scaleX(.6); } 25% { opacity: 1; transform: translate(-50%, -100%) scaleY(1) scaleX(1); } 100% { opacity: 0; transform: translate(-50%, -104%) scaleY(1.1) scaleX(.5); } }
+.fx-ember { width: 6px; height: 6px; border-radius: 50%; background: var(--fx-glow); box-shadow: 0 0 8px var(--fx-primary); animation-name: fx-ember; }
+@keyframes fx-ember { 0% { opacity: 0; transform: translate(calc(-50% + var(--x, 0px)), 10px) scale(.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--x2, 0px)), -92px) scale(.3); } }
+
+.fx-wave { width: 96px; height: 38px; border: 3px solid var(--fx-primary); border-radius: 50%; box-shadow: 0 0 14px var(--fx-glow); animation-name: fx-wave; }
+.fx-wave--late { border-color: var(--fx-glow); animation-delay: calc(var(--fx-del) + 110ms); }
+.fx-wave--flat { border-width: 2px; height: 30px; }
+@keyframes fx-wave { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(2.4, 2); } }
+.fx-dust { width: 9px; height: 9px; border-radius: 50%; background: var(--fx-secondary); animation-name: fx-dust; }
+@keyframes fx-dust { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(6px); } 25% { opacity: .85; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(58px) translateY(-14px); } }
+
+.fx-puff { width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle, var(--fx-glow), transparent 70%); animation-name: fx-puff; }
+@keyframes fx-puff { 0% { opacity: 0; transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(.5); } 30% { opacity: .85; } 100% { opacity: 0; transform: translate(calc(-50% + var(--x2, 0px)), calc(-50% + var(--y, 0px) - 36px)) scale(1.7); } }
+
+.fx-spark { width: 8px; height: 8px; background: var(--fx-glow); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation-name: fx-spark; }
+@keyframes fx-spark { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(4px) scale(.5); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(54px) scale(1.2); } }
+
+.fx-crack { width: 46px; height: 3px; background: linear-gradient(90deg, var(--fx-primary), transparent); transform-origin: 0 50%; animation-name: fx-crack; }
+@keyframes fx-crack { 0% { opacity: 0; transform: translate(0, -50%) rotate(var(--a)) scaleX(.1); } 25% { opacity: 1; transform: translate(0, -50%) rotate(var(--a)) scaleX(1); } 100% { opacity: 0; transform: translate(0, -50%) rotate(var(--a)) scaleX(1.1); } }
+.fx-debris { width: 7px; height: 7px; background: var(--fx-secondary); clip-path: polygon(0 0, 100% 20%, 70% 100%, 10% 80%); animation-name: fx-debris; }
+@keyframes fx-debris { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(6px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--a) + 40deg)) translateX(52px) translateY(14px); } }
+
+.fx-portal { width: 46px; height: 82px; border-radius: 50%; background: radial-gradient(ellipse, #000 0, var(--fx-secondary) 45%, var(--fx-primary) 100%); box-shadow: 0 0 22px var(--fx-primary); animation-name: fx-portal; }
+.fx-portal--ring { background: transparent; border: 3px solid var(--fx-glow); box-shadow: 0 0 14px var(--fx-glow); animation-name: fx-portal-ring; }
+.fx-portal--core { width: 22px; height: 52px; background: radial-gradient(ellipse, var(--fx-glow), transparent 70%); box-shadow: none; animation-delay: calc(var(--fx-del) + 80ms); }
+@keyframes fx-portal { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.1, .1); } 28% { opacity: 1; transform: translate(-50%, -50%) scale(1, 1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.6, 1.15); } }
+@keyframes fx-portal-ring { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.1) rotate(0); } 28% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(60deg); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5) rotate(180deg); } }
+
+.fx-link { width: 26px; height: 26px; border: 3px solid var(--fx-primary); border-radius: 50%; box-shadow: 0 0 10px var(--fx-glow); animation-name: fx-link; }
+@keyframes fx-link { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(64px) scale(.6); } 30% { opacity: 1; } 80% { opacity: 1; transform: translate(-50%, -50%) rotate(calc(var(--a) + 120deg)) translateX(12px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--a) + 160deg)) translateX(0) scale(1.4); } }

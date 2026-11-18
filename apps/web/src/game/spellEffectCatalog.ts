@@ -19,6 +19,8 @@ export interface SpellVisualSpec {
   motifs: { start: StartMotif; travel: TravelMotif; burst: BurstMotif };
   /** Key of the unique SVG glyph for this effect. */
   glyph: string;
+  /** Where the start motif plays: at the caster (default) or at the target (e.g. a sigil under a summon slot). */
+  startAt?: "source" | "target";
   /** Which effect of a multi-effect spell anchors the visual; defaults to the first effect. */
   focusEffectKind?: SpellEffect["kind"];
 }
