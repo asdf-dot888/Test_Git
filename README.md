@@ -67,6 +67,19 @@ npm run balance:sim -- --runs 500 --label my-change --out docs/balance/my-change
 
 적 강화는 두 번째 전투부터 적용됩니다. 첫 전투(튜토리얼 포함)는 두 난이도 모두 기존 규칙을 유지합니다. 조정 수치는 `packages/game-core/src/engine.ts`의 `ENEMY_PHASE_BONUS`(난이도·페이즈별 영웅 체력, 하수인 공격력, 하수인 체력)에 있습니다. 일반 난이도 적은 하드와 같은 턴 계획 방식을 쓰지만 플레이어의 손패와 덱 순서는 보지 않습니다.
 
+## 주문·영웅 능력 연출 미리보기
+
+영웅 능력 3종과 주문 카드(플레이어 24장, 보스 전용 8장) 35개에는 각각 고유한 연출과 소리가 있습니다. 연출은 CSS/SVG로, 소리는 기존 효과음 위에 Web Audio 합성 레이어로 만듭니다. 새 이미지나 오디오 파일은 쓰지 않습니다.
+
+개발 서버를 켜고 `/?effects-preview`를 열면 로그인 없이 모든 효과를 골라서 재생해 보고, 시전자·대상·피해량·슬로 모션을 바꿔 볼 수 있습니다. 이 페이지는 개발 서버에서만 열리며 프로덕션 빌드에는 포함되지 않습니다.
+
+```bash
+npm run dev
+# 브라우저에서 http://localhost:5173/?effects-preview 열기
+```
+
+효과 등록 위치는 `apps/web/src/game/spellEffects/`(스펙과 소리 레시피, 글리프)이고, 레지스트리는 `spellEffectCatalog.ts`, `soundRecipes.ts`, `spellEffectMotifs.tsx`입니다. 새 주문 카드를 추가하면 `spellEffectContent.test.ts`의 완전성 검사가 연출이 등록될 때까지 실패합니다.
+
 ## Azure Static Web Apps 수동 배포
 
 기존 Static Web App에 SPA와 관리형 Functions API를 함께 배포하려면 [Azure 설정 및 운영 안내](docs/azure-setup.md)를 따릅니다. 배포 전 `.env`에 Entra 공개 식별자와 `SWA_CLI_DEPLOYMENT_TOKEN` 또는 SWA CLI 로그인을 준비한 뒤 아래 명령을 사용합니다.

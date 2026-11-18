@@ -3,7 +3,7 @@
 ## Tasks
 | Task | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| T01 | `todo` | Coverage/timing audit, gallery review, docs, quality gates, close-out | [T01](./T01-audit-and-close-out.md) |
+| T01 | `done` | Coverage/timing audit, gallery review, docs, quality gates, close-out | [T01](./T01-audit-and-close-out.md) |
 
 ## Progress
-- done: 0/1 (active: T01)
+- done: 1/1 (active: none)

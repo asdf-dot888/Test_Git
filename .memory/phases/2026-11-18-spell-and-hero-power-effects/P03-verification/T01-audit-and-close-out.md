@@ -1,6 +1,6 @@
 # Task: T01 Audit and Close-out
 
-## Status: todo
+## Status: done
 
 ## Goal
 Prove coverage and limits for all 35 effects, review the whole set once more in the gallery, update documentation, run all quality gates, and close the plan.
@@ -44,6 +44,6 @@ Task: T01-audit-and-close-out
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 997 tests, lint clean, build clean; apps/web/dist has no 'effects-preview'/'EffectsPreview' and no balance bot; main bundle about 728 kB. Completeness tests: exactly the 35 required ids registered with spec, recipe and glyph; large exactly for eclipse, soul-storm, meteor-shard and the 8 boss spells; timing and hit-tail limits; every castable spell, boss cast, and hero power yields exactly one primary event. Docs: ASSETS.md (synthesized sound note) and README (gallery paragraph); GameGuideModal has no statements about spell visuals, so no change. Real-battle and gallery review NOT performed by Claude (no browser tool); the user should review the effects at /?effects-preview and report anything to tune.
+- commit: see Git history

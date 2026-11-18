@@ -15,3 +15,7 @@ All audio files shipped with the game are bundled locally under `apps/web/public
 | `sfx/timer-warning.ogg` | `Ding.ogg` in `ui_ogg.zip` | “UI Sound Effects (Button Clicks, User Feedback, Notifications)” — Robin Lamb | CC0 · [OpenGameArt source](https://opengameart.org/content/ui-sound-effects-button-clicks-user-feedback-notifications) | Copied as provided; 19,098 bytes. |
 
 The CC0 license permits reuse without attribution. These provenance notes are retained for future asset replacement and auditing.
+
+## Synthesized spell and hero power sounds
+
+The unique sound layer of the 35 spell and hero power effects is generated at runtime with the Web Audio API (oscillators, a deterministic noise buffer, and filters). It adds no audio files and uses no external sound sources or libraries. The recipes live in `apps/web/src/game/spellEffects/*.ts`; the existing CC0 samples listed above remain the base layer of each cast.

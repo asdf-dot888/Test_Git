@@ -1,20 +1,18 @@
 # Current Context
 
 ## Active Plan
-[Unique Spell and Hero Power Effects (Visual and Sound)](./plans/2026-11-18-spell-and-hero-power-effects.md)
+[Unique Spell and Hero Power Effects (Visual and Sound)](./plans/2026-11-18-spell-and-hero-power-effects.md) — complete (implementation); review pending with the user.
 
 ## Active Phase
-[P03 Verification](./phases/2026-11-18-spell-and-hero-power-effects/P03-verification/phase.md)
+None — P01, P02 and P03 are complete.
 
 ## Active Task
-[P03-T01 Audit and Close-out](./phases/2026-11-18-spell-and-hero-power-effects/P03-verification/T01-audit-and-close-out.md)
+None — no active task.
 
 ## Status
-- Decision: [2026-11-18-spell-and-hero-power-effects](./decisions/2026-11-18-spell-and-hero-power-effects.md) confirmed.
-- P01 Foundation and P02 Content complete: all 35 effects registered (3 hero powers, 24 player spells, 8 boss spells); 959 tests pass.
-- Claude has no browser tool, so no visual or audio review was done by Claude; every content task logs "gallery review: pending with the user" (`npm run dev`, then `/?effects-preview`).
-- Production serves v1.0.4 (these changes are not released).
-- User instruction: continue executing tasks in order without asking for confirmation.
+- All 35 effects (3 hero powers, 24 player spells, 8 boss spells) have unique CSS/SVG visuals and synthesized sound recipes; 997 tests, lint and build pass; the gallery and bot are not in the production bundle.
+- Not verified by Claude: how the effects actually look and sound (no browser tool in this session). The user should run `npm run dev` and open `/?effects-preview`, then report effects to retune (timing, colors, glyphs, loudness).
+- Not released: production still serves v1.0.4. A release is a separate request (`npm run deploy:swa`, clean worktree needed).
 
 ## Next Step (IMPORTANT)
-Implement P03-T01: add the completeness test (35 required ids all have spec, recipe, glyph; no extras; large exactly for eclipse, soul-storm, meteor-shard and the 8 boss spells), a real-registry primary-event test for every castable spell, update ASSETS.md (synth layer note) and README (gallery paragraph), check GameGuideModal text, run build/test/lint, check apps/web/dist has no gallery code, close the plan, and set this file to "No active task". Do not deploy.
+No active task. Wait for the user's review of the effects (retune in a small follow-up plan) or start a new feature with `/grill-me <feature>`.

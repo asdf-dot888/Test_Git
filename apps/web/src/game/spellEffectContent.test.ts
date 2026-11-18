@@ -85,3 +85,33 @@ describe("registered spell and hero power effects", () => {
     }
   });
 });
+
+describe("complete coverage of every spell and hero power", () => {
+  it("registers exactly the 35 required effects", () => {
+    expect(REQUIRED_SPELL_VISUAL_IDS).toHaveLength(35);
+    expect([...registeredIds].sort()).toEqual([...REQUIRED_SPELL_VISUAL_IDS].sort());
+    expect(Object.keys(SOUND_RECIPES).sort()).toEqual([...REQUIRED_SPELL_VISUAL_IDS].sort());
+    expect(Object.keys(GLYPHS).sort()).toEqual([...REQUIRED_SPELL_VISUAL_IDS].sort());
+  });
+
+  it("covers every batch id and nothing else", () => {
+    const batched = Object.values(BATCHES).flat();
+    expect(new Set(batched).size).toBe(batched.length);
+    expect([...batched].sort()).toEqual([...REQUIRED_SPELL_VISUAL_IDS].sort());
+  });
+
+  it("marks exactly eclipse, soul-storm, meteor-shard and the 8 boss spells as large", () => {
+    const large = Object.values(SPELL_VISUAL_SPECS).filter((spec) => spec.weight === "large").map((spec) => spec.id).sort();
+    expect(large).toEqual([
+      "eclipse", "grave-king-harvest", "grave-king-pit-gate", "grave-king-soul-tithe", "matron-thorn-prison", "matron-wither-curse",
+      "meteor-shard", "soul-storm", "void-titan-burning-mark", "void-titan-flame-legion", "void-titan-inferno",
+    ]);
+  });
+
+  it("keeps every normal effect within 1.2 s and every large effect within 2 s", () => {
+    for (const spec of Object.values(SPELL_VISUAL_SPECS)) {
+      expect(spec.totalMs, spec.id).toBeLessThanOrEqual(spec.weight === "large" ? 2000 : 1200);
+      expect(spec.totalMs - spec.impactAtMs, `${spec.id} hit tail`).toBeGreaterThanOrEqual(450);
+    }
+  });
+});

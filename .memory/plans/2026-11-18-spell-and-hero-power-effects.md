@@ -2,7 +2,7 @@
 
 - Date: 2026-11-18
 - Decisions: [2026-11-18-spell-and-hero-power-effects](../decisions/2026-11-18-spell-and-hero-power-effects.md)
-- Status: planned (no code written yet)
+- Status: done (2026-11-18). All 35 effects implemented and covered by automated checks; the visual and audio quality review is pending with the user (see `.memory/current.md`). Not released.
 
 ## Goal
 Give each of the 35 effects below its own procedural CSS/SVG visual and its own synthesized sound layer, replacing the card-art flight for spells and hero powers: 3 hero powers, 24 player spells (15 shared + 9 class), 8 boss-only spells.
@@ -26,7 +26,7 @@ Give each of the 35 effects below its own procedural CSS/SVG visual and its own 
 | :--- | :--- | :--- | :--- |
 | P01 | `done` | Foundation: registry and event tagging, SVG renderer integration, sound synthesis, preview gallery | [P01](../phases/2026-11-18-spell-and-hero-power-effects/P01-foundation/phase.md) |
 | P02 | `done` | Content: 35 effects in four batches (hero powers + class spells, shared damage, shared utility, boss spells) | [P02](../phases/2026-11-18-spell-and-hero-power-effects/P02-content/phase.md) |
-| P03 | `todo` | Verification, documentation, close-out | [P03](../phases/2026-11-18-spell-and-hero-power-effects/P03-verification/phase.md) |
+| P03 | `done` | Verification, documentation, close-out | [P03](../phases/2026-11-18-spell-and-hero-power-effects/P03-verification/phase.md) |
 
 ## Risks
 - Visuals cannot be judged by unit tests. Mitigation: the preview gallery (P01-T04) plus timing/uniqueness/data tests; each content task ends with a manual gallery review recorded in its progress log.

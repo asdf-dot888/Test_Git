@@ -688,3 +688,46 @@ describe("boss spells use their registered visuals", () => {
     expect(roles).toEqual(["primary", "primary"]);
   });
 });
+
+describe("every spell card has exactly one primary effect per cast", () => {
+  const castable = CARD_CATALOG.filter((card) => card.kind === "spell" && !card.enemyOnly);
+  const bossSpells = CARD_CATALOG.filter((card) => card.kind === "spell" && card.enemyOnly);
+
+  it("covers the 24 player spells and the 8 boss spells", () => {
+    expect(castable).toHaveLength(24);
+    expect(bossSpells).toHaveLength(8);
+  });
+
+  it.each(castable.map((card) => [card.id] as const))("player cast of %s", (id) => {
+    const before = withBattle(createRun(990), (state) => {
+      state.battle!.hand = [{ instanceId: "cast", cardId: id }];
+      state.battle!.playerBoard = [{ instanceId: "ally", cardId: "ash-wolf", owner: "player", attack: 2, health: 2, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+      state.battle!.enemyBoard = ["left", "center", "right"].map((instanceId) => ({ instanceId, cardId: "ash-wolf", owner: "enemy" as const, attack: 2, health: 6, maxHealth: 6, summonedTurn: 0, hasAttacked: false }));
+    });
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast", targetId: "center" }, 1);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.visualId === id)).toBe(true);
+    expect(events.filter((event) => event.visualRole === "primary")).toHaveLength(1);
+  });
+
+  it.each(bossSpells.map((card) => [card.id] as const))("enemy cast of %s", (id) => {
+    const run = createRun(991);
+    const effects = (CARD_CATALOG.find((card) => card.id === id)?.spellEffects ?? []).map((effect) => ({ kind: effect.kind, targetId: null as string | null }));
+    const events = collectEnemyActionEffects(run, run, { type: "cast-spell", cardId: id, instanceId: `${id}-cast`, handSlot: 0, effects }, 1);
+    expect(events.filter((event) => event.visualRole === "primary")).toHaveLength(1);
+  });
+
+  it("tags all three hero powers when they are used", () => {
+    const warrior = createRun(992, "warrior");
+    expect(collectCombatEffectEvents(warrior, warrior, { type: "use-hero-power" }, 1)[0]).toMatchObject({ visualId: "hero-power-warrior", visualRole: "primary" });
+    const assassin = withBattle(createRun(993, "assassin"), (state) => {
+      state.battle!.enemyBoard = [{ instanceId: "target", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    });
+    expect(collectCombatEffectEvents(assassin, assassin, { type: "use-hero-power", targetId: "target" }, 1)[0]).toMatchObject({ visualId: "hero-power-assassin", visualRole: "primary" });
+    const before = createRun(994, "demonist");
+    const after = withBattle(before, (state) => {
+      state.battle!.playerBoard = [{ instanceId: "imp", cardId: "demon-lesser-imp", owner: "player", attack: 1, health: 1, maxHealth: 1, summonedTurn: 1, hasAttacked: false }];
+    });
+    expect(collectCombatEffectEvents(before, after, { type: "use-hero-power" }, 1)[0]).toMatchObject({ visualId: "hero-power-demonist", visualRole: "primary" });
+  });
+});
