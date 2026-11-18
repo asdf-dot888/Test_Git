@@ -651,3 +651,40 @@ describe("shared utility spells use their registered visuals", () => {
     expect(events[0]).toMatchObject({ visualId: "healing-mist", visualRole: "primary" });
   });
 });
+
+describe("boss spells use their registered visuals", () => {
+  const IDS = [
+    "matron-thorn-prison", "matron-wither-curse", "grave-king-soul-tithe", "grave-king-pit-gate",
+    "grave-king-harvest", "void-titan-burning-mark", "void-titan-inferno", "void-titan-flame-legion",
+  ] as const;
+
+  function bossCast(cardId: string, run: RunState) {
+    const effects = (CARD_CATALOG.find((card) => card.id === cardId)?.spellEffects ?? []).map((effect) => ({ kind: effect.kind, targetId: null as string | null }));
+    return collectEnemyActionEffects(run, run, { type: "cast-spell", cardId, instanceId: `${cardId}-cast`, handSlot: 0, effects }, 1);
+  }
+
+  it.each(IDS)("%s yields exactly one primary event per cast record and tags every event", (id) => {
+    const run = withBattle(createRun(980), (state) => {
+      state.battle!.playerBoard = [{ instanceId: "victim", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    });
+    const events = bossCast(id, run);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.visualId === id)).toBe(true);
+    expect(events.filter((event) => event.visualRole === "primary")).toHaveLength(1);
+  });
+
+  it("anchors Soul Tithe on the summon and Harvest on the soul harvest", () => {
+    const run = createRun(981);
+    expect(bossCast("grave-king-soul-tithe", run).map((event) => [event.spellEffectKind, event.visualRole])).toEqual([
+      ["discardRandom", "follow-up"], ["gainTemporaryMana", "follow-up"], ["summon", "primary"],
+    ]);
+    const harvest = bossCast("grave-king-harvest", run);
+    expect(harvest.map((event) => [event.spellEffectKind, event.visualRole])).toEqual([["soulHarvest", "primary"]]);
+  });
+
+  it("keeps separate boss casts independent in one enemy turn", () => {
+    const run = createRun(982);
+    const roles = [...bossCast("void-titan-inferno", run), ...bossCast("matron-thorn-prison", run)].map((event) => event.visualRole);
+    expect(roles).toEqual(["primary", "primary"]);
+  });
+});

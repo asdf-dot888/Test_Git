@@ -1,6 +1,6 @@
 # Task: T04 Boss Spells
 
-## Status: todo
+## Status: done
 
 ## Goal
 Add unique effects for the 8 boss-only spells, themed by phase (cursed forest, demon abyss, ancient dragon).
@@ -53,7 +53,7 @@ Task: T04-boss-spells
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- [ ] gallery review: (one line per effect)
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 959 tests, lint clean, build clean. 8 boss effects registered via spellEffects/bossSpells.ts and bossSpellsGlyphs.tsx (all large, impact 900..1100 ms, total <= 1950 ms; soul-tithe focuses on summon, harvest on soulHarvest). Enemy cast record tests: one primary per record, multi-effect anchors, independent casts. Known limitation: wither-curse and inferno are board-wide effects but anchor on the first player minion/hero like the existing event targets; the wave/mist bursts are wide but not full-board.
+- [ ] gallery review: pending with the user (Claude has no browser tool; review at `/?effects-preview` after `npm run dev`). Automated checks cover data, limits, uniqueness, and rendering integrity only.
+- commit: see Git history

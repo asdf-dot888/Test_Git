@@ -19,6 +19,7 @@ const BATCHES: Readonly<Record<string, readonly string[]>> = {
   ],
   "shared damage spells": ["shadow-bolt", "soul-lance", "fate-shard", "reaper-cleave", "meteor-shard", "soul-storm", "eclipse"],
   "shared utility spells": ["healing-mist", "life-thread", "mana-spring", "soul-bargain", "raise-bones", "rune-surge", "dark-insight", "stolen-fate"],
+  "boss spells": ["matron-thorn-prison", "matron-wither-curse", "grave-king-soul-tithe", "grave-king-pit-gate", "grave-king-harvest", "void-titan-burning-mark", "void-titan-inferno", "void-titan-flame-legion"],
 };
 
 const registeredIds = Object.keys(SPELL_VISUAL_SPECS);
