@@ -1,6 +1,6 @@
 # Task: T01 Hero Powers and Class Spells
 
-## Status: todo
+## Status: done
 
 ## Goal
 Add the first 12 unique effects (visual + sound): 3 hero powers and 9 class spells.
@@ -61,7 +61,7 @@ Task: T01-hero-powers-and-class-spells
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- [ ] gallery review: (one line per effect)
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 903 tests, lint clean, build clean. 12 effects registered via game/spellEffects/heroAndClass.ts (specs + sound recipes) and heroAndClassGlyphs.tsx; new spellEffectContent.test.ts and SpellEffectVisual.registered.test.tsx cover every registered effect.
+- [ ] gallery review: pending with the user (Claude has no browser tool; review at `/?effects-preview` after `npm run dev`). Automated checks cover data, limits, uniqueness, and rendering integrity only.
+- commit: see Git history
