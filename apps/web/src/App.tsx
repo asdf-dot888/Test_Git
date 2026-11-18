@@ -24,7 +24,7 @@ import { createAudioController, type AudioController, type AudioSettings, type M
 import type { GameAction } from "./game/gameActions.js";
 import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord, type RunDifficulty } from "./leaderboard/leaderboardClient.js";
-import { combatEventSounds } from "./game/combatEffects.js";
+import { combatEventSounds, spellCueFor } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
 import { loadTutorialProgress, markTutorialCompleted } from "./game/tutorialProgress.js";
 import { restoreTutorialPlayerHealth } from "./game/tutorialHealth.js";
@@ -210,6 +210,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       if (playedAudioEventIds.current.has(event.id)) continue;
       playedAudioEventIds.current.add(event.id);
       for (const cue of combatEventSounds(event)) audioController.playEffect(cue);
+      const spellCue = spellCueFor(event);
+      if (spellCue) audioController.playSpellCue(spellCue);
     }
   }, [audioController, session.combatEffects]);
 

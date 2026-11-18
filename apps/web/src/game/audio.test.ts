@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAudioController } from "./audio.js";
+import { __setSoundRecipesForTest, type SoundRecipe } from "./soundRecipes.js";
 
 class FakeAudio {
   loop = false;
@@ -35,20 +36,42 @@ class FakeAudioParam {
 
 class FakeGainNode {
   gain = new FakeAudioParam();
+  target: unknown = null;
+  connect(target?: unknown): void { this.target = target; }
+  disconnect = vi.fn();
+}
+
+class FakeBiquadFilterNode {
+  type = "lowpass";
+  frequency = new FakeAudioParam();
+  Q = new FakeAudioParam();
   connect(): void {}
   disconnect = vi.fn();
+}
+
+class FakeBufferSourceNode {
+  buffer: unknown = null;
+  loop = false;
+  onended: (() => void) | null = null;
+  starts: number[] = [];
+  stops: Array<number | undefined> = [];
+  connect(): void {}
+  disconnect = vi.fn();
+  start(at: number): void { this.starts.push(at); }
+  stop(at?: number): void { this.stops.push(at); }
 }
 
 class FakeOscillatorNode {
   type = "sine";
   frequency = new FakeAudioParam();
+  detune = new FakeAudioParam();
   onended: (() => void) | null = null;
   starts: number[] = [];
-  stops: number[] = [];
+  stops: Array<number | undefined> = [];
   connect(): void {}
   disconnect = vi.fn();
   start(at: number): void { this.starts.push(at); }
-  stop(at: number): void { this.stops.push(at); }
+  stop(at?: number): void { this.stops.push(at); }
 }
 
 class FakeAudioContext {
@@ -56,8 +79,14 @@ class FakeAudioContext {
   currentTime = 0;
   state: AudioContextState = "running";
   destination = {} as AudioDestinationNode;
+  sampleRate = 8000;
   oscillators: FakeOscillatorNode[] = [];
+  bufferSources: FakeBufferSourceNode[] = [];
+  filters: FakeBiquadFilterNode[] = [];
+  buffersCreated = 0;
   gains: FakeGainNode[] = [];
+  /** Gain nodes connected straight to the destination (the masters), in creation order. */
+  get masterGains(): FakeGainNode[] { return this.gains.filter((gain) => gain.target === this.destination); }
   close = vi.fn(async () => undefined);
   resume = vi.fn(async () => undefined);
 
@@ -71,6 +100,20 @@ class FakeAudioContext {
     const oscillator = new FakeOscillatorNode();
     this.oscillators.push(oscillator);
     return oscillator;
+  }
+  createBiquadFilter(): FakeBiquadFilterNode {
+    const filter = new FakeBiquadFilterNode();
+    this.filters.push(filter);
+    return filter;
+  }
+  createBufferSource(): FakeBufferSourceNode {
+    const source = new FakeBufferSourceNode();
+    this.bufferSources.push(source);
+    return source;
+  }
+  createBuffer(_channels: number, length: number): { getChannelData(): Float32Array } {
+    this.buffersCreated += 1;
+    return { getChannelData: () => new Float32Array(length) };
   }
 }
 
@@ -359,5 +402,157 @@ describe("createAudioController", () => {
     expect(players.every((player) => player.paused)).toBe(true);
     await vi.advanceTimersByTimeAsync(500);
     expect(players.every((player) => player.paused)).toBe(true);
+  });
+});
+
+describe("playSpellCue (synthesized spell sound layer)", () => {
+  const recipe: SoundRecipe = {
+    id: "test-cue",
+    totalMs: 900,
+    layers: [
+      { wave: "sawtooth", startMs: 0, durationMs: 400, fromHz: 880, toHz: 220, gain: 0.4, detuneCents: 7, filter: { type: "lowpass", fromHz: 4000, toHz: 600, q: 2 } },
+      { wave: "noise", startMs: 100, durationMs: 300, fromHz: 1, gain: 0.3, filter: { type: "bandpass", fromHz: 1200 } },
+      { wave: "sine", startMs: 500, durationMs: 400, fromHz: 440, gain: 0.5, attackMs: 5 },
+    ],
+  };
+
+  function setupSynth(settings = { musicVolume: 0.4, effectsVolume: 0.6, muted: false }) {
+    FakeAudioContext.instances = [];
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    __setSoundRecipesForTest({ "test-cue": recipe });
+    const made = setup();
+    made.controller.setSettings(settings);
+    return made;
+  }
+
+  afterEach(() => {
+    __setSoundRecipesForTest(null);
+    vi.unstubAllGlobals();
+  });
+
+  it("builds one oscillator or noise source per layer, schedules each at its offset, and applies the filters", () => {
+    const { controller, players } = setupSynth();
+    controller.playSpellCue("test-cue");
+
+    const context = FakeAudioContext.instances[0]!;
+    expect(players).toHaveLength(0);
+    expect(context.oscillators).toHaveLength(2);
+    expect(context.bufferSources).toHaveLength(1);
+    expect(context.filters).toHaveLength(2);
+    expect(context.buffersCreated).toBe(1);
+
+    const [saw, sine] = context.oscillators;
+    expect(saw?.type).toBe("sawtooth");
+    expect(saw?.frequency.value).toBe(220);
+    expect(saw?.detune.value).toBe(7);
+    expect(saw?.starts[0]).toBeCloseTo(0);
+    expect(saw?.stops[0]).toBeCloseTo(0.42);
+    expect(sine?.type).toBe("sine");
+    expect(sine?.starts[0]).toBeCloseTo(0.5);
+    expect(sine?.stops[0]).toBeCloseTo(0.92);
+
+    const noise = context.bufferSources[0]!;
+    expect(noise.loop).toBe(true);
+    expect(noise.buffer).not.toBeNull();
+    expect(noise.starts[0]).toBeCloseTo(0.1);
+    expect(context.filters.map((filter) => filter.type)).toEqual(["lowpass", "bandpass"]);
+    expect(context.filters[0]?.frequency.value).toBe(600);
+    expect(context.filters[0]?.Q.value).toBe(2);
+    controller.dispose();
+  });
+
+  it("reuses one noise buffer across cues", () => {
+    const { controller } = setupSynth();
+    controller.playSpellCue("test-cue");
+    controller.playSpellCue("test-cue");
+    expect(FakeAudioContext.instances[0]?.buffersCreated).toBe(1);
+    controller.dispose();
+  });
+
+  it("scales the master volume by the effects volume and the per-cue scale", () => {
+    const { controller } = setupSynth();
+    controller.playSpellCue("test-cue");
+    controller.playSpellCue("test-cue", 0.5);
+    const context = FakeAudioContext.instances[0]!;
+    const masters = context.gains.filter((gain) => context.masterGains.includes(gain));
+    expect(masters).toHaveLength(2);
+    expect(masters[0]?.gain.value).toBeCloseTo(0.6 * 0.5);
+    expect(masters[1]?.gain.value).toBeCloseTo(0.6 * 0.5 * 0.5);
+    controller.dispose();
+  });
+
+  it("is silent for unknown ids, muted audio, zero volume, or missing WebAudio", () => {
+    const { controller } = setupSynth();
+    controller.playSpellCue("not-a-recipe");
+    expect(FakeAudioContext.instances).toHaveLength(0);
+
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: true });
+    controller.playSpellCue("test-cue");
+    expect(FakeAudioContext.instances).toHaveLength(0);
+
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 0, muted: false });
+    controller.playSpellCue("test-cue");
+    expect(FakeAudioContext.instances).toHaveLength(0);
+    controller.dispose();
+
+    vi.stubGlobal("AudioContext", undefined);
+    const noAudio = setup().controller;
+    expect(() => noAudio.playSpellCue("test-cue")).not.toThrow();
+    noAudio.dispose();
+  });
+
+  it("follows live volume and mute changes while a cue is playing", () => {
+    const { controller } = setupSynth();
+    controller.playSpellCue("test-cue");
+    const context = FakeAudioContext.instances[0]!;
+    const master = context.masterGains[0]!;
+    expect(master.gain.value).toBeCloseTo(0.3);
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: false });
+    expect(master.gain.value).toBeCloseTo(0.5);
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: true });
+    expect(master.gain.value).toBe(0);
+    controller.dispose();
+  });
+
+  it("disconnects every node after the last source ends", () => {
+    const { controller } = setupSynth();
+    controller.playSpellCue("test-cue");
+    const context = FakeAudioContext.instances[0]!;
+    const sources = [...context.oscillators, ...context.bufferSources];
+    sources.slice(0, -1).forEach((source) => source.onended?.());
+    expect(context.masterGains[0]?.disconnect).not.toHaveBeenCalled();
+    sources.at(-1)?.onended?.();
+    expect(context.masterGains[0]?.disconnect).toHaveBeenCalledOnce();
+    expect(context.filters.every((filter) => filter.disconnect.mock.calls.length === 1)).toBe(true);
+    for (const source of sources) expect(source.disconnect).toHaveBeenCalled();
+    controller.dispose();
+  });
+
+  it("allows four concurrent cues and stops the oldest when a fifth starts", () => {
+    const { controller } = setupSynth();
+    for (let count = 0; count < 4; count += 1) controller.playSpellCue("test-cue");
+    const context = FakeAudioContext.instances[0]!;
+    expect(context.oscillators.every((oscillator) => oscillator.stops.length === 1)).toBe(true);
+    controller.playSpellCue("test-cue");
+    // The first cue owns oscillators[0..1] and is stopped immediately; the others keep only their scheduled stop.
+    expect(context.oscillators[0]?.stops).toHaveLength(2);
+    expect(context.oscillators[1]?.stops).toHaveLength(2);
+    expect(context.masterGains[0]?.disconnect).toHaveBeenCalled();
+    expect(context.oscillators[2]?.stops).toHaveLength(1);
+    expect(context.masterGains[1]?.disconnect).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
+  it("stops and disconnects active cues on dispose", () => {
+    const { controller } = setupSynth();
+    controller.playSpellCue("test-cue");
+    const context = FakeAudioContext.instances[0]!;
+    controller.dispose();
+    expect(context.oscillators.every((oscillator) => oscillator.stops.length === 2)).toBe(true);
+    expect(context.bufferSources.every((source) => source.stops.length === 2)).toBe(true);
+    expect(context.masterGains[0]?.disconnect).toHaveBeenCalled();
+    expect(context.close).toHaveBeenCalledOnce();
+    expect(() => controller.playSpellCue("test-cue")).not.toThrow();
+    expect(FakeAudioContext.instances).toHaveLength(1);
   });
 });

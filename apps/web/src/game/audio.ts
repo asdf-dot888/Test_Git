@@ -1,3 +1,5 @@
+import { DEFAULT_ATTACK_MS, getSoundRecipe, type SynthLayer } from "./soundRecipes.js";
+
 export type MusicKind = "menu" | "normal" | "boss";
 export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "ui-hover" | "turn-start" | "turn-end" | "summon" | "timer-warning"
   | "impact-light" | "impact-medium" | "impact-heavy" | "impact-armor-block" | "impact-hero-melee" | "impact-boss-area";
@@ -12,6 +14,8 @@ export interface AudioController {
   unlock(): Promise<boolean>;
   playMusic(kind: MusicKind): Promise<boolean>;
   playEffect(kind: SoundEffectKind, volumeScale?: number): void;
+  /** Plays the synthesized sound layer of a spell or hero power effect (no-op for unknown ids). */
+  playSpellCue(id: string, volumeScale?: number): void;
   setSettings(settings: AudioSettings): void;
   dispose(): void;
 }
@@ -41,6 +45,8 @@ const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start" | "ui-hover">
   "impact-boss-area": "/audio/sfx/impact-boss-area.ogg",
 };
 
+const MAX_SPELL_CUES = 4;
+const SPELL_CUE_VOLUME = 0.5;
 const CROSSFADE_DURATION_MS = 400;
 const CROSSFADE_STEP_MS = 20;
 const DEFAULT_SETTINGS: AudioSettings = { musicVolume: 0.32, effectsVolume: 0.72, muted: false };
@@ -63,6 +69,9 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
   const turnCues = new Set<{ master: GainNode; oscillators: OscillatorNode[] }>();
   const hoverCues = new Set<{ master: GainNode; oscillators: OscillatorNode[] }>();
   let lastHoverAt = Number.NEGATIVE_INFINITY;
+  interface SpellCue { master: GainNode; scale: number; sources: AudioScheduledSourceNode[]; nodes: AudioNode[] }
+  const spellCues: SpellCue[] = [];
+  let noiseBuffer: AudioBuffer | null = null;
 
   function getAudioContext(): AudioContext | null {
     if (audioContext || typeof globalThis.AudioContext === "undefined") return audioContext;
@@ -157,6 +166,109 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
         oscillator.start(start);
         oscillator.stop(start + note.duration + 0.01);
       }
+    } catch {
+      // Audio support is optional; a missing WebAudio implementation must not affect gameplay.
+    }
+  }
+
+  /** One second of deterministic white noise, generated once per context and looped by noise layers. */
+  function getNoiseBuffer(context: AudioContext): AudioBuffer | null {
+    if (noiseBuffer) return noiseBuffer;
+    try {
+      const sampleRate = context.sampleRate || 44_100;
+      const buffer = context.createBuffer(1, sampleRate, sampleRate);
+      const data = buffer.getChannelData(0);
+      let seed = 0x2f6e2b1;
+      for (let index = 0; index < data.length; index += 1) {
+        seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
+        data[index] = seed / 0x80000000 - 1;
+      }
+      noiseBuffer = buffer;
+      return buffer;
+    } catch {
+      return null;
+    }
+  }
+
+  function finishSpellCue(cue: SpellCue): void {
+    for (const node of cue.nodes) {
+      try { node.disconnect(); } catch { /* Node may already be disconnected. */ }
+    }
+    try { cue.master.disconnect(); } catch { /* Node may already be disconnected. */ }
+    const index = spellCues.indexOf(cue);
+    if (index >= 0) spellCues.splice(index, 1);
+  }
+
+  function stopSpellCue(cue: SpellCue): void {
+    for (const source of cue.sources) {
+      try { source.stop(); } catch { /* Source may already have stopped. */ }
+    }
+    cue.sources = [];
+    finishSpellCue(cue);
+  }
+
+  function addSynthLayer(context: AudioContext, cue: SpellCue, layer: SynthLayer): void {
+    const start = context.currentTime + layer.startMs / 1000;
+    const end = start + layer.durationMs / 1000;
+    const attack = Math.min(layer.durationMs, layer.attackMs ?? DEFAULT_ATTACK_MS) / 1000;
+    let source: AudioScheduledSourceNode;
+    if (layer.wave === "noise") {
+      const buffer = getNoiseBuffer(context);
+      if (!buffer) return;
+      const noise = context.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      source = noise;
+    } else {
+      const oscillator = context.createOscillator();
+      oscillator.type = layer.wave;
+      oscillator.frequency.setValueAtTime(layer.fromHz, start);
+      if (layer.toHz !== undefined) oscillator.frequency.exponentialRampToValueAtTime(layer.toHz, end);
+      if (layer.detuneCents) oscillator.detune.setValueAtTime(layer.detuneCents, start);
+      source = oscillator;
+    }
+    const envelope = context.createGain();
+    envelope.gain.setValueAtTime(0.0001, start);
+    envelope.gain.linearRampToValueAtTime(layer.gain, start + attack);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, end);
+    const nodes: AudioNode[] = [source, envelope];
+    if (layer.filter) {
+      const filter = context.createBiquadFilter();
+      filter.type = layer.filter.type;
+      filter.frequency.setValueAtTime(layer.filter.fromHz, start);
+      if (layer.filter.toHz !== undefined) filter.frequency.exponentialRampToValueAtTime(layer.filter.toHz, end);
+      filter.Q.setValueAtTime(layer.filter.q ?? 0.8, start);
+      source.connect(filter);
+      filter.connect(envelope);
+      nodes.push(filter);
+    } else {
+      source.connect(envelope);
+    }
+    envelope.connect(cue.master);
+    cue.nodes.push(...nodes);
+    cue.sources.push(source);
+    source.onended = () => {
+      cue.sources = cue.sources.filter((active) => active !== source);
+      if (cue.sources.length === 0) finishSpellCue(cue);
+    };
+    source.start(start);
+    source.stop(end + 0.02);
+  }
+
+  function playSpellCue(id: string, volumeScale: number): void {
+    const recipe = getSoundRecipe(id);
+    const scale = clampVolume(volumeScale);
+    if (!recipe || disposed || effectVolume(SPELL_CUE_VOLUME * scale) === 0) return;
+    const context = getAudioContext();
+    if (!context) return;
+    try {
+      const master = context.createGain();
+      master.gain.setValueAtTime(effectVolume(SPELL_CUE_VOLUME * scale), context.currentTime);
+      master.connect(context.destination);
+      const cue: SpellCue = { master, scale, sources: [], nodes: [] };
+      while (spellCues.length >= MAX_SPELL_CUES) stopSpellCue(spellCues[0]!);
+      spellCues.push(cue);
+      for (const layer of recipe.layers) addSynthLayer(context, cue, layer);
     } catch {
       // Audio support is optional; a missing WebAudio implementation must not affect gameplay.
     }
@@ -293,6 +405,10 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       });
     },
 
+    playSpellCue(id, volumeScale = 1) {
+      playSpellCue(id, volumeScale);
+    },
+
     setSettings(nextSettings) {
       settings = {
         musicVolume: clampVolume(nextSettings.musicVolume),
@@ -303,6 +419,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       for (const [player, scale] of effectPlayers) player.volume = effectVolume(scale);
       for (const cue of turnCues) cue.master.gain.setValueAtTime(effectVolume(0.35), audioContext?.currentTime ?? 0);
       for (const cue of hoverCues) cue.master.gain.setValueAtTime(effectVolume(0.22), audioContext?.currentTime ?? 0);
+      for (const cue of spellCues) cue.master.gain.setValueAtTime(effectVolume(SPELL_CUE_VOLUME * cue.scale), audioContext?.currentTime ?? 0);
     },
 
     dispose() {
@@ -329,6 +446,9 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
         cue.master.disconnect();
       }
       hoverCues.clear();
+      for (const cue of [...spellCues]) stopSpellCue(cue);
+      spellCues.length = 0;
+      noiseBuffer = null;
       if (audioContext) void audioContext.close().catch(() => undefined);
       audioContext = null;
       effectPlayers.clear();

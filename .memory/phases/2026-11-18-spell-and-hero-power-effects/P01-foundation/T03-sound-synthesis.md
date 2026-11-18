@@ -1,6 +1,6 @@
 # Task: T03 Sound Synthesis
 
-## Status: todo
+## Status: done
 
 ## Goal
 Add a Web Audio synthesis layer that can play one unique sound recipe per effect, mixed with the existing sample cues, and wire it to primary effect events.
@@ -62,6 +62,6 @@ Task: T03-sound-synthesis
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 868 tests, lint clean, build clean. Added soundRecipes.ts (schema, limits, validators, fingerprint, test override), AudioController.playSpellCue (oscillator/noise layers, filters, cached deterministic noise buffer, concurrency cap 4, live volume/mute, dispose cleanup), spellCueFor() in combatEffects.ts and the App wiring. Audio fakes in audio.test.ts gained filter/buffer-source nodes and a masterGains getter.
+- commit: see Git history

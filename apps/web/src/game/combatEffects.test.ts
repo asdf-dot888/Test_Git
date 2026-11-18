@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
 import { __setSpellVisualSpecsForTest, type SpellVisualSpec } from "./spellEffectCatalog.js";
-import { CARD_COMBAT_VISUAL_PROFILES, combatEventSounds, combatImpactSounds, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
+import { CARD_COMBAT_VISUAL_PROFILES, combatEventSounds, combatImpactSounds, spellCueFor, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
 function withBattle(run: RunState, update: (run: RunState) => void): RunState {
   const next = structuredClone(run);
@@ -559,5 +559,16 @@ describe("spell visual tagging", () => {
     const events = collectCombatEffectEvents(before, before, { type: "play-minion", instanceId: "wolf" }, 1);
     expect(events.length).toBeGreaterThan(0);
     expect(events.every((event) => event.visualId === undefined)).toBe(true);
+  });
+});
+
+describe("spellCueFor", () => {
+  const base: CombatEffectEvent = { id: 1, assetCardId: "shadow-bolt", effectKind: "damage", soundCues: [], source: { kind: "hand", side: "player", slot: 0 }, target: { kind: "hero", side: "enemy" } };
+
+  it("returns the visual id only for the primary event of a tagged cast", () => {
+    expect(spellCueFor({ ...base, visualId: "shadow-bolt", visualRole: "primary" })).toBe("shadow-bolt");
+    expect(spellCueFor({ ...base, visualId: "shadow-bolt", visualRole: "follow-up" })).toBeNull();
+    expect(spellCueFor(base)).toBeNull();
+    expect(spellCueFor({ ...base, visualRole: "primary" })).toBeNull();
   });
 });

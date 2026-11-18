@@ -37,6 +37,11 @@ export function combatImpactSounds(event: CombatEffectEvent): SoundEffectKind[] 
   return tier ? [`impact-${tier}`] : [];
 }
 
+/** The synthesized spell sound to play for an event: only the primary event of a tagged cast has one. */
+export function spellCueFor(event: CombatEffectEvent): string | null {
+  return event.visualId !== undefined && event.visualRole === "primary" ? event.visualId : null;
+}
+
 /** Preserves cast/death cues, replacing generic damage with its resolved impact sound. */
 export function combatEventSounds(event: CombatEffectEvent): SoundEffectKind[] {
   const impacts = combatImpactSounds(event);
