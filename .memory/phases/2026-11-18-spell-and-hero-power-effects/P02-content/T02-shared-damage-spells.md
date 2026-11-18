@@ -1,6 +1,6 @@
 # Task: T02 Shared Damage Spells
 
-## Status: todo
+## Status: done
 
 ## Goal
 Add unique effects for the 7 shared damage spells.
@@ -52,7 +52,7 @@ Task: T02-shared-damage-spells
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- [ ] gallery review: (one line per effect)
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 909 tests, lint clean, build clean. 7 effects registered via spellEffects/sharedDamage.ts and sharedDamageGlyphs.tsx (meteor-shard, soul-storm, eclipse are large; soul-storm focuses on damage). Added real-registry tagging tests (one primary per cast, Soul Storm anchor, cleave neighbors, enemy cast) and made EffectsPreview/SpellEffectVisual tests independent of which cards are registered.
+- [ ] gallery review: pending with the user (Claude has no browser tool; review at `/?effects-preview` after `npm run dev`). Automated checks cover data, limits, uniqueness, and rendering integrity only.
+- commit: see Git history

@@ -17,6 +17,7 @@ const BATCHES: Readonly<Record<string, readonly string[]>> = {
     "assassin-venom-coat", "assassin-shuriken", "assassin-smoke-step",
     "demonist-dark-rite", "demonist-hellfire", "demonist-soul-bond",
   ],
+  "shared damage spells": ["shadow-bolt", "soul-lance", "fate-shard", "reaper-cleave", "meteor-shard", "soul-storm", "eclipse"],
 };
 
 const registeredIds = Object.keys(SPELL_VISUAL_SPECS);

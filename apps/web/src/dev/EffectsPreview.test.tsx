@@ -63,6 +63,7 @@ describe("EffectsPreview", () => {
   });
 
   it("disables playing an unregistered effect and says so", () => {
+    __setSpellVisualSpecsForTest({});
     render(<EffectsPreview />);
     expect((screen.getByRole("button", { name: "재생" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole("status").textContent).toContain("아직 연출이 등록되지 않았습니다");

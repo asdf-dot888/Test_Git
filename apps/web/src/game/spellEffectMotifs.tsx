@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { HERO_AND_CLASS_GLYPHS } from "./spellEffects/heroAndClassGlyphs.js";
+import { SHARED_DAMAGE_GLYPHS } from "./spellEffects/sharedDamageGlyphs.js";
 
 /**
  * Procedural motif library for spell and hero power effects. Each motif is a handful of absolutely
@@ -83,4 +84,4 @@ export const BURST_MOTIFS: Readonly<Record<string, MotifRenderer>> = {
 };
 
 /** One unique SVG glyph per effect id (content batches live in `./spellEffects/`). */
-export const GLYPHS: Readonly<Record<string, ReactNode>> = { ...HERO_AND_CLASS_GLYPHS };
+export const GLYPHS: Readonly<Record<string, ReactNode>> = { ...HERO_AND_CLASS_GLYPHS, ...SHARED_DAMAGE_GLYPHS };

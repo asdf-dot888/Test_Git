@@ -80,7 +80,7 @@ describe("SpellEffectVisual", () => {
   });
 
   it("stays within the element budget and renders nothing for unknown motifs or the none travel motif", () => {
-    const { container } = renderVisual({ spec: { ...spec, motifs: { start: "unknown", travel: "none", burst: "unknown" } } });
+    const { container } = renderVisual({ spec: { ...spec, glyph: "no-such-glyph", motifs: { start: "unknown", travel: "none", burst: "unknown" } } });
     expect(container.querySelectorAll(".spell-fx *").length).toBeLessThanOrEqual(72);
     expect(container.querySelector(".spell-fx__start")?.children).toHaveLength(0);
     expect(container.querySelector(".spell-fx__travel")?.children).toHaveLength(0);

@@ -574,3 +574,46 @@ describe("spellCueFor", () => {
     expect(spellCueFor({ ...base, visualRole: "primary" })).toBeNull();
   });
 });
+
+describe("shared damage spells use their registered visuals", () => {
+  const IDS = ["shadow-bolt", "soul-lance", "fate-shard", "reaper-cleave", "meteor-shard", "soul-storm", "eclipse"] as const;
+
+  function castRun(seed: number, cardId: string): RunState {
+    return withBattle(createRun(seed), (state) => {
+      state.battle!.hand = [{ instanceId: "cast", cardId }];
+      state.battle!.enemyBoard = ["left", "center", "right"].map((instanceId) => ({
+        instanceId, cardId: "ash-wolf", owner: "enemy" as const, attack: 2, health: 6, maxHealth: 6, summonedTurn: 0, hasAttacked: false,
+      }));
+    });
+  }
+
+  it.each(IDS)("%s produces exactly one primary event carrying its own visual id", (id) => {
+    const before = castRun(960, id);
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast", targetId: "center" }, 1);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.visualId === id)).toBe(true);
+    expect(events.filter((event) => event.visualRole === "primary")).toHaveLength(1);
+  });
+
+  it("anchors Soul Storm on its damage and leaves the draw as a follow-up", () => {
+    const before = castRun(961, "soul-storm");
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(events.map((event) => [event.spellEffectKind, event.visualRole])).toEqual([["damage", "primary"], ["draw", "follow-up"]]);
+  });
+
+  it("keeps the cleave's neighbors on the primary Reaper Cleave event", () => {
+    const before = castRun(962, "reaper-cleave");
+    const [event] = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast", targetId: "center" }, 1);
+    expect(event?.visualRole).toBe("primary");
+    expect(event?.affectedTargets).toHaveLength(3);
+  });
+
+  it("plays the same visual when the enemy casts a shared damage spell", () => {
+    const run = createRun(963);
+    const events = collectEnemyActionEffects(run, run, {
+      type: "cast-spell", cardId: "soul-lance", instanceId: "lance", handSlot: 0,
+      effects: [{ kind: "damage", targetId: "player-hero" }],
+    }, 1);
+    expect(events[0]).toMatchObject({ visualId: "soul-lance", visualRole: "primary" });
+  });
+});
