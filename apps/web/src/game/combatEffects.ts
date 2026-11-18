@@ -1,6 +1,7 @@
 import { CARD_BY_ID, CARD_CATALOG, gameConstants, type CardDefinition, type EnemyCombatRecord, type PlayerSide, type ResolvedSpellEffect, type RunState, type SpellEffect } from "@board-game/game-core";
 import type { GameAction } from "./gameActions.js";
 import type { SoundEffectKind } from "./audio.js";
+import { getSpellVisualSpec, heroPowerVisualId } from "./spellEffectCatalog.js";
 
 export type CombatEffectKind = "attack" | "damage" | "heal" | "buff" | "mana" | "summon" | "draw" | "cleave" | "theft" | "fusion" | "hero-power" | "impact";
 
@@ -110,6 +111,12 @@ export interface CombatEffectEvent {
   bossPhase?: 1 | 2 | 3;
   deathAnchors?: CombatAnchor[];
   slowMotion?: boolean;
+  /** Id of the unique spell/hero power visual this event belongs to (registry key). */
+  visualId?: string;
+  /** The primary event plays the whole visual; follow-up events keep only their hit consequences. */
+  visualRole?: "primary" | "follow-up";
+  /** The spell effect that produced this event (used to pick the anchor of multi-effect spells). */
+  spellEffectKind?: SpellEffect["kind"];
 }
 
 function slotOf<T extends { instanceId: string }>(items: readonly T[], instanceId: string): number {
@@ -129,7 +136,7 @@ function combatKindForSpellEffect(effect: SpellEffect): CombatEffectKind {
   return effect.kind;
 }
 
-function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false, deathAnchors?: CombatAnchor[], bossArea = false, damageTarget?: CombatDamageTarget, damage?: CombatDamageInfo, affectedTargets?: CombatTargetDamage[], bossPhase?: 1 | 2 | 3): void {
+function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false, deathAnchors?: CombatAnchor[], bossArea = false, damageTarget?: CombatDamageTarget, damage?: CombatDamageInfo, affectedTargets?: CombatTargetDamage[], bossPhase?: 1 | 2 | 3, options?: { spellEffectKind?: SpellEffect["kind"] }): void {
   events.push({
     id: firstEventId + events.length,
     assetCardId,
@@ -144,7 +151,24 @@ function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardI
     ...(bossArea ? { bossArea: true } : {}),
     ...(bossPhase ? { bossPhase } : {}),
     ...(deathAnchors?.length ? { deathAnchors } : {}),
+    ...(options?.spellEffectKind ? { spellEffectKind: options.spellEffectKind } : {}),
   });
+}
+
+/**
+ * Marks the events of one spell cast (or hero power use) with their registered visual: exactly one
+ * primary event (the first event of the spec's focus effect, else the first event) and the rest as follow-ups.
+ * Casts without a registered visual stay untagged so they keep the generic presentation.
+ */
+function tagSpellVisual(events: CombatEffectEvent[], startIndex: number, visualId: string): void {
+  const spec = getSpellVisualSpec(visualId);
+  const cast = events.slice(startIndex);
+  if (!spec || cast.length === 0) return;
+  const anchor = (spec.focusEffectKind ? cast.find((event) => event.spellEffectKind === spec.focusEffectKind) : undefined) ?? cast[0]!;
+  for (const event of cast) {
+    event.visualId = visualId;
+    event.visualRole = event === anchor ? "primary" : "follow-up";
+  }
 }
 
 function damageInfo(attemptedAmount: number, target: CombatAnchor, before: NonNullable<RunState["battle"]>, after: NonNullable<RunState["battle"]> | undefined, retaliation = false): CombatDamageInfo {
@@ -236,6 +260,7 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
     }
     if (record.type === "cast-spell") {
       const definition = CARD_BY_ID.get(record.cardId);
+      const castStart = events.length;
       for (const [index, logged] of record.effects.entries()) {
         const effect = definition?.spellEffects?.[index];
         if (!effect) continue;
@@ -260,8 +285,9 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
           { kind: "hand", side: "enemy", slot: record.handSlot, instanceId: record.instanceId },
           target, cues, effect.kind === "cleave", deathAnchors, false,
           causesDamage ? damageTargetFor(target) : undefined,
-          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets);
+          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets, undefined, { spellEffectKind: effect.kind });
       }
+      tagSpellVisual(events, castStart, record.cardId);
       continue;
     }
     if (record.type === "attack") {
@@ -348,6 +374,7 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     const card = previous.hand[handSlot];
     const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
     if (card && definition?.kind === "spell") {
+      const castStart = events.length;
       for (const [effectIndex, effect] of (definition.spellEffects ?? []).entries()) {
         const kind = combatKindForSpellEffect(effect);
         const cues: SoundEffectKind[] = effect.kind === "summon" ? ["summon"] : ["spell"];
@@ -368,8 +395,9 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
         if (deathAnchors.length && !cues.includes("death")) cues.push("death");
         pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", side: "player", slot: handSlot, instanceId: card.instanceId }, target, cues, effect.kind === "cleave", deathAnchors, false,
           effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave" ? damageTargetFor(target) : undefined,
-          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets);
+          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets, undefined, { spellEffectKind: effect.kind });
       }
+      tagSpellVisual(events, castStart, card.cardId);
     }
   } else if (action.type === "attack") {
     const attackerSlot = slotOf(previous.playerBoard, action.attackerId);
@@ -412,6 +440,7 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
     }
   } else if (action.type === "use-hero-power") {
     const playerClass = previousRun.playerClass;
+    const heroPowerStart = events.length;
     if (playerClass === "warrior") {
       pushEvent(events, firstEventId, null, "hero-power", { kind: "hero", side: "player" }, { kind: "hero", side: "player" }, ["spell"]);
     } else if (playerClass === "assassin") {
@@ -426,6 +455,7 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
       const summoned = next.playerBoard.find((minion) => !previous.playerBoard.some((old) => old.instanceId === minion.instanceId));
       if (summoned) pushEvent(events, firstEventId, summoned.cardId, "hero-power", { kind: "hero", side: "player" }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, summoned.instanceId) }, ["summon"]);
     }
+    if (playerClass) tagSpellVisual(events, heroPowerStart, heroPowerVisualId(playerClass));
   } else if (action.type === "end-turn" && nextRun.battle) {
     if (next.playerHero.health < previous.playerHero.health) {
       const amount = Math.max(0, previous.playerHero.health - next.playerHero.health);

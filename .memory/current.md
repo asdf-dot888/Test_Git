@@ -1,19 +1,19 @@
 # Current Context
 
 ## Active Plan
-[Overall Difficulty Uplift (Normal and Hard)](./plans/2026-11-17-difficulty-uplift.md) — complete.
+[Unique Spell and Hero Power Effects (Visual and Sound)](./plans/2026-11-18-spell-and-hero-power-effects.md)
 
 ## Active Phase
-None — P01 and P02 are complete.
+[P01 Foundation](./phases/2026-11-18-spell-and-hero-power-effects/P01-foundation/phase.md)
 
 ## Active Task
-None — no active task.
+[P01-T02 Effect Renderer](./phases/2026-11-18-spell-and-hero-power-effects/P01-foundation/T02-effect-renderer.md)
 
 ## Status
-- Final (independent seed 20281117, 1000 runs per cell): Normal average completion 62.9% (gap 3.3pp); Hard average 6.3% with class gap 5.3pp.
-- The 0.3pp Hard gap overshoot was accepted by the user as within statistical error ([follow-up decision](./decisions/2026-11-17-difficulty-uplift-followup.md), option A).
-- 788 tests, lint, and build pass; the simulation bot is not in any bundle.
-- Pushed and deployed on 2026-11-17: production now serves v1.0.4 (release commit 13a2151, `deployments.json` updated). Deployed from a clean temporary worktree because the main working tree has unrelated uncommitted `.memory` changes.
+- Decision: [2026-11-18-spell-and-hero-power-effects](./decisions/2026-11-18-spell-and-hero-power-effects.md) confirmed.
+- P01-T01 complete: registry (`apps/web/src/game/spellEffectCatalog.ts`) and event tagging (`visualId`, `visualRole`, `spellEffectKind`) in `combatEffects.ts`; 806 tests pass. No spec registered yet, so gameplay presentation is unchanged.
+- Production serves v1.0.4.
+- User instruction: continue executing tasks in order without asking for confirmation.
 
 ## Next Step (IMPORTANT)
-No active task. Start a new feature with `/grill-me <feature>`. 
+Implement P01-T02: `SpellEffectVisual.tsx`, `spellEffectMotifs.tsx`, `styles/spellEffects.css` (imported in `main.tsx`), integrate into `CombatEffectLayer.tsx` (replace the 930 ms constant with `spec.impactAtMs`, completion at `spec.totalMs`, suppress card flight for tagged events, `resolveSpec` prop), tests; run `npm run build` BEFORE `npm test`, commit, advance to P01-T03.

@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
+import { __setSpellVisualSpecsForTest, type SpellVisualSpec } from "./spellEffectCatalog.js";
 import { CARD_COMBAT_VISUAL_PROFILES, combatEventSounds, combatImpactSounds, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
 function withBattle(run: RunState, update: (run: RunState) => void): RunState {
@@ -426,5 +427,137 @@ describe("combatImpactSounds", () => {
       soundCues: ["spell", "damage"],
       damage: { amount: 0, armorBlocked: 0, outcome: "miss", retaliation: false },
     }))).toEqual(["spell"]);
+  });
+});
+
+describe("spell visual tagging", () => {
+  function visual(id: string, overrides: Partial<SpellVisualSpec> = {}): SpellVisualSpec {
+    return {
+      id,
+      weight: "normal",
+      impactAtMs: 520,
+      totalMs: 1100,
+      palette: { primary: "#fff", secondary: "#000", glow: "#888" },
+      motifs: { start: "gather", travel: "bolt", burst: "shatter" },
+      glyph: id,
+      ...overrides,
+    };
+  }
+
+  afterEach(() => __setSpellVisualSpecsForTest(null));
+
+  function handRun(seed: number, cardId: string): RunState {
+    return withBattle(createRun(seed), (state) => {
+      state.battle!.hand = [{ instanceId: "cast", cardId }];
+    });
+  }
+
+  it("leaves casts without a registered visual untagged but records the spell effect kind", () => {
+    const before = handRun(940, "shadow-bolt");
+    const [event] = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(event?.visualId).toBeUndefined();
+    expect(event?.visualRole).toBeUndefined();
+    expect(event?.spellEffectKind).toBe("damage");
+  });
+
+  it("tags a single-effect player cast with one primary event", () => {
+    __setSpellVisualSpecsForTest({ "shadow-bolt": visual("shadow-bolt") });
+    const before = handRun(941, "shadow-bolt");
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ visualId: "shadow-bolt", visualRole: "primary", spellEffectKind: "damage" });
+  });
+
+  it("marks exactly one primary event for a multi-effect cast and follows the focus effect", () => {
+    const before = handRun(942, "soul-storm");
+    const large = { weight: "large" as const, totalMs: 1900, impactAtMs: 800 };
+    __setSpellVisualSpecsForTest({ "soul-storm": visual("soul-storm", { ...large, focusEffectKind: "damage" }) });
+    const damageFocus = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(damageFocus.map((event) => [event.spellEffectKind, event.visualRole])).toEqual([["damage", "primary"], ["draw", "follow-up"]]);
+    expect(damageFocus.every((event) => event.visualId === "soul-storm")).toBe(true);
+
+    __setSpellVisualSpecsForTest({ "soul-storm": visual("soul-storm", { ...large, focusEffectKind: "draw" }) });
+    const drawFocus = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(drawFocus.map((event) => event.visualRole)).toEqual(["follow-up", "primary"]);
+
+    __setSpellVisualSpecsForTest({ "soul-storm": visual("soul-storm", large) });
+    const defaultFocus = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(defaultFocus.map((event) => event.visualRole)).toEqual(["primary", "follow-up"]);
+  });
+
+  it("falls back to the first event when the focus effect does not occur", () => {
+    __setSpellVisualSpecsForTest({ "soul-bargain": visual("soul-bargain", { focusEffectKind: "summon" }) });
+    const before = handRun(943, "soul-bargain");
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(events.map((event) => event.visualRole)).toEqual(["primary", "follow-up"]);
+  });
+
+  it("tags enemy casts of shared spells with the same visual id", () => {
+    __setSpellVisualSpecsForTest({ "shadow-bolt": visual("shadow-bolt") });
+    const run = createRun(944);
+    const events = collectEnemyActionEffects(run, run, {
+      type: "cast-spell", cardId: "shadow-bolt", instanceId: "bolt", handSlot: 0,
+      effects: [{ kind: "damage", targetId: "player-hero" }],
+    }, 1);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ visualId: "shadow-bolt", visualRole: "primary", spellEffectKind: "damage" });
+  });
+
+  it("anchors an enemy multi-effect boss spell on its focus effect", () => {
+    __setSpellVisualSpecsForTest({ "grave-king-soul-tithe": visual("grave-king-soul-tithe", { weight: "large", impactAtMs: 800, totalMs: 1900, focusEffectKind: "summon" }) });
+    const run = createRun(945);
+    const events = collectEnemyActionEffects(run, run, {
+      type: "cast-spell", cardId: "grave-king-soul-tithe", instanceId: "tithe", handSlot: 0,
+      effects: [{ kind: "discardRandom", targetId: null }, { kind: "gainTemporaryMana", targetId: null }, { kind: "summon", targetId: null }],
+    }, 1);
+    expect(events.map((event) => [event.spellEffectKind, event.visualRole])).toEqual([
+      ["discardRandom", "follow-up"], ["gainTemporaryMana", "follow-up"], ["summon", "primary"],
+    ]);
+  });
+
+  it("keeps separate casts independent so each enemy record has its own primary event", () => {
+    __setSpellVisualSpecsForTest({ "shadow-bolt": visual("shadow-bolt") });
+    const run = createRun(946);
+    const first = collectEnemyActionEffects(run, run, { type: "cast-spell", cardId: "shadow-bolt", instanceId: "one", handSlot: 0, effects: [{ kind: "damage", targetId: "player-hero" }] }, 1);
+    const second = collectEnemyActionEffects(run, run, { type: "cast-spell", cardId: "shadow-bolt", instanceId: "two", handSlot: 1, effects: [{ kind: "damage", targetId: "player-hero" }] }, 2);
+    expect([...first, ...second].map((event) => event.visualRole)).toEqual(["primary", "primary"]);
+  });
+
+  it("tags hero power events by class and leaves them untagged without a visual", () => {
+    const warrior = createRun(947, "warrior");
+    const untagged = collectCombatEffectEvents(warrior, warrior, { type: "use-hero-power" }, 1);
+    expect(untagged[0]?.effectKind).toBe("hero-power");
+    expect(untagged[0]?.visualId).toBeUndefined();
+
+    __setSpellVisualSpecsForTest({
+      "hero-power-warrior": visual("hero-power-warrior"),
+      "hero-power-assassin": visual("hero-power-assassin"),
+      "hero-power-demonist": visual("hero-power-demonist"),
+    });
+    expect(collectCombatEffectEvents(warrior, warrior, { type: "use-hero-power" }, 1)[0]).toMatchObject({ visualId: "hero-power-warrior", visualRole: "primary" });
+
+    const assassin = withBattle(createRun(948, "assassin"), (state) => {
+      state.battle!.enemyBoard = [{ instanceId: "target", cardId: "bone-rat", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+    });
+    expect(collectCombatEffectEvents(assassin, assassin, { type: "use-hero-power", targetId: "target" }, 1)[0]).toMatchObject({ visualId: "hero-power-assassin", visualRole: "primary" });
+
+    const demonistBefore = createRun(949, "demonist");
+    const demonistAfter = withBattle(demonistBefore, (state) => {
+      state.battle!.playerBoard = [{ instanceId: "imp", cardId: "demon-lesser-imp", owner: "player", attack: 1, health: 1, maxHealth: 1, summonedTurn: 1, hasAttacked: false }];
+    });
+    const demonist = collectCombatEffectEvents(demonistBefore, demonistAfter, { type: "use-hero-power" }, 1);
+    expect(demonist).toHaveLength(1);
+    expect(demonist[0]).toMatchObject({ visualId: "hero-power-demonist", visualRole: "primary" });
+  });
+
+  it("never tags minion plays", () => {
+    __setSpellVisualSpecsForTest({ "ash-wolf": visual("ash-wolf") });
+    const before = withBattle(createRun(950), (state) => {
+      state.battle!.hand = [{ instanceId: "wolf", cardId: "ash-wolf" }];
+      state.battle!.playerMana.current = 5;
+    });
+    const events = collectCombatEffectEvents(before, before, { type: "play-minion", instanceId: "wolf" }, 1);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.visualId === undefined)).toBe(true);
   });
 });
