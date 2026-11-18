@@ -155,10 +155,49 @@ try {
   }
 
   Write-Host "Deploying the SPA and managed Functions API to the $Environment environment..."
-  & npx.cmd swa deploy $webOutput --api-location $stagedApi --api-language node --api-version 22 --env $Environment --app-name $staticWebAppName --resource-group $staticWebAppResourceGroup
-  if ($LASTEXITCODE -ne 0) {
-    throw "SWA deployment failed with exit code $LASTEXITCODE. Sign in with 'npx swa login' or set SWA_CLI_DEPLOYMENT_TOKEN, then retry."
+  # The SWA CLI can exit with code 0 after an authentication failure (for example a failed device-code login),
+  # so success is decided from its output and from the live site, never from the exit code alone.
+  $swaLines = New-Object System.Collections.Generic.List[string]
+  $previousErrorPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    & npx.cmd swa deploy $webOutput --api-location $stagedApi --api-language node --api-version 22 --env $Environment --app-name $staticWebAppName --resource-group $staticWebAppResourceGroup 2>&1 | ForEach-Object {
+      $line = "$_"
+      $swaLines.Add($line)
+      Write-Host $line
+    }
+    $swaExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorPreference
   }
+  if ($swaExitCode -ne 0) {
+    throw "SWA deployment failed with exit code $swaExitCode. Set SWA_CLI_DEPLOYMENT_TOKEN (Azure portal, Static Web App, Manage deployment token) in .env or the environment, then retry."
+  }
+  $swaOutput = ($swaLines -join [Environment]::NewLine) -replace "\x1b\[[0-9;]*m", ""
+  $deployedMatch = [regex]::Match($swaOutput, "Project deployed to\s+(https://\S+)")
+  if (-not $deployedMatch.Success) {
+    throw "The SWA CLI did not report a completed upload (no 'Project deployed to' message), so nothing was deployed. No version or release record was changed. Set SWA_CLI_DEPLOYMENT_TOKEN (Azure portal, Static Web App, Manage deployment token) in .env or the environment instead of signing in with the device code, then retry."
+  }
+  $deployedUrl = $deployedMatch.Groups[1].Value.TrimEnd(".", ",", ")")
+
+  Write-Host "Verifying that $deployedUrl serves the new build..."
+  $localIndexHtml = Get-Content -Raw -LiteralPath (Join-Path $webOutput "index.html")
+  $expectedAsset = [regex]::Match($localIndexHtml, "assets/index-[A-Za-z0-9_-]+\.js").Value
+  if ([string]::IsNullOrWhiteSpace($expectedAsset)) { throw "Could not find the main bundle name in the built index.html." }
+  $serving = $false
+  for ($attempt = 1; $attempt -le 12; $attempt++) {
+    try {
+      $response = Invoke-WebRequest -UseBasicParsing -Uri "$deployedUrl/?verify=$attempt" -Headers @{ "Cache-Control" = "no-cache" } -TimeoutSec 20
+      if ($response.Content.Contains($expectedAsset)) { $serving = $true; break }
+    } catch {
+      # The site may be briefly unavailable while the new version rolls out; retry.
+    }
+    Start-Sleep -Seconds 10
+  }
+  if (-not $serving) {
+    throw "The upload was reported as complete, but $deployedUrl does not serve $expectedAsset yet. No version or release record was changed. Check the site, then retry."
+  }
+  Write-Host "Verified: $deployedUrl serves $expectedAsset."
 
   if ($Environment -eq "preview") {
     Write-Host "Preview deployment of v$candidateVersion succeeded. Production version and release history were not changed."
