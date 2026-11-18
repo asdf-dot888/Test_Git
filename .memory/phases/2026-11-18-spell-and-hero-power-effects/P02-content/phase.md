@@ -9,4 +9,4 @@
 | T04 | `todo` | 8 boss-only spells | [T04](./T04-boss-spells.md) |
 
 ## Progress
-- done: 0/4 (active: none; blocked until P01 completes)
+- done: 0/4 (active: T01)

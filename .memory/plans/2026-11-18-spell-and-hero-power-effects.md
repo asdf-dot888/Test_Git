@@ -24,7 +24,7 @@ Give each of the 35 effects below its own procedural CSS/SVG visual and its own 
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `todo` | Foundation: registry and event tagging, SVG renderer integration, sound synthesis, preview gallery | [P01](../phases/2026-11-18-spell-and-hero-power-effects/P01-foundation/phase.md) |
+| P01 | `done` | Foundation: registry and event tagging, SVG renderer integration, sound synthesis, preview gallery | [P01](../phases/2026-11-18-spell-and-hero-power-effects/P01-foundation/phase.md) |
 | P02 | `todo` | Content: 35 effects in four batches (hero powers + class spells, shared damage, shared utility, boss spells) | [P02](../phases/2026-11-18-spell-and-hero-power-effects/P02-content/phase.md) |
 | P03 | `todo` | Verification, documentation, close-out | [P03](../phases/2026-11-18-spell-and-hero-power-effects/P03-verification/phase.md) |
 

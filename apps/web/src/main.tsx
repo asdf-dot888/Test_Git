@@ -18,7 +18,14 @@ const root = createRoot(rootElement);
 
 const auth = readAuthConfig();
 
-if (!auth.config) {
+// Development-only effects gallery (no login); the branch is removed from production builds.
+const previewRequested = import.meta.env.DEV && new URLSearchParams(window.location.search).has("effects-preview");
+
+if (previewRequested) {
+  void import("./dev/EffectsPreview.js").then(({ EffectsPreview }) => {
+    root.render(<StrictMode><EffectsPreview /></StrictMode>);
+  });
+} else if (!auth.config) {
   root.render(<AuthConfigurationPage missing={auth.missing} />);
 } else {
   root.render(<main className="auth-screen"><p role="status">로그인을 준비하고 있습니다.</p></main>);

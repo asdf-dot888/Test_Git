@@ -1,6 +1,6 @@
 # Task: T04 Effects Preview Gallery
 
-## Status: todo
+## Status: done
 
 ## Goal
 Provide a dev-only page that plays any registered effect (visual + sound) on a fake board, so effects can be reviewed without signing in or playing a battle.
@@ -40,6 +40,6 @@ Task: T04-effects-preview-gallery
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 884 tests, lint clean, build clean; no 'effects-preview', 'EffectsPreview' or preview CSS in apps/web/dist. Added dev/EffectsPreview.tsx, dev/previewEvents.ts, dev/effectsPreview.css, main.tsx gate (import.meta.env.DEV + ?effects-preview). Also fixed a gap from T02: board shake CSS had a fixed 930 ms delay, so it now uses --hit-delay (set by CombatEffectLayer from the spec's impactAtMs; legacy 930 ms otherwise) and combatKindForSpellEffect is exported.
+- commit: see Git history

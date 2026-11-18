@@ -132,7 +132,7 @@ function damageTargetFor(anchor: CombatAnchor): CombatDamageTarget | undefined {
   return anchor.kind === "minion" || anchor.kind === "hero" ? anchor.kind : undefined;
 }
 
-function combatKindForSpellEffect(effect: SpellEffect): CombatEffectKind {
+export function combatKindForSpellEffect(effect: SpellEffect): CombatEffectKind {
   if (effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "damageAllEnemyMinions" || effect.kind === "soulHarvest" || effect.kind === "burnEnemyHero") return "damage";
   if (effect.kind === "rootMinion" || effect.kind === "curseAllEnemyMinions") return "buff";
   if (effect.kind === "cleave") return "cleave";

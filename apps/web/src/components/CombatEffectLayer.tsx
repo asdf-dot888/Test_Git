@@ -217,13 +217,15 @@ function EffectSprite({ event, index, paused, onComplete, resolveSpec }: { event
     const board = document.querySelector<HTMLElement>(".battle-board");
     if (!board) return;
     retainBoardShake(board, shakeClass, event.id);
+    board.style.setProperty("--hit-delay", `${hitDelayMs}ms`);
     return () => {
       releaseBoardShake(board, shakeClass, event.id);
       if (!board.classList.contains("is-shaking") && !board.classList.contains("is-boss-area-impact") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
         board.style.animationPlayState = "";
+        board.style.removeProperty("--hit-delay");
       }
     };
-  }, [event.areaImpact, event.damageTarget, event.id, shakeClass]);
+  }, [event.areaImpact, event.damageTarget, event.id, hitDelayMs, shakeClass]);
 
   useEffect(() => {
     if (!shakeClass) return;
@@ -249,6 +251,7 @@ function EffectSprite({ event, index, paused, onComplete, resolveSpec }: { event
       releaseBoardShake(board, shakeClass, event.id);
       if (!board.classList.contains("is-shaking") && !board.classList.contains("is-boss-area-impact") && !board.classList.contains("is-hit-shaking") && !board.classList.contains("is-hit-shaking-medium") && !board.classList.contains("is-hit-shaking-heavy")) {
         board.style.animationPlayState = "";
+        board.style.removeProperty("--hit-delay");
       }
     }, shakeRemainingMs.current);
     return () => {
