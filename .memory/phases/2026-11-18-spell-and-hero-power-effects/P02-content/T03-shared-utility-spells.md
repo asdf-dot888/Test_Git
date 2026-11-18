@@ -1,6 +1,6 @@
 # Task: T03 Shared Utility Spells
 
-## Status: todo
+## Status: done
 
 ## Goal
 Add unique effects for the 8 shared non-damage spells (heal, buff, summon, draw, mana, theft, discard/temporary mana).
@@ -51,7 +51,7 @@ Task: T03-shared-utility-spells
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- [ ] gallery review: (one line per effect)
-- commit: pending
+- [x] implementation complete
+- [x] validation passed: 940 tests, lint clean, build clean. 8 effects registered via spellEffects/sharedUtility.ts and sharedUtilityGlyphs.tsx (all normal; soul-bargain focuses on gainTemporaryMana; raise-bones starts at the target). Tagging tests with the real registry (one primary per cast, Soul Bargain anchor, enemy cast). batch-patch.mjs was made line-based so it works for any batch.
+- [ ] gallery review: pending with the user (Claude has no browser tool; review at `/?effects-preview` after `npm run dev`). Automated checks cover data, limits, uniqueness, and rendering integrity only.
+- commit: see Git history

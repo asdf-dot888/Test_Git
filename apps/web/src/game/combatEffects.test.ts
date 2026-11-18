@@ -617,3 +617,37 @@ describe("shared damage spells use their registered visuals", () => {
     expect(events[0]).toMatchObject({ visualId: "soul-lance", visualRole: "primary" });
   });
 });
+
+describe("shared utility spells use their registered visuals", () => {
+  const IDS = ["healing-mist", "life-thread", "mana-spring", "soul-bargain", "raise-bones", "rune-surge", "dark-insight", "stolen-fate"] as const;
+
+  function castRun(seed: number, cardId: string): RunState {
+    return withBattle(createRun(seed), (state) => {
+      state.battle!.hand = [{ instanceId: "cast", cardId }];
+      state.battle!.playerBoard = [{ instanceId: "ally", cardId: "ash-wolf", owner: "player", attack: 2, health: 2, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    });
+  }
+
+  it.each(IDS)("%s produces exactly one primary event carrying its own visual id", (id) => {
+    const before = castRun(970, id);
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast", targetId: "ally" }, 1);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.visualId === id)).toBe(true);
+    expect(events.filter((event) => event.visualRole === "primary")).toHaveLength(1);
+  });
+
+  it("anchors Soul Bargain on the temporary mana and leaves the discard as a follow-up", () => {
+    const before = castRun(971, "soul-bargain");
+    const events = collectCombatEffectEvents(before, before, { type: "cast-spell", instanceId: "cast" }, 1);
+    expect(events.map((event) => [event.spellEffectKind, event.visualRole])).toEqual([["discardRandom", "follow-up"], ["gainTemporaryMana", "primary"]]);
+  });
+
+  it("plays the same visual when the enemy casts a shared utility spell", () => {
+    const run = createRun(972);
+    const events = collectEnemyActionEffects(run, run, {
+      type: "cast-spell", cardId: "healing-mist", instanceId: "mist", handSlot: 0,
+      effects: [{ kind: "heal", targetId: null }],
+    }, 1);
+    expect(events[0]).toMatchObject({ visualId: "healing-mist", visualRole: "primary" });
+  });
+});

@@ -1,5 +1,6 @@
 import { HERO_AND_CLASS_RECIPES } from "./spellEffects/heroAndClass.js";
 import { SHARED_DAMAGE_RECIPES } from "./spellEffects/sharedDamage.js";
+import { SHARED_UTILITY_RECIPES } from "./spellEffects/sharedUtility.js";
 
 /**
  * Synthesized sound layers for spell and hero power effects. A recipe is a short list of oscillator or
@@ -42,7 +43,7 @@ export interface SoundRecipe {
 export const SYNTH_LIMITS = { maxLayers: 6, maxGain: 0.6, maxTotalMs: 2000, minHz: 20, maxHz: 16000 } as const;
 export const DEFAULT_ATTACK_MS = 12;
 
-const ALL_SOUND_RECIPES: readonly SoundRecipe[] = [...HERO_AND_CLASS_RECIPES, ...SHARED_DAMAGE_RECIPES];
+const ALL_SOUND_RECIPES: readonly SoundRecipe[] = [...HERO_AND_CLASS_RECIPES, ...SHARED_DAMAGE_RECIPES, ...SHARED_UTILITY_RECIPES];
 
 /** Registered recipes, one entry per effect id (content batches live in `./spellEffects/`). */
 export const SOUND_RECIPES: Readonly<Record<string, SoundRecipe>> = Object.fromEntries(

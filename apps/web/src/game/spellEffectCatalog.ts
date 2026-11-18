@@ -1,6 +1,7 @@
 import { CARD_CATALOG, type PlayerClass, type SpellEffect } from "@board-game/game-core";
 import { HERO_AND_CLASS_SPECS } from "./spellEffects/heroAndClass.js";
 import { SHARED_DAMAGE_SPECS } from "./spellEffects/sharedDamage.js";
+import { SHARED_UTILITY_SPECS } from "./spellEffects/sharedUtility.js";
 
 export type SpellVisualWeight = "normal" | "large";
 
@@ -29,7 +30,7 @@ export interface SpellVisualSpec {
 
 export const SPELL_VISUAL_LIMITS = { normalMs: 1200, largeMs: 2000, minHitTailMs: 450, minImpactAtMs: 300 } as const;
 
-const ALL_SPELL_VISUAL_SPECS: readonly SpellVisualSpec[] = [...HERO_AND_CLASS_SPECS, ...SHARED_DAMAGE_SPECS];
+const ALL_SPELL_VISUAL_SPECS: readonly SpellVisualSpec[] = [...HERO_AND_CLASS_SPECS, ...SHARED_DAMAGE_SPECS, ...SHARED_UTILITY_SPECS];
 
 /** Registered effects, one entry per effect id (content batches live in `./spellEffects/`). */
 export const SPELL_VISUAL_SPECS: Readonly<Record<string, SpellVisualSpec>> = Object.fromEntries(
