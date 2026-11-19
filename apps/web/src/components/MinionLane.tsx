@@ -1,4 +1,5 @@
-import { gameConstants, type MinionState, type PlayerSide } from "@board-game/game-core";
+import { CARD_BY_ID, gameConstants, type MinionState, type PlayerSide } from "@board-game/game-core";
+import { CardInspection } from "./CardInspection.js";
 import { MinionCard } from "./MinionCard.js";
 import { readDragPayload, type DropTarget } from "./dragInteractions.js";
 
@@ -13,9 +14,11 @@ interface MinionLaneProps {
   onSelectTarget(targetId: string): void;
   onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
   intentTargetIds?: string[];
+  /** When false, a finger tap goes to the minion's own action (used while the assassin hero power asks for a target). */
+  tapDetails?: boolean;
 }
 
-export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget, onDropTarget, intentTargetIds = [] }: MinionLaneProps) {
+export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget, onDropTarget, intentTargetIds = [], tapDetails = true }: MinionLaneProps) {
   const occupied = new Map(minions.map((minion) => [minion.instanceId, minion]));
   return (
     <section className={`minion-lane lane-${side}`} aria-label={`${side === "player" ? "내" : "적"} 하수인 전장`}>
@@ -41,21 +44,28 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
               else if (minion) { event.preventDefault(); onDropTarget(payload, { kind: "minion", side, instanceId: minion.instanceId }); }
             }}
           >
-            {minion ? (
-              <MinionCard
-                minion={minion}
-                selected={selectedAttackerId === minion.instanceId}
-                targetable={targetable}
-                disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side)}
-                draggable={side === "player" && !disabled}
-                intentTarget={intentTargetIds.includes(minion.instanceId)}
-                exhausted={attackUnavailable && !targetable}
-                onSelect={() => {
-                  if (side === "player" && (targetMode === "none" || isSelectingAttacker) && (minion.summonedTurn >= turnNumber || minion.hasAttacked || minion.statusEffects?.some((status) => status.kind === "root"))) return;
-                  onSelectTarget(minion.instanceId);
-                }}
-              />
-            ) : <span className="empty-slot" aria-hidden="true" />}
+            {minion ? (() => {
+              const definition = CARD_BY_ID.get(minion.cardId);
+              const card = (
+                <MinionCard
+                  minion={minion}
+                  selected={selectedAttackerId === minion.instanceId}
+                  targetable={targetable}
+                  disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side)}
+                  draggable={side === "player" && !disabled}
+                  intentTarget={intentTargetIds.includes(minion.instanceId)}
+                  exhausted={attackUnavailable && !targetable}
+                  onSelect={() => {
+                    if (side === "player" && (targetMode === "none" || isSelectingAttacker) && (minion.summonedTurn >= turnNumber || minion.hasAttacked || minion.statusEffects?.some((status) => status.kind === "root"))) return;
+                    onSelectTarget(minion.instanceId);
+                  }}
+                />
+              );
+              // A finger tap opens the details popup; mouse clicks still select the attacker or target.
+              return definition
+                ? <CardInspection card={definition} className="minion-card-inspection" tapDetails={tapDetails} liveStats={{ attack: minion.attack, health: minion.health, maxHealth: minion.maxHealth }}>{card}</CardInspection>
+                : card;
+            })() : <span className="empty-slot" aria-hidden="true" />}
           </div>
         );
       })}

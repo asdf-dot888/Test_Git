@@ -125,11 +125,11 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} temporary={battle.enemyMana.temporary} />
           </div>
           <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
-          <MinionLane side="enemy" minions={battle.enemyBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
+          <MinionLane side="enemy" minions={battle.enemyBoard} tapDetails={targetMode !== "hero-power"} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
-          <MinionLane side="player" minions={battle.playerBoard} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
+          <MinionLane side="player" minions={battle.playerBoard} tapDetails={targetMode !== "hero-power"} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
           <HeroPanel
             hero={battle.playerHero}
             side="player"

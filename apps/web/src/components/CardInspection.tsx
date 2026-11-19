@@ -1,7 +1,7 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import type { CardDefinition } from "@board-game/game-core";
-import { CardDetailsPopup, type CardDetailsAction } from "./CardDetailsPopup.js";
+import { CardDetailsPopup, type CardDetailsAction, type CardLiveStats } from "./CardDetailsPopup.js";
 import { computePreviewRect, type PreviewRect } from "./cardPreviewRect.js";
 import { isTouchPointer } from "../game/inputMode.js";
 
@@ -15,11 +15,13 @@ interface CardInspectionProps {
   tapDetails?: boolean;
   /** Optional confirm button inside the popup (reward and discard screens). */
   action?: CardDetailsAction;
+  /** Current board values for a minion, shown in the popup instead of the printed stats. */
+  liveStats?: CardLiveStats;
 }
 
 type PointerKind = "mouse" | "touch" | "keyboard";
 
-export function CardInspection({ card, children, className, desktopHover = false, hoverSize = "scaled", tapDetails = true, action }: CardInspectionProps) {
+export function CardInspection({ card, children, className, desktopHover = false, hoverSize = "scaled", tapDetails = true, action, liveStats }: CardInspectionProps) {
   const [preview, setPreview] = useState<PreviewRect | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +101,7 @@ export function CardInspection({ card, children, className, desktopHover = false
     >
       {children}
       {hoverPreview}
-      {detailsOpen && <CardDetailsPopup card={card} onClose={closeDetails} {...(action ? { action } : {})} />}
+      {detailsOpen && <CardDetailsPopup card={card} onClose={closeDetails} {...(action ? { action } : {})} {...(liveStats ? { liveStats } : {})} />}
     </div>
   );
 }
