@@ -2,7 +2,7 @@
 
 - Date: 2026-11-19
 - Decisions: [2026-11-19-assassin-hero-power-touch](../decisions/2026-11-19-assassin-hero-power-touch.md) (replaces D08 of [mobile tap details and touch drag](../decisions/2026-11-19-mobile-card-tap-details-and-touch-drag.md))
-- Status: in progress (P01 done; next P02-T01)
+- Status: in progress (P01 done, P02-T01 done; next P02-T02)
 
 ## Goal
 On touch devices the assassin hero power (“그림자 습격”, 2 mana, 2 damage to an enemy minion or the enemy hero) can be used in two ways:
@@ -31,7 +31,7 @@ Releasing on anything that is not a valid target cancels completely (no target m
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
 | P01 | `done` | Drag payload, drop rules, gesture origin, App drop handling for the hero power | [P01](../phases/2026-11-19-assassin-hero-power-touch/P01-drag-rules/phase.md) |
-| P02 | `todo` | Hero power button drag wiring, board highlights, styling, guide text, whole-screen tests, close-out | [P02](../phases/2026-11-19-assassin-hero-power-touch/P02-touch-ui-and-guidance/phase.md) |
+| P02 | `in-progress` | Hero power button drag wiring, board highlights, styling, guide text, whole-screen tests, close-out | [P02](../phases/2026-11-19-assassin-hero-power-touch/P02-touch-ui-and-guidance/phase.md) |
 
 ## Risks
 - Touch behavior cannot be verified on a real phone in this environment (the user could not check either). Mitigation: pure rule and gesture tests, jsdom pointer-event tests like `GameBoard.touch.test.tsx`, and a short manual checklist in P02-T02 added to the existing phone checklist of the previous plan.

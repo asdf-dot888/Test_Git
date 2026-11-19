@@ -1,13 +1,13 @@
 # Current Context
 
 ## Active Plan
-[Assassin Hero Power on Touch (tap-then-tap and drag)](./plans/2026-11-19-assassin-hero-power-touch.md) — in progress, 2 phases and 4 tasks; P01 done (1107 tests, build and lint pass).
+[Assassin Hero Power on Touch (tap-then-tap and drag)](./plans/2026-11-19-assassin-hero-power-touch.md) — in progress, 2 phases and 4 tasks; P01 and P02-T01 done (1135 tests, build and lint pass).
 
 ## Active Phase
 [P02 Touch UI and Guidance](./phases/2026-11-19-assassin-hero-power-touch/P02-touch-ui-and-guidance/phase.md)
 
 ## Active Task
-[P02-T01 Hero Power Button Drag](./phases/2026-11-19-assassin-hero-power-touch/P02-touch-ui-and-guidance/T01-hero-power-button-drag.md)
+[P02-T02 Guidance, Whole-Screen Tests and Close-out](./phases/2026-11-19-assassin-hero-power-touch/P02-touch-ui-and-guidance/T02-guidance-tests-and-close-out.md)
 
 ## Status
 - Decision: [assassin-hero-power-touch](./decisions/2026-11-19-assassin-hero-power-touch.md) (confirmed 2026-11-19; replaces D08 of the mobile decision).
@@ -21,4 +21,4 @@
 - An unexplained flaky test failure happened once (P01-T01 of the previous plan; reruns passed); mention it if it recurs.
 
 ## Next Step (IMPORTANT)
-Run `/memory-execute` (or “current 보고 이어서 해줘”) to start P02-T01. Environment: Node 24 lives in `~/.local/node-v24.22.3-darwin-arm64/bin` (prefix commands with `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`); git author for this repo is set locally to the existing `asdf-dot888` identity; some files are CRLF in the working tree but LF in HEAD (check with `git diff --stat` and convert the file you edit back to LF). Validation order: `npm run build`, `npm test`, `npm run lint`. After this plan, wait for the user's phone check of both touch plans, then release (version bump and deploy) only when the user asks.
+Run `/memory-execute` (or “current 보고 이어서 해줘”) to start P02-T02. Environment: Node 24 lives in `~/.local/node-v24.22.3-darwin-arm64/bin` (prefix commands with `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`); git author for this repo is set locally to the existing `asdf-dot888` identity; some files are CRLF in the working tree but LF in HEAD (check with `git diff --stat` and convert the file you edit back to LF). Validation order: `npm run build`, `npm test`, `npm run lint`. After this plan, wait for the user's phone check of both touch plans, then release (version bump and deploy) only when the user asks.

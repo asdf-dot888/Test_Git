@@ -186,6 +186,10 @@
 .hero-power-button:not(:disabled) { cursor: pointer; }
 .hero-power-control.is-ready .hero-power-button { border-color: #e4bd74; box-shadow: 0 0 14px rgb(212 170 98 / 38%), inset 0 0 0 2px rgb(10 9 9 / 44%); }
 .hero-power-button:disabled { opacity: .48; filter: saturate(.65); }
+/* The assassin button can be dragged onto a target with a finger: stop the page from scrolling or selecting text from it. */
+.hero-power-button { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.hero-power-button.is-assassin:not(:disabled) { touch-action: none; }
+.hero-power-control.is-dragging .hero-power-button { opacity: .55; filter: saturate(.7); }
 .hero-power-mana-mark { position: absolute; z-index: 1; right: -5px; bottom: -3px; width: 18px; height: 18px; display: grid; place-items: center; color: #122533; border: 1px solid #d8f5ff; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #f4ffff, #6bc9e7 65%, #237b9e); font-size: 10px; font-weight: 900; }
 .hero-power-shard-mark { position: absolute; z-index: 1; top: -6px; left: -8px; padding: 2px 4px; color: #f2ddff; border: 1px solid #ad78c8; border-radius: 8px; background: #482d59; font-size: 8px; font-weight: 800; }
 .hero-power-popover { position: absolute; z-index: 12; right: -5px; bottom: calc(100% + 9px); width: min(240px, 72vw); padding: 11px 12px; color: #eadfce; border: 1px solid rgb(217 174 103 / 72%); border-radius: 10px; background: linear-gradient(145deg, #2b2524f7, #171719fa); box-shadow: 0 10px 28px #000b, inset 0 1px rgb(255 255 255 / 6%); opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity .14s ease, transform .14s ease, visibility .14s; pointer-events: none; }
@@ -802,6 +806,8 @@
 body.touch-dragging { overscroll-behavior: contain; }
 .touch-drag-ghost .game-card { width: 96px; height: 134px; min-width: 0; }
 .touch-drag-ghost .minion-card { width: 96px; }
+.touch-drag-ghost .hero-power-ghost { display: block; width: 60px; height: 60px; margin: 0 auto; overflow: hidden; border: 2px solid #e4bd74; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #44392d, #211e20 72%); box-shadow: 0 0 18px rgb(212 170 98 / 55%); }
+.touch-drag-ghost .hero-power-ghost img { display: block; width: 100%; height: 100%; object-fit: cover; }
 /* A finger drag on the player's minions must reach our pointer handlers instead of panning the page. */
 .lane-player .minion-card-inspection, .lane-player .minion-card-inspection .minion-card { touch-action: none; }
 .is-drop-valid { outline: 2px solid rgb(240 212 141 / 85%); outline-offset: 2px; box-shadow: 0 0 16px 3px rgb(245 191 75 / 42%); }

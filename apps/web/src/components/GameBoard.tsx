@@ -157,6 +157,9 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
                 boardSize={battle.playerBoard.length}
                 targetMode={targetMode === "hero-power"}
                 onActivate={onUseHeroPower}
+                getValidTargets={getValidTargets}
+                onDrop={(payload, target) => onDropInteraction?.(payload, target)}
+                onDragStateChange={setDragState}
               />
             )}
           />

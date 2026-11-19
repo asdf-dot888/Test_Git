@@ -219,3 +219,147 @@ describe("GameBoard touch drag", () => {
     expect(onDropInteraction).not.toHaveBeenCalled();
   });
 });
+
+function heroPowerSetup(playerClass: "assassin" | "warrior" | "demonist" = "assassin") {
+  const run = createRun(931, playerClass);
+  const battle = run.battle!;
+  battle.activeSide = "player";
+  battle.status = "active";
+  battle.turnNumber = 3;
+  battle.playerMana = { current: 10, max: 10, temporary: 0 };
+  battle.hand = [];
+  battle.playerBoard = [{ instanceId: "friendly-wolf", cardId: "ash-wolf", owner: "player", attack: 2, health: 3, maxHealth: 3, summonedTurn: 1, hasAttacked: false }];
+  battle.enemyBoard = [
+    { instanceId: "enemy-a", cardId: "ash-wolf", owner: "enemy", attack: 3, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false },
+    { instanceId: "enemy-b", cardId: "ash-wolf", owner: "enemy", attack: 3, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false },
+  ];
+  return run;
+}
+
+const heroPowerPayload = { kind: "hero-power", instanceId: "hero-power" };
+const powerButton = () => document.querySelector<HTMLElement>(".hero-power-button")!;
+
+function dragHeroPower(x = 60, y = 300) {
+  finger(powerButton(), "pointerDown", 60, 560);
+  finger(powerButton(), "pointerMove", x, y);
+}
+
+describe("GameBoard touch drag of the assassin hero power", () => {
+  afterEach(() => {
+    Reflect.deleteProperty(document, "elementFromPoint");
+    document.body.classList.remove("touch-dragging");
+  });
+
+  it("outlines only the enemy minions and the enemy hero, and uses the power on the one it is dropped on", () => {
+    const onDropInteraction = vi.fn();
+    renderBoard(heroPowerSetup(), { onDropInteraction });
+    pointAt(".lane-enemy .lane-slot[data-drop-target='minion:enemy:enemy-b']");
+
+    dragHeroPower();
+    expect(document.querySelector(".touch-drag-ghost .hero-power-ghost")).toBeTruthy();
+    expect(document.querySelector(".hero-power-control")?.classList.contains("is-dragging")).toBe(true);
+    const outlined = Array.from(document.querySelectorAll(".is-drop-valid")).map((element) => element.getAttribute("data-drop-target") ?? element.className);
+    expect(outlined).toHaveLength(3);
+    expect(document.querySelectorAll(".lane-enemy .lane-slot.is-drop-valid")).toHaveLength(2);
+    expect(document.querySelector(".hero-enemy.is-drop-valid")).toBeTruthy();
+    expect(document.querySelector(".lane-player .is-drop-valid")).toBeNull();
+    expect(document.querySelector(".lane-enemy .lane-slot.is-drop-hover")?.getAttribute("data-drop-target")).toBe("minion:enemy:enemy-b");
+
+    finger(powerButton(), "pointerUp", 60, 300);
+    expect(onDropInteraction).toHaveBeenCalledExactlyOnceWith(heroPowerPayload, { kind: "minion", side: "enemy", instanceId: "enemy-b" });
+    expect(document.querySelector(".touch-drag-ghost")).toBeNull();
+    expect(document.querySelector(".is-drop-valid")).toBeNull();
+    expect(document.querySelector(".hero-power-control")?.classList.contains("is-dragging")).toBe(false);
+  });
+
+  it("can be dropped on the enemy hero while enemy minions remain", () => {
+    const onDropInteraction = vi.fn();
+    renderBoard(heroPowerSetup(), { onDropInteraction });
+    pointAt(".hero-enemy");
+
+    dragHeroPower();
+    expect(document.querySelector(".hero-enemy.is-drop-valid.is-drop-hover")).toBeTruthy();
+    finger(powerButton(), "pointerUp", 60, 300);
+    expect(onDropInteraction).toHaveBeenCalledExactlyOnceWith(heroPowerPayload, { kind: "hero", side: "enemy" });
+  });
+
+  it.each([
+    ["a friendly minion", ".lane-player .lane-slot[data-drop-target='minion:player:friendly-wolf']"],
+    ["an empty slot", ".lane-player .lane-slot[data-drop-target='slot:1']"],
+    ["the player hero", ".hero-player"],
+    ["empty space", null],
+  ])("cancels completely when released on %s", (_name, selector) => {
+    const onDropInteraction = vi.fn();
+    const onUseHeroPower = vi.fn();
+    renderBoard(heroPowerSetup(), { onDropInteraction, onUseHeroPower });
+    pointAt(selector);
+
+    dragHeroPower();
+    finger(powerButton(), "pointerUp", 60, 300);
+    fireEvent.click(powerButton());
+    expect(onDropInteraction).not.toHaveBeenCalled();
+    expect(onUseHeroPower).not.toHaveBeenCalled();
+    expect(document.querySelector(".touch-drag-ghost")).toBeNull();
+    expect(document.querySelector(".is-drop-valid")).toBeNull();
+  });
+
+  it("keeps a short tap as the tap flow: it activates once and shows no ghost", () => {
+    const onUseHeroPower = vi.fn();
+    const onDropInteraction = vi.fn();
+    renderBoard(heroPowerSetup(), { onUseHeroPower, onDropInteraction });
+
+    finger(powerButton(), "pointerDown", 60, 560);
+    finger(powerButton(), "pointerMove", 63, 562);
+    expect(document.querySelector(".touch-drag-ghost")).toBeNull();
+    finger(powerButton(), "pointerUp", 63, 562);
+    fireEvent.click(powerButton());
+    expect(onUseHeroPower).toHaveBeenCalledOnce();
+    expect(onDropInteraction).not.toHaveBeenCalled();
+  });
+
+  it("does not also activate target mode from the click that follows a drag", () => {
+    const onUseHeroPower = vi.fn();
+    renderBoard(heroPowerSetup(), { onUseHeroPower, onDropInteraction: vi.fn() });
+    pointAt(".lane-enemy .lane-slot[data-drop-target='minion:enemy:enemy-a']");
+
+    dragHeroPower();
+    finger(powerButton(), "pointerUp", 60, 300);
+    fireEvent.click(powerButton());
+    expect(onUseHeroPower).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a warrior", () => heroPowerSetup("warrior"), {}],
+    ["a demonist", () => heroPowerSetup("demonist"), {}],
+    ["when the power was already used", () => { const run = heroPowerSetup(); run.battle!.heroPowerUsed = true; return run; }, {}],
+    ["without enough mana", () => { const run = heroPowerSetup(); run.battle!.playerMana = { current: 1, max: 10, temporary: 0 }; return run; }, {}],
+    ["on the enemy's turn", () => { const run = heroPowerSetup(); run.battle!.activeSide = "enemy"; return run; }, {}],
+    ["while the game is resolving", () => heroPowerSetup(), { isResolving: true }],
+    ["while choosing a target", () => heroPowerSetup(), { targetMode: "hero-power" as const }],
+    ["during the tutorial", () => heroPowerSetup(), { tutorialStep: "play-card" as const }],
+  ])("cannot be dragged for %s", (_name, setup, overrides) => {
+    const onDropInteraction = vi.fn();
+    renderBoard(setup(), { onDropInteraction, ...overrides });
+    pointAt(".hero-enemy");
+
+    dragHeroPower();
+    expect(document.querySelector(".touch-drag-ghost")).toBeNull();
+    expect(document.querySelector(".is-drop-valid")).toBeNull();
+    finger(powerButton(), "pointerUp", 60, 300);
+    expect(onDropInteraction).not.toHaveBeenCalled();
+  });
+
+  it("ignores mouse and pen pointers (they keep the plain click)", () => {
+    const onDropInteraction = vi.fn();
+    renderBoard(heroPowerSetup(), { onDropInteraction });
+    pointAt(".hero-enemy");
+
+    for (const pointerType of ["mouse", "pen"]) {
+      fireEvent.pointerDown(powerButton(), { pointerType, pointerId: 9, clientX: 60, clientY: 560 });
+      fireEvent.pointerMove(powerButton(), { pointerType, pointerId: 9, clientX: 60, clientY: 300 });
+      expect(document.querySelector(".touch-drag-ghost")).toBeNull();
+      fireEvent.pointerUp(powerButton(), { pointerType, pointerId: 9, clientX: 60, clientY: 300 });
+    }
+    expect(onDropInteraction).not.toHaveBeenCalled();
+  });
+});

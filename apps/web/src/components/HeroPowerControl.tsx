@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { gameConstants, PLAYER_CLASS_DEFINITIONS, type PlayerClass } from "@board-game/game-core";
+import type { DragPayload, DropTarget } from "./dragInteractions.js";
+import { useTouchDrag, type DragState } from "./useTouchDrag.js";
+
+const HERO_POWER_PAYLOAD: DragPayload = { kind: "hero-power", instanceId: "hero-power" };
 
 interface HeroPowerControlProps {
   playerClass?: PlayerClass;
@@ -11,21 +15,35 @@ interface HeroPowerControlProps {
   boardSize: number;
   targetMode: boolean;
   onActivate(): void;
+  /** Targets the dragged hero power may be dropped on (touch drag; only the assassin has any). */
+  getValidTargets?(payload: DragPayload): DropTarget[];
+  onDrop?(payload: DragPayload, target: DropTarget): void;
+  onDragStateChange?(state: DragState | null): void;
 }
 
-export function HeroPowerControl({ playerClass, currentMana, used, active, resolving, shardCount, boardSize, targetMode, onActivate }: HeroPowerControlProps) {
+export function HeroPowerControl({ playerClass, currentMana, used, active, resolving, shardCount, boardSize, targetMode, onActivate, getValidTargets, onDrop, onDragStateChange }: HeroPowerControlProps) {
   const [showDetails, setShowDetails] = useState(false);
   const dismissTimer = useRef<number | null>(null);
   useEffect(() => () => {
     if (dismissTimer.current !== null) window.clearTimeout(dismissTimer.current);
   }, []);
-  if (!playerClass) return null;
-  const definition = PLAYER_CLASS_DEFINITIONS.find(({ id }) => id === playerClass)!;
   const ready = currentMana >= 2
     && !used
     && active
     && !resolving
     && (playerClass !== "demonist" || (shardCount >= 3 && boardSize < gameConstants.maxBoard));
+  // Only the assassin picks a target, so only its button can be dragged. A short press is still a tap (target mode).
+  const touchDrag = useTouchDrag({
+    payload: HERO_POWER_PAYLOAD,
+    origin: "hero-power",
+    enabled: playerClass === "assassin" && ready && !targetMode && Boolean(onDrop),
+    getValidTargets: () => getValidTargets?.(HERO_POWER_PAYLOAD) ?? [],
+    onDrop: (dragged, target) => onDrop?.(dragged, target),
+    ...(onDragStateChange ? { onDragStateChange } : {}),
+    ghost: () => <span className="hero-power-ghost"><img src={`/art/hero-powers/${playerClass}.png`} alt="" draggable={false} /></span>,
+  });
+  if (!playerClass) return null;
+  const definition = PLAYER_CLASS_DEFINITIONS.find(({ id }) => id === playerClass)!;
   const disabled = !ready && !targetMode;
   const status = used
     ? "이번 턴 사용 완료"
@@ -49,7 +67,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
   };
 
   return (
-    <div className={`hero-power-control${ready || targetMode ? " is-ready" : ""}${showDetails ? " is-showing-details" : ""}`}>
+    <div className={`hero-power-control${ready || targetMode ? " is-ready" : ""}${showDetails ? " is-showing-details" : ""}${touchDrag.dragging ? " is-dragging" : ""}`}>
       <button
         type="button"
         className={`hero-power-button is-${playerClass}`}
@@ -58,11 +76,13 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
         aria-describedby="hero-power-details"
         aria-pressed={targetMode}
         onClick={handleActivate}
+        {...touchDrag.handlers}
       >
         <img className="hero-power-illustration" src={`/art/hero-powers/${playerClass}.png`} alt="" aria-hidden="true" />
         <span className="hero-power-mana-mark" aria-hidden="true">2</span>
         {playerClass === "demonist" && <span className="hero-power-shard-mark" aria-label={`영혼 조각 ${shardCount}/6`}>{shardCount}/6</span>}
       </button>
+      {touchDrag.ghostPortal}
       <div id="hero-power-details" className="hero-power-popover" role="tooltip">
         <strong>{definition.heroPowerName}</strong>
         <div className="hero-power-costs">

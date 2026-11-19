@@ -1,6 +1,6 @@
 # Task: T01 Hero Power Button Drag
 
-## Status: todo
+## Status: done
 
 ## Goal
 The assassin's hero power button can be pressed and dragged with a finger onto a target. A short press still works as a tap (enter target mode, then tap a target). Releasing on an invalid place cancels without side effects.
@@ -58,5 +58,7 @@ Task: T01-hero-power-button-drag
 Commit only the files this task changed, by explicit path.
 
 ## Progress
-- [ ] implementation
-- [ ] validation
+- [x] implementation complete. `HeroPowerControl` calls `useTouchDrag` (origin `hero-power`, enabled only for the assassin when ready, not in target mode, with a drop handler) and spreads the handlers on the button; `ready` moved above the hook and the early return. Props `getValidTargets`, `onDrop`, `onDragStateChange` are wired in `GameBoard` (same `dragState` as cards, so enemy minions and the enemy hero are outlined by the existing highlight code). CSS: `.hero-power-button.is-assassin:not(:disabled) { touch-action: none }` (scoped so other classes and the disabled button keep normal scrolling), `user-select`/`-webkit-touch-callout: none`, `.is-dragging` dimming and `.hero-power-ghost` (60 px round ghost reusing the `.touch-drag-ghost` positioning).
+- [x] validation passed: build clean, lint clean, 1135 tests (98 files; +28). New tests: `HeroPowerControl.test.tsx` (hook-level drag, tap, disabled cases, mouse) and `GameBoard.touch.test.tsx` (outlines, drop on minion and hero, four cancel cases, tap flow, no click after drag, eight cannot-drag cases, mouse and pen).
+- Note: `HeroPowerControl.tsx`, its test and `board.css` were CRLF in the working tree (LF in HEAD) and were converted back to LF before editing.
+- commit: see Git history
