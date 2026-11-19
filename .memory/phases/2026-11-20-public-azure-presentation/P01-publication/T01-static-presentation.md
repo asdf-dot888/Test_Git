@@ -41,4 +41,4 @@ Task: T01-static-presentation
 ## Progress
 - [x] implementation complete
 - [x] validation passed
-- commit: pending
+- commit: 3a39316

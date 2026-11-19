@@ -9,7 +9,7 @@ Publish the completed 12-slide HTML deck publicly at the existing Mango Stone Az
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | Add the static deck, deploy the existing app, and verify the public route. | [P01](../phases/2026-11-20-public-azure-presentation/P01-publication/phase.md) |
+| P01 | `done` | Add the static deck, deploy the existing app, and verify the public route. | [P01](../phases/2026-11-20-public-azure-presentation/P01-publication/phase.md) |
 
 ## Boundaries
 - Preserve the existing game at `/`, managed leaderboard API, and all unrelated untracked files.
