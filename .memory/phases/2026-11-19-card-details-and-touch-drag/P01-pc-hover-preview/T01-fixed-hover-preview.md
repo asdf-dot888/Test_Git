@@ -53,4 +53,4 @@ Task: T01-fixed-hover-preview
 - [x] implementation complete. `computePreviewRect`/`HOVER_PREVIEW_SIZE` live in `apps/web/src/components/cardPreviewRect.ts` (a separate file so the component file only exports components, which the react-refresh lint rule requires). `CardInspection` gained `hoverSize` and focus/blur preview; `DiscardPicker` passes `desktopHover hoverSize="fixed"` and wraps the added-card line (name is now a button).
 - [x] validation passed: build clean, lint clean, 1004 tests. The first full `npm test` run showed 1 failing test that I did not capture; two reruns passed 91/91 files, so it looks like a flaky test under load. Watch for it in later runs.
 - Not verified by Claude: how the preview looks in a real browser (no browser tool). Check by hovering discard cards after `npm run dev`.
-- commit: see Git history
+- commit: a2e94a9

@@ -1,6 +1,6 @@
 # Task: T01 Tap Inspection Core
 
-## Status: todo
+## Status: done
 
 ## Goal
 Replace the 500 ms long-press in `CardInspection` with tap-to-open details for touch pointers, add the popup action slot, and stop the browser's image menu on cards. No gameplay wiring changes yet (other tasks add minions, rewards and drag).
@@ -62,6 +62,7 @@ Task: T01-tap-inspection-core
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. Design change from the blueprint: tap detection uses the `click` event plus the input that preceded it (pointerdown pointerType, touchstart fallback, keydown) instead of pointerup/movement tracking. Browsers do not send a click when the finger scrolls or drags, so no move tolerance is needed here, and the popup cannot be closed by the ghost click that follows the tap. A disabled child (pointer-events: none) still opens details because the click lands on the wrapper. `apps/web/src/game/inputMode.ts` has `isTouchPointer`, `TAP_MOVE_TOLERANCE_PX` (for the drag in P03), `prefersTouchGuidance`, `useTouchGuidance`.
+- [x] validation passed: build clean, lint clean, 1018 tests (92 files). Long-press tests were rewritten (CardInspection, CardView, DiscardPicker, RewardScreen); the App touch test now asserts that a touch tap opens details, and the select-and-target flow is covered with pen input.
+- Known interim state: until P03 lands, touch users can read details but cannot play cards (tap no longer selects). The plan ships as one release, so this is expected.
+- commit: cece6aa

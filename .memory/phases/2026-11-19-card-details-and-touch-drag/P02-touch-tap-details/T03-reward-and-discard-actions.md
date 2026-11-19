@@ -1,6 +1,6 @@
 # Task: T03 Reward and Discard Actions
 
-## Status: todo
+## Status: done
 
 ## Goal
 On touch devices a tap on a reward card or a discard candidate opens details, and a large button inside the popup confirms the choice (“이 카드 받기” / “이 카드 버리기”). The added-card line also opens its details on tap. PC click-to-choose is unchanged.
@@ -41,6 +41,6 @@ Task: T03-reward-and-discard-actions
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `RewardScreen` passes `action` “이 카드 받기” (disabled while `disabled` or `selectedCardId`); `DiscardPicker` passes “이 카드 버리기” (disabled while `disabled`). The added-card line from P01-T01 opens details on tap without an action.
+- [x] validation passed: build clean, lint clean, 1027 tests (93 files). Existing App tests for the deck-overflow reward flow (mouse path) stay green; new tests cover the touch tap → popup button path for rewards and discards, closing the popup choosing nothing, and the disabled states.
+- commit: see Git history

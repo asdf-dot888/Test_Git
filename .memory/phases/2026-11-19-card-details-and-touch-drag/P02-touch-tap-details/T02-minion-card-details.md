@@ -1,6 +1,6 @@
 # Task: T02 Minion Card Details
 
-## Status: todo
+## Status: done
 
 ## Goal
 A touch tap on any board minion (player or enemy) opens the details popup. Because touch no longer uses tap-to-select, the old attack flow (tap attacker, tap target) is unreachable by touch; attacking is done by drag in P03.
@@ -41,6 +41,6 @@ Task: T02-minion-card-details
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `MinionLane` wraps each `MinionCard` in `CardInspection` (`minion-card-inspection`, `liveStats` from `MinionState`, `tapDetails` prop); `GameBoard` passes `tapDetails={targetMode !== "hero-power"}` to both lanes (this already covers the hero power exception that P03-T04 only needs to test and polish). `CardDetailsPopup` gained `liveStats` (“현재 공격 X · 체력 Y/Z”). The disabled-minion `pointer-events: none` rule is limited to `@media (pointer: coarse)` so PC hover tooltips on disabled minions keep working.
+- [x] validation passed: build clean, lint clean, 1022 tests (93 files). New `GameBoard.touch.test.tsx` covers player/enemy minion tap, live stats, mouse click still selects, and hero power target mode letting the finger select. The popup action and live stats are exercised through `CardInspection`/`GameBoard.touch` tests instead of a separate `CardDetailsPopup.test.tsx`.
+- commit: 80e4969
