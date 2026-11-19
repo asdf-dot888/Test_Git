@@ -99,6 +99,8 @@ npm run dev
 npm run deploy:swa
 ```
 
+윈도우와 맥 모두에서 실행됩니다. 맥과 리눅스에서는 PowerShell 7(`pwsh`)이 PATH에 있어야 하며, `npm run deploy:swa`가 설치된 `pwsh` 또는 `powershell`을 자동으로 고릅니다. 실제 배포는 작업 트리가 깨끗해야 시작됩니다.
+
 업로드 없이 빌드와 배포 파일만 점검하려면 다음을 실행합니다.
 
 ```powershell

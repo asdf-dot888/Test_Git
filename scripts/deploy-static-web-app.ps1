@@ -5,6 +5,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# npm and npx are .cmd shims on Windows only, so use the plain commands elsewhere (same check as package-release.ps1).
+$onWindows = $IsWindows -or $env:OS -eq "Windows_NT"
+$npmCommand = if ($onWindows) { "npm.cmd" } else { "npm" }
+$npxCommand = if ($onWindows) { "npx.cmd" } else { "npx" }
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $staticWebAppName = "board-card-roguelike-demo"
 $staticWebAppResourceGroup = "grill-me-edu"
@@ -85,7 +89,7 @@ try {
   $previousVersionOverride = [Environment]::GetEnvironmentVariable("VITE_APP_VERSION", "Process")
   try {
     [Environment]::SetEnvironmentVariable("VITE_APP_VERSION", $candidateVersion, "Process")
-    & npm.cmd run build
+    & $npmCommand run build
     if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE." }
   } finally {
     [Environment]::SetEnvironmentVariable("VITE_APP_VERSION", $previousVersionOverride, "Process")
@@ -139,7 +143,7 @@ try {
   if (-not (Test-Path -LiteralPath $stagedEntryPoint)) { throw "The staged Functions entry point is missing: $stagedEntryPoint" }
 
   Write-Host "Installing standalone production dependencies for the Functions API..."
-  & npm.cmd install --omit=dev --prefix $stagedApi --workspaces=false --no-audit --no-fund
+  & $npmCommand install --omit=dev --prefix $stagedApi --workspaces=false --no-audit --no-fund
   if ($LASTEXITCODE -ne 0) { throw "Could not install production dependencies into the staged API package." }
   foreach ($dependency in @("@azure/functions", "@azure/cosmos", "jose", "zod")) {
     $dependencyManifest = Join-Path $stagedApi "node_modules/$dependency/package.json"
@@ -161,7 +165,7 @@ try {
   $previousErrorPreference = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
   try {
-    & npx.cmd swa deploy $webOutput --api-location $stagedApi --api-language node --api-version 22 --env $Environment --app-name $staticWebAppName --resource-group $staticWebAppResourceGroup 2>&1 | ForEach-Object {
+    & $npxCommand swa deploy $webOutput --api-location $stagedApi --api-language node --api-version 22 --env $Environment --app-name $staticWebAppName --resource-group $staticWebAppResourceGroup 2>&1 | ForEach-Object {
       $line = "$_"
       $swaLines.Add($line)
       Write-Host $line
@@ -206,7 +210,7 @@ try {
 
   $deployedAtUtc = [DateTimeOffset]::UtcNow.ToString("o")
   try {
-    & npm.cmd version $candidateVersion --no-git-tag-version --ignore-scripts --workspaces=false
+    & $npmCommand version $candidateVersion --no-git-tag-version --ignore-scripts --workspaces=false
     if ($LASTEXITCODE -ne 0) { throw "npm could not update package version metadata." }
 
     $history = [ordered]@{ releases = @() }
