@@ -800,6 +800,10 @@
 .minion-card-inspection { width: 100%; display: grid; place-items: center; }
 .touch-drag-ghost { position: fixed; z-index: 85; width: 96px; pointer-events: none; opacity: .92; transform: translate(-50%, calc(-100% - 24px)) scale(1.05); filter: drop-shadow(0 14px 18px rgb(0 0 0 / 70%)); }
 body.touch-dragging { overscroll-behavior: contain; }
+.touch-drag-ghost .game-card { width: 96px; height: 134px; min-width: 0; }
+.touch-drag-ghost .minion-card { width: 96px; }
+/* A finger drag on the player's minions must reach our pointer handlers instead of panning the page. */
+.lane-player .minion-card-inspection, .lane-player .minion-card-inspection .minion-card { touch-action: none; }
 .is-drop-valid { outline: 2px solid rgb(240 212 141 / 85%); outline-offset: 2px; box-shadow: 0 0 16px 3px rgb(245 191 75 / 42%); }
 .is-drop-hover { outline-color: #fff1c4; box-shadow: 0 0 22px 6px rgb(255 222 140 / 75%); }
 @media (pointer: coarse) { .minion-card-inspection > .minion-card:disabled { pointer-events: none; } }

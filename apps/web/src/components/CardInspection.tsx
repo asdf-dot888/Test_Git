@@ -4,6 +4,7 @@ import type { CardDefinition } from "@board-game/game-core";
 import { CardDetailsPopup, type CardDetailsAction, type CardLiveStats } from "./CardDetailsPopup.js";
 import { computePreviewRect, type PreviewRect } from "./cardPreviewRect.js";
 import { isTouchPointer } from "../game/inputMode.js";
+import type { TouchDragHandlers } from "./useTouchDrag.js";
 
 interface CardInspectionProps {
   card: CardDefinition;
@@ -17,11 +18,14 @@ interface CardInspectionProps {
   action?: CardDetailsAction;
   /** Current board values for a minion, shown in the popup instead of the printed stats. */
   liveStats?: CardLiveStats;
+  /** Touch drag handlers from `useTouchDrag`; they are attached to the wrapper next to the tap handling. */
+  dragHandlers?: TouchDragHandlers;
 }
 
 type PointerKind = "mouse" | "touch" | "keyboard";
 
-export function CardInspection({ card, children, className, desktopHover = false, hoverSize = "scaled", tapDetails = true, action, liveStats }: CardInspectionProps) {
+export function CardInspection({ card, children, className, desktopHover = false, hoverSize = "scaled", tapDetails = true, action, liveStats, dragHandlers }: CardInspectionProps) {
+  const { onClickCapture: swallowClickAfterDrag, ...pointerDragHandlers } = dragHandlers ?? {};
   const [preview, setPreview] = useState<PreviewRect | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -60,6 +64,8 @@ export function CardInspection({ card, children, className, desktopHover = false
   };
 
   const openDetailsOnTap = (event: MouseEvent<HTMLDivElement>) => {
+    swallowClickAfterDrag?.(event);
+    if (event.isPropagationStopped()) return;
     if (!tapDetails || lastInput.current !== "touch" || !insideWrapper(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
@@ -89,6 +95,7 @@ export function CardInspection({ card, children, className, desktopHover = false
     <div
       ref={wrapperRef}
       className={`card-inspection-target ${className}`}
+      {...pointerDragHandlers}
       onMouseEnter={showDesktopPreview}
       onMouseLeave={() => setPreview(null)}
       onFocus={showFocusPreview}

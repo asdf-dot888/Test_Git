@@ -7,7 +7,7 @@
 [P03 Touch Drag](./phases/2026-11-19-card-details-and-touch-drag/P03-touch-drag/phase.md) — P01 and P02 are done.
 
 ## Active Task
-[P03-T03 Wire Hand Cards and Minions](./phases/2026-11-19-card-details-and-touch-drag/P03-touch-drag/T03-wire-hand-and-minions.md)
+[P03-T04 Assassin Hero Power on Touch](./phases/2026-11-19-card-details-and-touch-drag/P03-touch-drag/T04-hero-power-touch-targeting.md)
 
 ## Status
 - Plan has 4 phases and 10 tasks: P01 (1) PC hover preview, P02 (3) touch tap details, P03 (4) touch drag, P04 (2) guidance and verification.
@@ -17,4 +17,4 @@
 - Claude cannot test touch behavior on a phone; touch work is verified by unit/jsdom tests and the manual checklist in P04-T02.
 
 ## Next Step (IMPORTANT)
-Run `/memory-execute` (or “current 보고 이어서 해줘”) to implement P03-T03. Until P03-T03 lands, touch users can read card details but cannot play cards (tap no longer selects); the plan ships as one release. Note: the P01-T01 full test run had one unexplained flaky failure (reruns passed); mention it if it recurs.
+Run `/memory-execute` (or “current 보고 이어서 해줘”) to implement P03-T04. Touch drag now works (P03-T03); the plan ships as one release. Note: the P01-T01 full test run had one unexplained flaky failure (reruns passed); mention it if it recurs.

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { HeroState, PlayerSide } from "@board-game/game-core";
 import { readDragPayload, type DropTarget } from "./dragInteractions.js";
+import { formatDropTarget } from "./touchDrag.js";
 
 interface HeroPanelProps {
   hero: HeroState;
@@ -13,14 +14,17 @@ interface HeroPanelProps {
   heroPowerControl?: ReactNode;
   onSelectTarget(targetId: string): void;
   onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
+  /** Touch drag: outlines the enemy hero while it is a valid drop target. */
+  dropHighlight?: "valid" | "hover" | null;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, heroPowerControl, onSelectTarget, onDropTarget }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, heroPowerControl, onSelectTarget, onDropTarget, dropHighlight = null }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
     <section
-      className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}`}
+      className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}${dropHighlight ? " is-drop-valid" : ""}${dropHighlight === "hover" ? " is-drop-hover" : ""}`}
       data-effect-anchor={`hero:${side}`}
+      {...(side === "enemy" ? { "data-drop-target": formatDropTarget({ kind: "hero", side: "enemy" }) } : {})}
       aria-label={`${name} 영웅`}
       onDragOver={(event) => { if (side === "enemy" && onDropTarget) event.preventDefault(); }}
       onDrop={(event) => {

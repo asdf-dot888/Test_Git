@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { isTouchPointer } from "../game/inputMode.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
@@ -32,7 +32,12 @@ export interface TouchDragHandlers {
   onPointerCancel(event: PointerEvent<HTMLElement>): void;
   /** Cancels the browser's own (mouse-only) drag when the gesture started with a finger. */
   onDragStart(event: DragEvent<HTMLElement>): void;
+  /** Swallows the click some browsers still send right after a finger drag ends, so it cannot open details or select. */
+  onClickCapture(event: MouseEvent<HTMLElement>): void;
 }
+
+/** How long after a drag ends a click is treated as part of that drag (ms). */
+export const POST_DRAG_CLICK_WINDOW_MS = 400;
 
 interface Gesture {
   pointerId: number;
@@ -59,6 +64,7 @@ export function useTouchDrag(options: TouchDragOptions): { handlers: TouchDragHa
   const gesture = useRef<Gesture | null>(null);
   const validRef = useRef<DropTarget[]>([]);
   const lastPointerWasTouch = useRef(false);
+  const lastDragEndedAt = useRef(Number.NEGATIVE_INFINITY);
   const [drag, setDrag] = useState<DragState | null>(null);
 
   const finish = useCallback(() => {
@@ -66,6 +72,7 @@ export function useTouchDrag(options: TouchDragOptions): { handlers: TouchDragHa
     gesture.current = null;
     validRef.current = [];
     if (!hadDrag) return;
+    lastDragEndedAt.current = Date.now();
     document.body.classList.remove(DRAGGING_BODY_CLASS);
     setDrag(null);
     optionsRef.current.onDragStateChange?.(null);
@@ -124,6 +131,12 @@ export function useTouchDrag(options: TouchDragOptions): { handlers: TouchDragHa
     },
     onDragStart(event) {
       if (lastPointerWasTouch.current) event.preventDefault();
+    },
+    onClickCapture(event) {
+      if (Date.now() - lastDragEndedAt.current < POST_DRAG_CLICK_WINDOW_MS) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     },
   };
 

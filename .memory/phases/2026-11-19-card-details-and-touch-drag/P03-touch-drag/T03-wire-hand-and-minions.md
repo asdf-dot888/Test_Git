@@ -1,6 +1,6 @@
 # Task: T03 Wire Hand Cards and Minions
 
-## Status: todo
+## Status: done
 
 ## Goal
 Touch users can drag a hand card or a player minion onto valid targets; valid targets glow while dragging; invalid drops do nothing. Taps keep opening details (P02). PC drag and click are unchanged.
@@ -49,6 +49,7 @@ Task: T03-wire-hand-and-minions
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `CardView` (hand) and a new internal `LaneMinion` component in `MinionLane.tsx` (player minions) call `useTouchDrag` and pass its handlers to `CardInspection` through the new `dragHandlers` prop (the hook's `onClickCapture` swallows the click some browsers send within 400 ms after a finger drag, so a drop cannot open details or select a card). `MinionLane` slots and the enemy `HeroPanel` carry `data-drop-target`; `GameBoard` keeps the `DragState` and passes `dropHighlights` (`is-drop-valid` / `is-drop-hover`) down; `getValidDropTargets(run, payload)` from P03-T01 supplies the targets. PC HTML5 drag and click are unchanged (`onDragStart` is cancelled only when the gesture began with a finger). CSS: `touch-action: none` for the player's minion cards, ghost sizes. Dragging a minion that cannot act shows the ghost with no outlines and drops to nothing (decided: still gives feedback).
+- [x] validation passed: build clean, lint clean, 1085 tests. New integration tests in `GameBoard.touch.test.tsx` cover play-minion, spell on minion and hero, attack, invalid release, horizontal swipe, click after drag, and unaffordable cards.
+- Not verified by Claude: real-phone behavior of `touch-action` (hand pan vs vertical drag), pointer capture and the ghost position. See the P04-T02 checklist.
+- commit: see Git history

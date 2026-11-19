@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { ENEMY_BY_ID, type EnemyTurnPlaybackStep, type RunState } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
 import type { PlayerSide } from "@board-game/game-core";
@@ -10,12 +10,15 @@ import { HeroPanel } from "./HeroPanel.js";
 import { HandPanel } from "./HandPanel.js";
 import { ManaDisplay } from "./ManaDisplay.js";
 import { MinionLane } from "./MinionLane.js";
+import { sameDropTarget } from "./touchDrag.js";
+import type { DragState } from "./useTouchDrag.js";
 import { TargetPicker } from "./TargetPicker.js";
 import { TurnControls } from "./TurnControls.js";
 import { HeroPowerControl } from "./HeroPowerControl.js";
 import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
 import { OpeningHandRedrawControl } from "./OpeningHandRedrawControl.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
+import { getValidDropTargets } from "../game/dropRules.js";
 import { getPlayerSpellSelection } from "../game/spellTargeting.js";
 import type { TutorialStepId } from "./FirstRunTutorial.js";
 
@@ -55,6 +58,10 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
 }
 
 export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
+  // Touch drag progress: which targets to outline and which one is under the finger.
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const dropHighlights = { valid: dragState?.valid ?? [], hovered: dragState?.hovered ?? null };
+  const getValidTargets = (payload: DragPayload) => getValidDropTargets(run, payload);
   const battle = run.battle;
   if (!battle) return <main className="board-unavailable">전투를 준비하고 있습니다.</main>;
   const playerHeroArtKey = run.playerClass ?? "player";
@@ -124,12 +131,12 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             </div>
             <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} temporary={battle.enemyMana.temporary} />
           </div>
-          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
-          <MinionLane side="enemy" minions={battle.enemyBoard} tapDetails={targetMode !== "hero-power"} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
+          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} dropHighlight={dropHighlights.valid.some((target) => sameDropTarget(target, { kind: "hero", side: "enemy" })) ? (sameDropTarget(dropHighlights.hovered, { kind: "hero", side: "enemy" }) ? "hover" : "valid") : null} />
+          <MinionLane side="enemy" minions={battle.enemyBoard} tapDetails={targetMode !== "hero-power"} dropHighlights={dropHighlights} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
-          <MinionLane side="player" minions={battle.playerBoard} tapDetails={targetMode !== "hero-power"} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
+          <MinionLane side="player" minions={battle.playerBoard} tapDetails={targetMode !== "hero-power"} dropHighlights={dropHighlights} getValidTargets={getValidTargets} onDragStateChange={setDragState} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} intentTargetIds={intentTargetIds} />
           <HeroPanel
             hero={battle.playerHero}
             side="player"
@@ -167,7 +174,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
           <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled || !canEndTurn} /></div>
         </div>
-        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "play-card" && !(tutorialStep === "attack" && readyMinionCount === 0))} canSelectCard={canSelectCard} onSelectCard={onSelectCard} />
+        <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "play-card" && !(tutorialStep === "attack" && readyMinionCount === 0))} canSelectCard={canSelectCard} onSelectCard={onSelectCard} getValidTargets={getValidTargets} onDragStateChange={setDragState} {...(onDropInteraction ? { onDropInteraction } : {})} />
       </footer>
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
       {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}
