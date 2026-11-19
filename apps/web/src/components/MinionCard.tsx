@@ -37,7 +37,7 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
       onDragStart={(event) => { if (draggable) writeDragPayload(event, { kind: "minion", instanceId: minion.instanceId }); }}
       onClick={onSelect}
     >
-      <span className="minion-art-frame"><img src={`/art/cards/${card?.artKey ?? minion.cardId}.png`} alt="" /></span>
+      <span className="minion-art-frame"><img src={`/art/cards/${card?.artKey ?? minion.cardId}.png`} alt="" draggable={false} /></span>
       <span className="minion-name">{name}</span>
       <span className="minion-stats"><b aria-label={`공격력 ${minion.attack}`}>{minion.attack}</b><b aria-label={`체력 ${minion.health}/${minion.maxHealth}`}>{minion.health}<small>/{minion.maxHealth}</small></b></span>
       {statuses.length > 0 && <span className="minion-statuses" aria-label={statusLabels.join("; ")}>

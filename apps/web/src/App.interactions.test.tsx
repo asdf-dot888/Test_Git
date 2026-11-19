@@ -132,7 +132,7 @@ describe("game pointer and keyboard interactions", () => {
     }
   });
 
-  it("accepts touch activation for Fate Shard and its opposing minion", async () => {
+  it("opens details on a touch tap of a hand card instead of selecting it", async () => {
     const sync = makeReadySync(spellRun("fate-shard"));
     renderWithTestAuth(<GameSessionView sync={sync} />);
     enterActiveEncounter();
@@ -140,10 +140,22 @@ describe("game pointer and keyboard interactions", () => {
     fireEvent.pointerDown(card, { pointerType: "touch" });
     fireEvent.pointerUp(card, { pointerType: "touch" });
     fireEvent.click(card);
+    expect(screen.getByRole("dialog", { name: /운명의 파편/ })).toBeTruthy();
+    expect(document.querySelector(".lane-enemy .minion-card")!.classList.contains("is-targetable")).toBe(false);
+  });
+
+  it("accepts pen activation for Fate Shard and its opposing minion", async () => {
+    const sync = makeReadySync(spellRun("fate-shard"));
+    renderWithTestAuth(<GameSessionView sync={sync} />);
+    enterActiveEncounter();
+    const card = await screen.findByRole("button", { name: /운명의 파편/ });
+    fireEvent.pointerDown(card, { pointerType: "pen" });
+    fireEvent.pointerUp(card, { pointerType: "pen" });
+    fireEvent.click(card);
     const target = document.querySelector(".lane-enemy .minion-card")!;
     expect(target.classList.contains("is-targetable")).toBe(true);
-    fireEvent.pointerDown(target, { pointerType: "touch" });
-    fireEvent.pointerUp(target, { pointerType: "touch" });
+    fireEvent.pointerDown(target, { pointerType: "pen" });
+    fireEvent.pointerUp(target, { pointerType: "pen" });
     fireEvent.click(target);
     await waitFor(() => expect(screen.queryByRole("button", { name: /운명의 파편/ })).toBeNull());
     expect(document.querySelector(".player-toolbar .mana-display")?.getAttribute("aria-label")).toBe("마나 8/10");

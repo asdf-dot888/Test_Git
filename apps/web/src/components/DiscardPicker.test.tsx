@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DiscardPicker } from "./DiscardPicker.js";
 
@@ -48,17 +48,15 @@ describe("DiscardPicker", () => {
     expect(preview.textContent).toContain("공포의 거신");
   });
 
-  it("inspects a discard card on long press without discarding it", () => {
-    vi.useFakeTimers();
+  it("inspects a discard card on a touch tap without discarding it", () => {
     const onDiscard = vi.fn();
     const cards = [{ instanceId: "deck-card-1", cardId: "bone-rat" }];
-    const { container } = render(<DiscardPicker cards={cards} disabled={false} onDiscard={onDiscard} />);
-    const target = container.querySelector(".discard-card-inspection")!;
-    fireEvent.touchStart(target, { touches: [{ clientX: 20, clientY: 30 }] });
-    act(() => vi.advanceTimersByTime(500));
+    render(<DiscardPicker cards={cards} disabled={false} onDiscard={onDiscard} />);
+    const chip = screen.getByRole("button", { name: /뼈 쥐/ });
+    fireEvent.pointerDown(chip, { pointerType: "touch" });
+    fireEvent.pointerUp(chip, { pointerType: "touch" });
+    fireEvent.click(chip);
     expect(screen.getAllByRole("dialog")[1]?.textContent).toContain("뼈 쥐");
-    fireEvent.touchEnd(target, { touches: [] });
-    fireEvent.click(screen.getByRole("button", { name: /뼈 쥐/ }));
     expect(onDiscard).not.toHaveBeenCalled();
   });
 });

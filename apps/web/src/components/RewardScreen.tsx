@@ -24,7 +24,7 @@ export function RewardScreen({ reward, disabled = false, onChoose, onSkip, selec
             return <CardInspection card={card} className="reward-card-inspection" key={cardId}>
               <button className={`reward-card card-${card.kind}${selectedCardId === cardId ? " is-selected" : ""}`} type="button" disabled={disabled || Boolean(selectedCardId)} aria-pressed={selectedCardId === cardId} onClick={() => onChoose(cardId)}>
                 <span className="card-cost">{card.cost}</span>
-                <span className="reward-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
+                <span className="reward-art"><img src={`/art/cards/${card.artKey}.png`} alt="" draggable={false} /></span>
                 <strong className="reward-name">{card.name}</strong>
                 <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
                 {card.minion && <span className="reward-stats">공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}

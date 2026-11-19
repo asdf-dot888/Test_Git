@@ -1,8 +1,9 @@
-import { useRef, useState, type FocusEvent, type MouseEvent, type PointerEvent, type ReactNode, type TouchEvent } from "react";
+import { useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import type { CardDefinition } from "@board-game/game-core";
-import { CardDetailsPopup } from "./CardDetailsPopup.js";
+import { CardDetailsPopup, type CardDetailsAction } from "./CardDetailsPopup.js";
 import { computePreviewRect, type PreviewRect } from "./cardPreviewRect.js";
+import { isTouchPointer } from "../game/inputMode.js";
 
 interface CardInspectionProps {
   card: CardDefinition;
@@ -10,20 +11,20 @@ interface CardInspectionProps {
   className: string;
   desktopHover?: boolean;
   hoverSize?: "scaled" | "fixed";
+  /** When true (default), a finger tap opens the details popup and swallows the click, so the card's own action does not run. */
+  tapDetails?: boolean;
+  /** Optional confirm button inside the popup (reward and discard screens). */
+  action?: CardDetailsAction;
 }
 
-export function CardInspection({ card, children, className, desktopHover = false, hoverSize = "scaled" }: CardInspectionProps) {
+type PointerKind = "mouse" | "touch" | "keyboard";
+
+export function CardInspection({ card, children, className, desktopHover = false, hoverSize = "scaled", tapDetails = true, action }: CardInspectionProps) {
   const [preview, setPreview] = useState<PreviewRect | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startPoint = useRef<{ x: number; y: number } | null>(null);
-  const longPressTriggered = useRef(false);
-
-  const clearLongPress = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    startPoint.current = null;
-  };
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  // The input that produced the next click. A touch tap opens details; mouse, pen and keyboard clicks pass through.
+  const lastInput = useRef<PointerKind>("mouse");
 
   const placePreview = (element: HTMLElement) => {
     setPreview(computePreviewRect(element.getBoundingClientRect(), { width: window.innerWidth, height: window.innerHeight }, hoverSize));
@@ -38,52 +39,42 @@ export function CardInspection({ card, children, className, desktopHover = false
     if (desktopHover) placePreview(event.currentTarget);
   };
 
-  const armLongPress = (x: number, y: number) => {
-    clearLongPress();
-    startPoint.current = { x, y };
-    timer.current = setTimeout(() => {
-      longPressTriggered.current = true;
-      setPreview(null);
-      setDetailsOpen(true);
-    }, 500);
+  const insideWrapper = (target: EventTarget | null) => target instanceof Node && Boolean(wrapperRef.current?.contains(target));
+
+  // Pointer events from the popup portal bubble through React to this wrapper; only react to the card itself.
+  const rememberPointer = (event: PointerEvent<HTMLDivElement>) => {
+    if (!insideWrapper(event.target)) return;
+    lastInput.current = isTouchPointer(event) ? "touch" : "mouse";
+    if (isTouchPointer(event)) setPreview(null);
   };
 
-  const startTouchInspection = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse") return;
-    armLongPress(event.clientX, event.clientY);
+  // Fallback for browsers without pointer events.
+  const rememberTouch = (event: TouchEvent<HTMLDivElement>) => {
+    if (insideWrapper(event.target)) lastInput.current = "touch";
   };
 
-  const moveTouchInspection = (event: PointerEvent<HTMLDivElement>) => {
-    cancelAfterMovement(event.clientX, event.clientY);
+  const rememberKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (insideWrapper(event.target)) lastInput.current = "keyboard";
   };
 
-  const startNativeTouchInspection = (event: TouchEvent<HTMLDivElement>) => {
-    const touch = event.touches[0];
-    if (touch) armLongPress(touch.clientX, touch.clientY);
-  };
-
-  const moveNativeTouchInspection = (event: TouchEvent<HTMLDivElement>) => {
-    const touch = event.touches[0];
-    if (touch) cancelAfterMovement(touch.clientX, touch.clientY);
-  };
-
-  const cancelAfterMovement = (x: number, y: number) => {
-    const start = startPoint.current;
-    if (start && Math.hypot(x - start.x, y - start.y) > 10) clearLongPress();
-  };
-
-  const suppressLongPressClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!longPressTriggered.current || !event.currentTarget.contains(event.target as Node)) return;
+  const openDetailsOnTap = (event: MouseEvent<HTMLDivElement>) => {
+    if (!tapDetails || lastInput.current !== "touch" || !insideWrapper(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
-    longPressTriggered.current = false;
+    setPreview(null);
+    setDetailsOpen(true);
+  };
+
+  // Block the browser's image/save menu that appears after a long press on a card image.
+  const suppressTouchContextMenu = (event: MouseEvent<HTMLDivElement>) => {
+    if (lastInput.current === "touch" && insideWrapper(event.target)) event.preventDefault();
   };
 
   const closeDetails = () => setDetailsOpen(false);
   const hoverPreview = preview && createPortal(
     <div className={`game-card card-${card.kind} game-card-hover-preview${hoverSize === "fixed" ? " game-card-hover-preview--fixed" : ""}`} aria-hidden="true" style={{ left: preview.left, top: preview.top, width: preview.width, height: preview.height }}>
       <span className="card-cost">{card.cost}</span>
-      <span className="card-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
+      <span className="card-art"><img src={`/art/cards/${card.artKey}.png`} alt="" draggable={false} /></span>
       <strong className="card-name">{card.name}</strong>
       <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
       {card.minion && <span className="card-stats">공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}
@@ -94,25 +85,21 @@ export function CardInspection({ card, children, className, desktopHover = false
 
   return (
     <div
+      ref={wrapperRef}
       className={`card-inspection-target ${className}`}
       onMouseEnter={showDesktopPreview}
       onMouseLeave={() => setPreview(null)}
       onFocus={showFocusPreview}
       onBlur={() => setPreview(null)}
-      onPointerDown={startTouchInspection}
-      onPointerMove={moveTouchInspection}
-      onPointerUp={clearLongPress}
-      onPointerCancel={clearLongPress}
-      onPointerLeave={clearLongPress}
-      onTouchStart={startNativeTouchInspection}
-      onTouchMove={moveNativeTouchInspection}
-      onTouchEnd={clearLongPress}
-      onTouchCancel={clearLongPress}
-      onClickCapture={suppressLongPressClick}
+      onPointerDownCapture={rememberPointer}
+      onTouchStartCapture={rememberTouch}
+      onKeyDownCapture={rememberKeyboard}
+      onClickCapture={openDetailsOnTap}
+      onContextMenu={suppressTouchContextMenu}
     >
       {children}
       {hoverPreview}
-      {detailsOpen && <CardDetailsPopup card={card} onClose={closeDetails} />}
+      {detailsOpen && <CardDetailsPopup card={card} onClose={closeDetails} {...(action ? { action } : {})} />}
     </div>
   );
 }

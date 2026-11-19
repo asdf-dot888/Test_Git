@@ -795,6 +795,8 @@
 }
 .dialog-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(5, 5, 5, .76); }
 .card-inspection-target { position: relative; min-width: 0; }
+.card-inspection-target, .card-inspection-target *, .minion-card, .minion-card *, .card-details-art { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.card-details-action { width: 100%; min-height: 48px; margin-top: 8px; }
 .hand-card-inspection { flex: 0 0 clamp(96px, 8vw, 122px); }
 .hand-card-inspection > .game-card { width: 100%; min-width: 100%; flex: 1 1 auto; }
 .reward-card-inspection { width: 100%; min-width: 0; }

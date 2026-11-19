@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RewardScreen } from "./RewardScreen.js";
 
@@ -26,16 +26,14 @@ describe("RewardScreen", () => {
     expect(onSkip).toHaveBeenCalledOnce();
   });
 
-  it("inspects a reward card on long press without choosing it", () => {
-    vi.useFakeTimers();
+  it("inspects a reward card on a touch tap without choosing it", () => {
     const onChoose = vi.fn();
-    const { container } = render(<RewardScreen reward={{ tier: "normal", choices: ["shadow-bolt"], encounterIndex: 0 }} onChoose={onChoose} onSkip={vi.fn()} />);
-    const target = container.querySelector(".reward-card-inspection")!;
-    fireEvent.touchStart(target, { touches: [{ clientX: 20, clientY: 30 }] });
-    act(() => vi.advanceTimersByTime(500));
+    render(<RewardScreen reward={{ tier: "normal", choices: ["shadow-bolt"], encounterIndex: 0 }} onChoose={onChoose} onSkip={vi.fn()} />);
+    const card = screen.getByRole("button", { name: /주문/ });
+    fireEvent.pointerDown(card, { pointerType: "touch" });
+    fireEvent.pointerUp(card, { pointerType: "touch" });
+    fireEvent.click(card);
     expect(screen.getByRole("dialog").textContent).toContain("주문");
-    fireEvent.touchEnd(target, { touches: [] });
-    fireEvent.click(screen.getByRole("button", { name: /주문/ }));
     expect(onChoose).not.toHaveBeenCalled();
   });
 });

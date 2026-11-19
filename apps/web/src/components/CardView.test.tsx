@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CARD_BY_ID } from "@board-game/game-core";
 import { CardView } from "./CardView.js";
@@ -78,17 +78,32 @@ describe("CardView", () => {
     expect(document.querySelector(".game-card-hover-preview")?.textContent).toContain(CARD_BY_ID.get("shadow-bolt")!.description);
   });
 
-  it("opens full details for a disabled hand card after a touch long press", () => {
-    vi.useFakeTimers();
+  it("opens full details for a disabled hand card after a touch tap", () => {
     const onSelect = vi.fn();
     const { container } = render(<CardView instance={{ instanceId: "disabled-bolt-touch", cardId: "shadow-bolt" }} selected={false} disabled onSelect={onSelect} />);
-    const target = container.querySelector(".hand-card-inspection")!;
-    fireEvent.touchStart(target, { touches: [{ clientX: 20, clientY: 30 }] });
-    act(() => vi.advanceTimersByTime(500));
+    const target = container.querySelector<HTMLElement>(".hand-card-inspection")!;
+    // A disabled button has pointer-events: none, so the tap lands on the wrapper.
+    fireEvent.pointerDown(target, { pointerType: "touch" });
+    fireEvent.pointerUp(target, { pointerType: "touch" });
+    fireEvent.click(target);
     expect(screen.getByRole("dialog").textContent).toContain(CARD_BY_ID.get("shadow-bolt")!.description);
-    fireEvent.touchEnd(target, { touches: [] });
-    fireEvent.click(container.querySelector(".game-card")!);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("opens details instead of selecting on a touch tap, but a mouse click still selects", () => {
+    const onSelect = vi.fn();
+    render(<CardView instance={{ instanceId: "bolt-tap", cardId: "shadow-bolt" }} selected={false} disabled={false} onSelect={onSelect} />);
+    const card = screen.getByRole("button", { name: /그림자 화살/ });
+
+    fireEvent.pointerDown(card, { pointerType: "touch" });
+    fireEvent.click(card);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(onSelect).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    fireEvent.pointerDown(card, { pointerType: "mouse" });
+    fireEvent.click(card);
+    expect(onSelect).toHaveBeenCalledOnce();
   });
 
   it("shows a spell's full description in the hover preview without minion stats", () => {
