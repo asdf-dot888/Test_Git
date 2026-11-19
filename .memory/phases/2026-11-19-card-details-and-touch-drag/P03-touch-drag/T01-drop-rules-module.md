@@ -1,6 +1,6 @@
 # Task: T01 Drop Rules Module
 
-## Status: todo
+## Status: done
 
 ## Goal
 Move the drop rules out of `App.handleDropInteraction` into a pure, tested module so the PC drop handlers, the touch drag and the highlight styling share one rule set. No behavior change for PC.
@@ -54,6 +54,6 @@ Task: T01-drop-rules-module
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `apps/web/src/game/dropRules.ts` exports `resolveDrop(run, payload, target, options?)`, `getValidDropTargets`, `canMinionAttack` and `DropAction`; `App.handleDropInteraction` keeps its tutorial gates and delegates the rules. Deviation from the blueprint: spells now follow strict target rules (enemy-minion spell only on enemy minions, friendly-minion spell only on friendly minions, targetless spell only on the enemy hero), but PC keeps its old behavior of sending a wrong spell target to the game so it shows “현재 선택할 수 없는 대상입니다.” That is the option `surfaceInvalidSpellTargets: true`, used only by `handleDropInteraction`. Touch drags and highlights (P03-T02/T03) use the strict rules. Fusion drops without a recipe (or without 1 mana) now do nothing instead of showing an engine error.
+- [x] validation passed: build clean, lint clean, 1043 tests (94 files). The first implementation made four existing App tests fail (invalid spell drops no longer showed the error); that is what led to the option above.
+- commit: see Git history

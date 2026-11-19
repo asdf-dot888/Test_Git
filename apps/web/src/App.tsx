@@ -28,6 +28,7 @@ import { combatEventSounds, spellCueFor } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
 import { loadTutorialProgress, markTutorialCompleted } from "./game/tutorialProgress.js";
 import { restoreTutorialPlayerHealth } from "./game/tutorialHealth.js";
+import { resolveDrop } from "./game/dropRules.js";
 import { getPlayerSpellSelection } from "./game/spellTargeting.js";
 import { createRun as createGameRun, type RunState } from "@board-game/game-core";
 
@@ -608,53 +609,23 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   };
 
   const handleDropInteraction = (payload: DragPayload, target: DropTarget) => {
-    if (!battle) return;
-    if (payload.kind === "card") {
-      if (tutorialMode !== "inactive" && !tutorialAllows("play-card")) return;
-      const card = battle.hand.find(({ instanceId }) => instanceId === payload.instanceId);
-      const definition = card ? CARD_BY_ID.get(card.cardId) : undefined;
-      if (!card || !definition) return;
-      if (target.kind === "slot" && definition.kind === "minion") {
-        if (tutorialMode !== "inactive") advanceTutorial("play-card");
-        dispatch({ type: "play-minion", instanceId: payload.instanceId, slotIndex: target.slotIndex });
-        return;
-      }
-      if (definition.kind === "spell" && target.kind === "minion") {
-        if (tutorialMode !== "inactive") advanceTutorial("play-card");
-        dispatch({ type: "cast-spell", instanceId: payload.instanceId, targetId: target.instanceId });
-        return;
-      }
-      if (definition.kind === "spell" && target.kind === "hero" && target.side === "enemy") {
-        if (tutorialMode !== "inactive") advanceTutorial("play-card");
-        const targetId = getPlayerSpellSelection(definition) === "enemy-character" ? "enemy-hero" : battle.enemyHero.id;
-        dispatch({ type: "cast-spell", instanceId: payload.instanceId, targetId });
-      }
-      return;
+    if (!run || !battle) return;
+    if (tutorialMode !== "inactive") {
+      if (payload.kind === "card" && !tutorialAllows("play-card")) return;
+      if (payload.kind === "minion" && tutorialStep !== "attack") return;
     }
-
-    const attacker = battle.playerBoard.find(({ instanceId }) => instanceId === payload.instanceId);
-    if (!attacker) return;
-    if (tutorialMode !== "inactive" && tutorialStep !== "attack") return;
-    const canAttack = attacker.summonedTurn < battle.turnNumber && !attacker.hasAttacked && !attacker.statusEffects?.some((status) => status.kind === "root");
-    if (target.kind === "minion" && target.side === "enemy") {
-      if (!canAttack) return;
-      if (tutorialMode !== "inactive") {
+    const action = resolveDrop(run, payload, target, { surfaceInvalidSpellTargets: true });
+    if (!action) return;
+    if (tutorialMode !== "inactive") {
+      if (action.type === "attack") {
         advanceTutorial("attack");
         const pending = tutorialActionRef.current;
-        if (pending) tutorialActionRef.current = { ...pending, attackerId: attacker.instanceId };
+        if (pending) tutorialActionRef.current = { ...pending, attackerId: action.attackerId };
+      } else if (action.type === "play-minion" || action.type === "cast-spell") {
+        advanceTutorial("play-card");
       }
-      dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: target.instanceId });
-    } else if (target.kind === "hero" && target.side === "enemy") {
-      if (!canAttack || battle.enemyBoard.length > 0) return;
-      if (tutorialMode !== "inactive") {
-        advanceTutorial("attack");
-        const pending = tutorialActionRef.current;
-        if (pending) tutorialActionRef.current = { ...pending, attackerId: attacker.instanceId };
-      }
-      dispatch({ type: "attack", attackerId: attacker.instanceId, targetId: battle.enemyHero.id });
-    } else if (target.kind === "minion" && target.side === "player") {
-      dispatch({ type: "fuse-minions", firstMinionId: attacker.instanceId, secondMinionId: target.instanceId });
     }
+    dispatch(action);
   };
 
   const leaderboardView = leaderboardViews[selectedLeaderboardDifficulty];
