@@ -1,6 +1,6 @@
 # Task: T01 Touch Guidance Text
 
-## Status: todo
+## Status: done
 
 ## Goal
 Touch devices see drag-based instructions in the tutorial and the game guide; PC keeps the current wording.
@@ -39,6 +39,6 @@ Task: T01-touch-guidance-text
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `FirstRunTutorial` (`TOUCH_STEP_COPY` for inspect-hand, play-card, attack) and `GameGuideModal` (new “조작 방법” section) choose touch or mouse wording from an optional `inputMode` prop, defaulting to `useTouchGuidance()` ((hover: none) and (pointer: coarse)). PC wording is unchanged; the tutorial's step logic needed no change because touch drops already go through `handleDropInteraction`.
+- [x] validation passed: build clean, lint clean, 1095 tests (97 files). Added tests for both wordings in both components and for following the device media query. The two test files had no `afterEach(cleanup)`, which hid duplicate renders; it was added.
+- commit: see Git history

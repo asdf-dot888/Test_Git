@@ -1,13 +1,18 @@
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useTouchGuidance } from "../game/inputMode.js";
 
 interface GameGuideModalProps {
   open: boolean;
   onClose(): void;
   onReplayTutorial?(): void;
+  /** Which controls to describe. Defaults to the device: finger-first screens get tap and drag wording. */
+  inputMode?: "touch" | "pointer";
 }
 
-export function GameGuideModal({ open, onClose, onReplayTutorial }: GameGuideModalProps): ReactElement | null {
+export function GameGuideModal({ open, onClose, onReplayTutorial, inputMode }: GameGuideModalProps): ReactElement | null {
+  const deviceUsesTouch = useTouchGuidance();
+  const touch = inputMode ? inputMode === "touch" : deviceUsesTouch;
   if (!open) return null;
 
   return createPortal(
@@ -32,6 +37,12 @@ export function GameGuideModal({ open, onClose, onReplayTutorial }: GameGuideMod
             <h3>하수인과 주문</h3>
             <p>하수인은 낸 다음 턴부터 턴마다 한 번 공격할 수 있습니다. 하수인끼리 공격하면 양쪽 모두 상대 하수인의 공격력만큼 피해를 받습니다.</p>
             <p>주문은 카드에 적힌 효과를 즉시 발휘합니다.</p>
+          </section>
+          <section>
+            <h3>조작 방법</h3>
+            {touch
+              ? <p>카드나 하수인을 탭하면 자세한 정보를 볼 수 있고, 빈 곳이나 닫기 버튼을 누르면 닫힙니다. 카드는 위로 끌어 놓아 사용하고, 하수인은 적 위로 끌어 공격합니다. 영웅 능력은 버튼을 눌러 사용합니다.</p>
+              : <p>카드를 클릭해 선택하거나 끌어 놓아 사용하고, 하수인을 선택하거나 끌어서 공격합니다. 카드에 마우스를 올리면 자세한 정보가 보입니다.</p>}
           </section>
           <section>
             <h3>승리와 보상</h3>

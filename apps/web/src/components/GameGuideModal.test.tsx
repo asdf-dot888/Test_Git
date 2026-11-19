@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameGuideModal } from "./GameGuideModal.js";
+
+afterEach(cleanup);
 
 describe("GameGuideModal", () => {
   it("stays hidden while closed", () => {
@@ -26,6 +28,19 @@ describe("GameGuideModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("describes mouse controls on pointer devices and tap and drag controls on touch devices", () => {
+    const { rerender } = render(<GameGuideModal open={true} onClose={vi.fn()} inputMode="pointer" />);
+    expect(screen.getByRole("heading", { name: "조작 방법" })).toBeTruthy();
+    expect(screen.getByRole("dialog").textContent).toContain("마우스를 올리면 자세한 정보가 보입니다");
+    expect(screen.getByRole("dialog").textContent).not.toContain("탭하면");
+
+    rerender(<GameGuideModal open={true} onClose={vi.fn()} inputMode="touch" />);
+    const text = screen.getByRole("dialog").textContent;
+    expect(text).toContain("탭하면 자세한 정보를 볼 수 있고");
+    expect(text).toContain("끌어 놓아 사용하고");
+    expect(text).not.toContain("마우스를 올리면");
   });
 
   it("offers a tutorial replay action when the menu supplies one", () => {

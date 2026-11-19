@@ -7,7 +7,7 @@
 [P04 Guidance and Verification](./phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/phase.md) — P01, P02 and P03 are done.
 
 ## Active Task
-[P04-T01 Touch Guidance Text](./phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/T01-touch-guidance-text.md)
+[P04-T02 Audit and Close-Out](./phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/T02-audit-and-close-out.md)
 
 ## Status
 - Plan has 4 phases and 10 tasks: P01 (1) PC hover preview, P02 (3) touch tap details, P03 (4) touch drag, P04 (2) guidance and verification.
@@ -17,4 +17,4 @@
 - Claude cannot test touch behavior on a phone; touch work is verified by unit/jsdom tests and the manual checklist in P04-T02.
 
 ## Next Step (IMPORTANT)
-Run `/memory-execute` (or “current 보고 이어서 해줘”) to implement P04-T01. Touch drag and tap details work (P02, P03); the plan ships as one release. Note: the P01-T01 full test run had one unexplained flaky failure (reruns passed); mention it if it recurs.
+Run `/memory-execute` (or “current 보고 이어서 해줘”) to implement P04-T02. Touch drag and tap details work (P02, P03); the plan ships as one release. Note: the P01-T01 full test run had one unexplained flaky failure (reruns passed); mention it if it recurs.
