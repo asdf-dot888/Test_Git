@@ -4,7 +4,7 @@
 - Decisions:
   - [2026-11-19-discard-card-hover-preview](../decisions/2026-11-19-discard-card-hover-preview.md)
   - [2026-11-19-mobile-card-tap-details-and-touch-drag](../decisions/2026-11-19-mobile-card-tap-details-and-touch-drag.md)
-- Status: planned (no code written yet). Not released.
+- Status: done (2026-11-19). All 10 tasks implemented and covered by automated checks; the touch behavior still needs the user's check on a real phone (checklist in P04-T02). Not released.
 
 ## Goal
 1. PC: hovering a card in the discard picker (and the “추가할 카드” line of the reward-overflow case) shows a fixed-size (about 220×320) card preview with art, cost, name, kind, stats and effect text.
@@ -34,7 +34,7 @@ PC click-to-select, hover preview and HTML5 drag stay as they are.
 | P01 | `done` | PC fixed-size hover preview for the discard picker and the added-card line | [P01](../phases/2026-11-19-card-details-and-touch-drag/P01-pc-hover-preview/phase.md) |
 | P02 | `done` | Touch tap opens details everywhere; popup action buttons; image menu suppression | [P02](../phases/2026-11-19-card-details-and-touch-drag/P02-touch-tap-details/phase.md) |
 | P03 | `done` | Shared drop rules, touch drag engine, wiring, highlights, assassin hero power on touch | [P03](../phases/2026-11-19-card-details-and-touch-drag/P03-touch-drag/phase.md) |
-| P04 | `todo` | Touch guidance text, verification, close-out | [P04](../phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/phase.md) |
+| P04 | `done` | Touch guidance text, verification, close-out | [P04](../phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/phase.md) |
 
 ## Risks
 - Touch behavior cannot be verified on a real phone in this environment. Mitigation: pure functions (gesture classification, preview rectangle, drop rules) get unit tests, components get jsdom tests with synthetic pointer events, and P04-T02 writes a manual phone checklist for the user.
