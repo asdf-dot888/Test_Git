@@ -1,18 +1,18 @@
-import { useRef, useState, type MouseEvent, type PointerEvent, type ReactNode, type TouchEvent } from "react";
+import { useRef, useState, type FocusEvent, type MouseEvent, type PointerEvent, type ReactNode, type TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import type { CardDefinition } from "@board-game/game-core";
 import { CardDetailsPopup } from "./CardDetailsPopup.js";
+import { computePreviewRect, type PreviewRect } from "./cardPreviewRect.js";
 
 interface CardInspectionProps {
   card: CardDefinition;
   children: ReactNode;
   className: string;
   desktopHover?: boolean;
+  hoverSize?: "scaled" | "fixed";
 }
 
-interface PreviewRect { left: number; top: number; width: number; height: number }
-
-export function CardInspection({ card, children, className, desktopHover = false }: CardInspectionProps) {
+export function CardInspection({ card, children, className, desktopHover = false, hoverSize = "scaled" }: CardInspectionProps) {
   const [preview, setPreview] = useState<PreviewRect | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -25,15 +25,17 @@ export function CardInspection({ card, children, className, desktopHover = false
     startPoint.current = null;
   };
 
+  const placePreview = (element: HTMLElement) => {
+    setPreview(computePreviewRect(element.getBoundingClientRect(), { width: window.innerWidth, height: window.innerHeight }, hoverSize));
+  };
+
   const showDesktopPreview = (event: MouseEvent<HTMLDivElement>) => {
     if (!desktopHover || (window.matchMedia && !window.matchMedia("(hover: hover) and (pointer: fine)").matches)) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const width = Math.min(rect.width * 1.5, Math.max(0, window.innerWidth - 16));
-    const height = Math.min(rect.height * 1.5, Math.max(0, window.innerHeight - 16));
-    const preferredTop = rect.top - height - 10 >= 8 ? rect.top - height - 10 : rect.bottom + 10;
-    const left = Math.min(Math.max(8, rect.left + rect.width / 2 - width / 2), Math.max(8, window.innerWidth - width - 8));
-    const top = Math.min(Math.max(8, preferredTop), Math.max(8, window.innerHeight - height - 8));
-    setPreview({ left, top, width, height });
+    placePreview(event.currentTarget);
+  };
+
+  const showFocusPreview = (event: FocusEvent<HTMLDivElement>) => {
+    if (desktopHover) placePreview(event.currentTarget);
   };
 
   const armLongPress = (x: number, y: number) => {
@@ -79,7 +81,7 @@ export function CardInspection({ card, children, className, desktopHover = false
 
   const closeDetails = () => setDetailsOpen(false);
   const hoverPreview = preview && createPortal(
-    <div className={`game-card card-${card.kind} game-card-hover-preview`} aria-hidden="true" style={{ left: preview.left, top: preview.top, width: preview.width, height: preview.height }}>
+    <div className={`game-card card-${card.kind} game-card-hover-preview${hoverSize === "fixed" ? " game-card-hover-preview--fixed" : ""}`} aria-hidden="true" style={{ left: preview.left, top: preview.top, width: preview.width, height: preview.height }}>
       <span className="card-cost">{card.cost}</span>
       <span className="card-art"><img src={`/art/cards/${card.artKey}.png`} alt="" /></span>
       <strong className="card-name">{card.name}</strong>
@@ -95,6 +97,8 @@ export function CardInspection({ card, children, className, desktopHover = false
       className={`card-inspection-target ${className}`}
       onMouseEnter={showDesktopPreview}
       onMouseLeave={() => setPreview(null)}
+      onFocus={showFocusPreview}
+      onBlur={() => setPreview(null)}
       onPointerDown={startTouchInspection}
       onPointerMove={moveTouchInspection}
       onPointerUp={clearLongPress}

@@ -1,6 +1,6 @@
 # Task: T01 Fixed-Size Hover Preview
 
-## Status: todo
+## Status: done
 
 ## Goal
 On PC, hovering (or keyboard-focusing) a card in the discard picker, and the “추가할 카드” line in the reward-overflow case, shows a fixed-size card preview with art, cost, name, kind, stats and effect. The hand preview keeps its current size.
@@ -50,6 +50,7 @@ Task: T01-fixed-hover-preview
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `computePreviewRect`/`HOVER_PREVIEW_SIZE` live in `apps/web/src/components/cardPreviewRect.ts` (a separate file so the component file only exports components, which the react-refresh lint rule requires). `CardInspection` gained `hoverSize` and focus/blur preview; `DiscardPicker` passes `desktopHover hoverSize="fixed"` and wraps the added-card line (name is now a button).
+- [x] validation passed: build clean, lint clean, 1004 tests. The first full `npm test` run showed 1 failing test that I did not capture; two reruns passed 91/91 files, so it looks like a flaky test under load. Watch for it in later runs.
+- Not verified by Claude: how the preview looks in a real browser (no browser tool). Check by hovering discard cards after `npm run dev`.
+- commit: see Git history

@@ -31,7 +31,7 @@ PC click-to-select, hover preview and HTML5 drag stay as they are.
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `todo` | PC fixed-size hover preview for the discard picker and the added-card line | [P01](../phases/2026-11-19-card-details-and-touch-drag/P01-pc-hover-preview/phase.md) |
+| P01 | `done` | PC fixed-size hover preview for the discard picker and the added-card line | [P01](../phases/2026-11-19-card-details-and-touch-drag/P01-pc-hover-preview/phase.md) |
 | P02 | `todo` | Touch tap opens details everywhere; popup action buttons; image menu suppression | [P02](../phases/2026-11-19-card-details-and-touch-drag/P02-touch-tap-details/phase.md) |
 | P03 | `todo` | Shared drop rules, touch drag engine, wiring, highlights, assassin hero power on touch | [P03](../phases/2026-11-19-card-details-and-touch-drag/P03-touch-drag/phase.md) |
 | P04 | `todo` | Touch guidance text, verification, close-out | [P04](../phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/phase.md) |

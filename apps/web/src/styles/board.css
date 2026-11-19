@@ -230,6 +230,14 @@
 .game-card-hover-preview .card-kind { display: block; color: #c9bda8; font-size: 11px; }
 .game-card-hover-preview .card-stats { font-size: 12px; }
 .game-card-hover-preview .card-description { display: block; align-self: start; color: #e0d5c4; font-size: 11px; line-height: 1.35; text-align: center; white-space: normal; }
+.game-card-hover-preview--fixed { padding: 10px; gap: 6px; }
+.game-card-hover-preview--fixed .card-cost { width: 30px; height: 30px; font-size: 17px; }
+.game-card-hover-preview--fixed .card-name { font-size: 17px; }
+.game-card-hover-preview--fixed .card-kind { font-size: 12px; }
+.game-card-hover-preview--fixed .card-stats { font-size: 14px; }
+.game-card-hover-preview--fixed .card-description { font-size: 13px; }
+.reward-being-added__name { padding: 0; color: var(--gold-bright); border: 0; background: none; font: inherit; font-weight: 700; cursor: help; }
+.reward-being-added__name:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
 .empty-hand { align-self: center; color: var(--muted); font-size: 13px; }
 .board-unavailable { min-height: 100vh; display: grid; place-items: center; color: var(--muted); }
 .menu-button { justify-self: end; padding: 7px 12px; color: #d6c6a6; border: 1px solid var(--line); border-radius: 6px; background: #211f20; font-size: 11px; cursor: pointer; }

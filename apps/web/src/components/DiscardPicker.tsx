@@ -21,7 +21,9 @@ export function DiscardPicker({ cards, disabled, onDiscard, title = "새 카드�
         {onCancel && <button className="dialog-close" type="button" aria-label="닫기" disabled={disabled} onClick={onCancel}>×</button>}
         <h2 id="discard-title">{title}</h2>
         <p>{description}</p>
-        {reward && <p className="reward-being-added">추가할 카드: <strong>{reward.name}</strong></p>}
+        {reward && <CardInspection card={reward} className="reward-added-inspection" desktopHover hoverSize="fixed">
+          <p className="reward-being-added">추가할 카드: <button className="reward-being-added__name" type="button">{reward.name}</button></p>
+        </CardInspection>}
         <div className="discard-options">
           {cards.map((card) => {
             const definition = CARD_BY_ID.get(card.cardId);
@@ -31,7 +33,7 @@ export function DiscardPicker({ cards, disabled, onDiscard, title = "새 카드�
               <span>{definition?.kind === "minion" ? "하수인" : "주문"}</span>
             </button>;
             return definition
-              ? <CardInspection card={definition} className="discard-card-inspection" key={card.instanceId}>{button}</CardInspection>
+              ? <CardInspection card={definition} className="discard-card-inspection" desktopHover hoverSize="fixed" key={card.instanceId}>{button}</CardInspection>
               : <div className="discard-card-inspection" key={card.instanceId}>{button}</div>;
           })}
         </div>
