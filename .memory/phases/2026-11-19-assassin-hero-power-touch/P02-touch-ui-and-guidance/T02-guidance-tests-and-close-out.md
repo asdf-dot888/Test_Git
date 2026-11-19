@@ -1,6 +1,6 @@
 # Task: T02 Guidance, Whole-Screen Tests and Close-out
 
-## Status: todo
+## Status: done
 
 ## Goal
 Tell touch players about both ways, prove the full flow works through the real `App`, add the phone checklist, and close the plan.
@@ -52,5 +52,8 @@ Task: T02-guidance-tests-and-close-out
 Commit only the files this task changed (including the `.memory` files above), by explicit path.
 
 ## Progress
-- [ ] implementation
-- [ ] validation
+- [x] implementation complete. Touch guide text in `GameGuideModal.tsx` now says the Assassin can tap the button then an enemy, or drag the button onto an enemy (PC text unchanged; test updated for both input modes). `README.md` “카드 조작” note updated. Whole-screen tests in `App.touch.test.tsx` drag the real button: onto an enemy minion, onto the enemy hero while a minion remains, two cancel cases (friendly minion, empty slot), warrior and demonist cannot drag. The earlier tap-then-tap and cancel tests stayed green. The phone checklist addendum was added to the previous plan's `P04-guidance-and-verification/T02-audit-and-close-out.md`. `FirstRunTutorial.tsx` has no hero power text, so no change there.
+- [x] validation passed: build clean, lint clean, 1140 tests (98 files; +5).
+- Not verified by Claude: touch behavior on a real phone (see the checklist addendum).
+- Note: `GameGuideModal.tsx`, its test and `README.md` were CRLF in the working tree (LF in HEAD) and were converted back to LF before editing.
+- commit: see Git history

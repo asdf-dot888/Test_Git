@@ -24,7 +24,7 @@ Verify the whole feature, record what could not be verified, and hand the user a
 5. Drag a ready minion onto an enemy minion and onto the hero (when no enemy minions); fuse two friendly minions with a recipe.
 6. Tap minions on both sides → details with current stats.
 7. Reward screen: tap card → details → “이 카드 받기”; discard screen: tap → “이 카드 버리기”.
-8. Assassin: tap the hero power button → tap a target; warrior and demonist: button works directly.
+8. Assassin: tap the hero power button → tap a target, or drag the button onto a target (see the addendum below); warrior and demonist: button works directly.
 9. Tutorial text and game guide show drag instructions.
 10. PC: hover discard cards and the added-card line → 220×320 preview.
 
@@ -58,3 +58,13 @@ Task: T02-audit-and-close-out
 - Not verified by Claude (no phone or browser available): how the preview, popup, drag ghost and outlines look; `touch-action` behavior (hand swipe vs vertical drag, board drag, no page scroll while dragging); the native image menu really stays away on iOS Safari and Android Chrome; pointer capture and click-after-drag behavior on real devices.
 - Manual phone checklist for the user (run `npm run dev` and open the LAN address on a phone, or use the deployed site after release): 1) hand: tap a card, details open; tap × or the empty area, they close; long press shows no “이미지 저장” menu. 2) drag a minion card up onto an empty slot, it plays; drag it onto an invalid place, it returns. 3) drag a spell onto an enemy minion or the enemy hero (targetless spells go on the enemy hero). 4) swipe the hand left and right, it scrolls without picking up a card. 5) drag a ready minion onto an enemy minion, and onto the hero when no enemy minions remain; fuse two friendly minions that have a recipe. 6) tap minions on both sides, details show current stats. 7) reward screen: tap a card, then “이 카드 받기”; discard screen: tap, then “이 카드 버리기”. 8) assassin: tap the hero power button, then a target; warrior and demonist: the button works directly. 9) tutorial and game guide show drag instructions. 10) PC: hover discard cards and the added-card line, a 220×320 preview appears.
 - commit: see Git history
+
+### Addendum (2026-11-19, plan `2026-11-19-assassin-hero-power-touch`): phone checklist for the Assassin hero power drag
+Not verified by Claude (no phone or browser available). Please try on a real phone:
+1. Assassin with 2 or more mana: press and drag the hero power button; the round ghost follows the finger and the enemy minions and the enemy hero are outlined.
+2. Release on an enemy minion and on the enemy hero (also while enemy minions remain): 2 damage, mana −2, the button becomes unavailable for the rest of the turn.
+3. Release on empty ground, an empty slot, a friendly minion or your own hero: nothing happens, no target mode appears, no mana is spent.
+4. Quick tap on the button: target mode opens; tap an enemy to use it; tap the button again to cancel (this is the old flow and must still work).
+5. The page does not scroll or zoom while dragging the button, and no image-save or text-selection menu appears on iOS Safari and Android Chrome.
+6. The button is small (34–40 px): check that a finger can start the drag easily and that the ghost is not hidden under the finger.
+7. Warrior and demonist: the button still works with a single tap and cannot be dragged.

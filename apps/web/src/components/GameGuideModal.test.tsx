@@ -35,11 +35,13 @@ describe("GameGuideModal", () => {
     expect(screen.getByRole("heading", { name: "조작 방법" })).toBeTruthy();
     expect(screen.getByRole("dialog").textContent).toContain("마우스를 올리면 자세한 정보가 보입니다");
     expect(screen.getByRole("dialog").textContent).not.toContain("탭하면");
+    expect(screen.getByRole("dialog").textContent).not.toContain("암살자는 버튼을 누른 뒤");
 
     rerender(<GameGuideModal open={true} onClose={vi.fn()} inputMode="touch" />);
     const text = screen.getByRole("dialog").textContent;
     expect(text).toContain("탭하면 자세한 정보를 볼 수 있고");
     expect(text).toContain("끌어 놓아 사용하고");
+    expect(text).toContain("암살자는 버튼을 누른 뒤 적을 탭하거나, 버튼을 적 위로 끌어 놓아 사용합니다");
     expect(text).not.toContain("마우스를 올리면");
   });
 

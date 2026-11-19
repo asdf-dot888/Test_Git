@@ -125,6 +125,60 @@ describe("touch play through the whole game screen", () => {
     expect(screen.queryByText("영웅 능력 대상을 선택하세요")).toBeNull();
   });
 
+  it("lets the Assassin drag the hero power button onto an enemy minion", async () => {
+    renderWithTestAuth(<GameSessionView sync={makeReadySync(battleRun("soul-lance", "assassin"))} />);
+    enterActiveEncounter();
+    await screen.findByRole("button", { name: /영혼 창/ });
+
+    touchDrag(document.querySelector(".hero-power-button")!, ".lane-enemy .lane-slot[data-drop-target='minion:enemy:enemy-0']");
+    await waitFor(() => expect(manaLabel()).toBe("마나 8/10"));
+    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("8");
+    // The drag never switched on target mode, and the power cannot be used twice in a turn.
+    expect(screen.queryByText("영웅 능력 대상을 선택하세요")).toBeNull();
+    expect((document.querySelector(".hero-power-button") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("lets the Assassin drag the hero power button onto the enemy hero while an enemy minion remains", async () => {
+    renderWithTestAuth(<GameSessionView sync={makeReadySync(battleRun("soul-lance", "assassin"))} />);
+    enterActiveEncounter();
+    await screen.findByRole("button", { name: /영혼 창/ });
+
+    touchDrag(document.querySelector(".hero-power-button")!, ".hero-enemy");
+    await waitFor(() => expect(manaLabel()).toBe("마나 8/10"));
+    expect(document.querySelector(".hero-enemy")?.textContent).toContain("28");
+    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("10");
+  });
+
+  it.each([
+    ["a friendly minion", ".lane-player .lane-slot[data-drop-target='minion:player:friendly']"],
+    ["an empty slot", ".lane-player .lane-slot[data-drop-target='slot:1']"],
+  ])("cancels the Assassin hero power drag released on %s, without spending mana or switching on target mode", async (_name, selector) => {
+    renderWithTestAuth(<GameSessionView sync={makeReadySync(battleRun("soul-lance", "assassin"))} />);
+    enterActiveEncounter();
+    await screen.findByRole("button", { name: /영혼 창/ });
+
+    touchDrag(document.querySelector(".hero-power-button")!, selector);
+    fireEvent.click(document.querySelector(".hero-power-button")!);
+    expect(manaLabel()).toBe("마나 10/10");
+    expect(screen.queryByText("영웅 능력 대상을 선택하세요")).toBeNull();
+    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("10");
+    expect((document.querySelector(".hero-power-button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("does not let warriors or demonists drag their hero power", async () => {
+    for (const playerClass of ["warrior", "demonist"] as const) {
+      const { unmount } = renderWithTestAuth(<GameSessionView sync={makeReadySync(battleRun("soul-lance", playerClass))} />);
+      enterActiveEncounter();
+      await screen.findByRole("button", { name: /영혼 창/ });
+
+      touchDrag(document.querySelector(".hero-power-button")!, ".hero-enemy");
+      expect(document.querySelector(".touch-drag-ghost")).toBeNull();
+      expect(manaLabel()).toBe("마나 10/10");
+      unmount();
+      cleanup();
+    }
+  });
+
   it("cancels the Assassin hero power target mode, after which a tap on a minion opens details again", async () => {
     renderWithTestAuth(<GameSessionView sync={makeReadySync(battleRun("soul-lance", "assassin"))} />);
     enterActiveEncounter();
