@@ -33,7 +33,7 @@ export function DiscardPicker({ cards, disabled, onDiscard, title = "새 카드�
               <span>{definition?.kind === "minion" ? "하수인" : "주문"}</span>
             </button>;
             return definition
-              ? <CardInspection card={definition} className="discard-card-inspection" desktopHover hoverSize="fixed" key={card.instanceId}>{button}</CardInspection>
+              ? <CardInspection card={definition} className="discard-card-inspection" desktopHover hoverSize="fixed" key={card.instanceId} action={{ label: "이 카드 버리기", disabled, onSelect: () => onDiscard(card.instanceId) }}>{button}</CardInspection>
               : <div className="discard-card-inspection" key={card.instanceId}>{button}</div>;
           })}
         </div>

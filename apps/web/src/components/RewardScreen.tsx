@@ -21,7 +21,7 @@ export function RewardScreen({ reward, disabled = false, onChoose, onSkip, selec
           {reward.choices.map((cardId) => {
             const card = CARD_BY_ID.get(cardId);
             if (!card) return null;
-            return <CardInspection card={card} className="reward-card-inspection" key={cardId}>
+            return <CardInspection card={card} className="reward-card-inspection" key={cardId} action={{ label: "이 카드 받기", disabled: disabled || Boolean(selectedCardId), onSelect: () => onChoose(cardId) }}>
               <button className={`reward-card card-${card.kind}${selectedCardId === cardId ? " is-selected" : ""}`} type="button" disabled={disabled || Boolean(selectedCardId)} aria-pressed={selectedCardId === cardId} onClick={() => onChoose(cardId)}>
                 <span className="card-cost">{card.cost}</span>
                 <span className="reward-art"><img src={`/art/cards/${card.artKey}.png`} alt="" draggable={false} /></span>

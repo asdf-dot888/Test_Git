@@ -19,6 +19,42 @@ describe("DiscardPicker", () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
+  it("discards from the popup button on touch, after reading the card", () => {
+    const onDiscard = vi.fn();
+    const cards = [{ instanceId: "deck-card-1", cardId: "bone-rat" }, { instanceId: "deck-card-2", cardId: "ash-wolf" }];
+    render(<DiscardPicker cards={cards} disabled={false} onDiscard={onDiscard} />);
+    const chip = screen.getByRole("button", { name: /뼈 쥐/ });
+
+    fireEvent.pointerDown(chip, { pointerType: "touch" });
+    fireEvent.click(chip);
+    expect(onDiscard).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "이 카드 버리기" }));
+    expect(onDiscard).toHaveBeenCalledOnce();
+    expect(onDiscard).toHaveBeenCalledWith("deck-card-1");
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
+  it("opens the added card's details on a touch tap without a discard action", () => {
+    const cards = [{ instanceId: "deck-card-1", cardId: "bone-rat" }];
+    render(<DiscardPicker cards={cards} disabled={false} rewardCardId="dread-colossus" onDiscard={vi.fn()} />);
+    const name = screen.getByRole("button", { name: "공포의 거신" });
+
+    fireEvent.pointerDown(name, { pointerType: "touch" });
+    fireEvent.click(name);
+    expect(screen.getAllByRole("dialog")[1]?.textContent).toContain("공포의 거신");
+    expect(screen.queryByRole("button", { name: "이 카드 버리기" })).toBeNull();
+  });
+
+  it("keeps the popup discard button disabled while a discard is being processed", () => {
+    const cards = [{ instanceId: "deck-card-1", cardId: "bone-rat" }];
+    const { container } = render(<DiscardPicker cards={cards} disabled onDiscard={vi.fn()} />);
+    const wrapper = container.querySelector(".discard-card-inspection")!;
+
+    fireEvent.pointerDown(wrapper, { pointerType: "touch" });
+    fireEvent.click(wrapper);
+    expect((screen.getByRole("button", { name: "이 카드 버리기" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("shows a fixed-size card preview while hovering or focusing a discard card, and hides it afterwards", () => {
     const cards = [{ instanceId: "deck-card-1", cardId: "bone-rat" }];
     const { container } = render(<DiscardPicker cards={cards} disabled={false} onDiscard={vi.fn()} />);
