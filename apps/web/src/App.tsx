@@ -610,6 +610,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
   const handleDropInteraction = (payload: DragPayload, target: DropTarget) => {
     if (!run || !battle) return;
+    // The hero power stays blocked during the first-run tutorial, whether it is tapped or dragged.
+    if (payload.kind === "hero-power" && tutorialMode !== "inactive") return;
     if (tutorialMode !== "inactive") {
       if (payload.kind === "card" && !tutorialAllows("play-card")) return;
       if (payload.kind === "minion" && tutorialStep !== "attack") return;

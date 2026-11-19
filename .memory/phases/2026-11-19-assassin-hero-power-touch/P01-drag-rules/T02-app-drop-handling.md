@@ -1,6 +1,6 @@
 # Task: T02 App Drop Handling for the Hero Power
 
-## Status: todo
+## Status: done
 
 ## Goal
 Make `App.handleDropInteraction` accept the hero power payload: dispatch `use-hero-power` with the resolved target, keep the tutorial blocked, and make sure a successful drop leaves no target mode behind.
@@ -41,5 +41,6 @@ Task: T02-app-drop-handling
 Commit only the files this task changed, by explicit path.
 
 ## Progress
-- [ ] implementation
-- [ ] validation
+- [x] implementation complete. `App.handleDropInteraction` returns early for a `hero-power` payload while the tutorial is active; otherwise the existing `resolveDrop` + `dispatch(action)` path handles it (`DropAction` `use-hero-power` is accepted by `dispatch` as is, no mapping needed). Deviation from the blueprint: the tests are in a new file `apps/web/src/App.heroPowerDrop.test.tsx` that replaces `GameBoard` with a stub exposing `onDropInteraction`, because the button UI does not exist until P02-T01. The whole-screen drag through the real button is tested in P02-T02.
+- [x] validation passed: build clean, lint clean, 1107 tests (98 files; +6). Mutation check: removing the tutorial gate makes the tutorial test fail.
+- commit: see Git history

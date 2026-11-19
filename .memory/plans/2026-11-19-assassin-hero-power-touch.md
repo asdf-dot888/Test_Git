@@ -2,7 +2,7 @@
 
 - Date: 2026-11-19
 - Decisions: [2026-11-19-assassin-hero-power-touch](../decisions/2026-11-19-assassin-hero-power-touch.md) (replaces D08 of [mobile tap details and touch drag](../decisions/2026-11-19-mobile-card-tap-details-and-touch-drag.md))
-- Status: in progress (P01-T01 done; next P01-T02)
+- Status: in progress (P01 done; next P02-T01)
 
 ## Goal
 On touch devices the assassin hero power (“그림자 습격”, 2 mana, 2 damage to an enemy minion or the enemy hero) can be used in two ways:
@@ -30,7 +30,7 @@ Releasing on anything that is not a valid target cancels completely (no target m
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in-progress` | Drag payload, drop rules, gesture origin, App drop handling for the hero power | [P01](../phases/2026-11-19-assassin-hero-power-touch/P01-drag-rules/phase.md) |
+| P01 | `done` | Drag payload, drop rules, gesture origin, App drop handling for the hero power | [P01](../phases/2026-11-19-assassin-hero-power-touch/P01-drag-rules/phase.md) |
 | P02 | `todo` | Hero power button drag wiring, board highlights, styling, guide text, whole-screen tests, close-out | [P02](../phases/2026-11-19-assassin-hero-power-touch/P02-touch-ui-and-guidance/phase.md) |
 
 ## Risks
