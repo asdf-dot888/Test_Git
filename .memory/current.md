@@ -1,18 +1,20 @@
 # Current Context
 
 ## Active Plan
-[Unique Spell and Hero Power Effects (Visual and Sound)](./plans/2026-11-18-spell-and-hero-power-effects.md) — complete (implementation); review pending with the user.
+[Card Details (PC Hover Preview) and Touch Tap-Details / Touch Drag](./plans/2026-11-19-card-details-and-touch-drag.md) — planned, no code written yet.
 
 ## Active Phase
-None — P01, P02 and P03 are complete.
+[P01 PC Hover Preview](./phases/2026-11-19-card-details-and-touch-drag/P01-pc-hover-preview/phase.md)
 
 ## Active Task
-None — no active task.
+[P01-T01 Fixed-Size Hover Preview](./phases/2026-11-19-card-details-and-touch-drag/P01-pc-hover-preview/T01-fixed-hover-preview.md)
 
 ## Status
-- All 35 effects (3 hero powers, 24 player spells, 8 boss spells) have unique CSS/SVG visuals and synthesized sound recipes; 997 tests, lint and build pass; the gallery and bot are not in the production bundle.
-- Not verified by Claude: how the effects actually look and sound (no browser tool in this session). The user should run `npm run dev` and open `/?effects-preview`, then report effects to retune (timing, colors, glyphs, loudness).
-- Released: production serves **v1.0.5** (deployed 2026-11-19, release commit 9575aed), verified against the live site (bundle contains 1.0.5; /changelog.html is served). v1.0.4 was never deployed (its content ships in v1.0.5). Deploying needs `SWA_CLI_DEPLOYMENT_TOKEN` in `.env` (the device-code login does not work with SWA CLI 2.1.0); the token was shared in chat on 2026-11-19, so it should be rotated in the Azure portal (Manage deployment token > reset) and the new value placed in `.env`.
+- Plan has 4 phases and 10 tasks: P01 (1) PC hover preview, P02 (3) touch tap details, P03 (4) touch drag, P04 (2) guidance and verification.
+- Decisions: [discard hover preview](./decisions/2026-11-19-discard-card-hover-preview.md), [mobile tap details and touch drag](./decisions/2026-11-19-mobile-card-tap-details-and-touch-drag.md). D08 of the mobile decision (assassin hero power stays tap-to-target on touch) was added while planning as a default and is not yet confirmed by the user.
+- Previous plan (unique spell and hero power effects) is implemented; the user's visual/audio review is still pending (`npm run dev`, open `/?effects-preview`).
+- Released: production serves **v1.0.5** (deployed 2026-11-19, release commit 9575aed). Deploying needs `SWA_CLI_DEPLOYMENT_TOKEN` in `.env`; the token was shared in chat on 2026-11-19 and should be rotated in the Azure portal. This plan is not released.
+- Claude cannot test touch behavior on a phone; touch work is verified by unit/jsdom tests and the manual checklist in P04-T02.
 
 ## Next Step (IMPORTANT)
-No active task. Wait for the user's review of the effects (retune in a small follow-up plan) or start a new feature with `/grill-me <feature>`.
+Run `/memory-execute` (or “current 보고 이어서 해줘”) to implement P01-T01.
