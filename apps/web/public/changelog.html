@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mangostone 업데이트 내역</title>
+  <meta name="description" content="Mangostone 버전별 업데이트 내역입니다.">
+  <style>
+    :root {
+      --bg: #14110f;
+      --panel: #1d1814;
+      --panel-2: #251f19;
+      --line: rgb(217 179 108 / 28%);
+      --text: #e9dcc4;
+      --muted: #b4a58a;
+      --accent: #d9b36c;
+      --accent-2: #f2d79b;
+      --new: #6fe39a;
+      --up: #ffb13d;
+      --fix: #7fb4ff;
+      --dev: #b9a8ff;
+      --warn: #ff8a7a;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7f1e6;
+        --panel: #fffaf0;
+        --panel-2: #f1e6cf;
+        --line: rgb(120 84 24 / 28%);
+        --text: #2b2118;
+        --muted: #6f5d44;
+        --accent: #8a5a12;
+        --accent-2: #5c3a05;
+        --new: #1f8a4c;
+        --up: #b45f06;
+        --fix: #1d5fbf;
+        --dev: #5b3fd0;
+        --warn: #b3261e;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; padding: 0 16px 64px;
+      color: var(--text); background: var(--bg);
+      font: 16px/1.65 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; }
+    header { padding: 40px 0 8px; }
+    h1 { margin: 0 0 6px; font-size: clamp(1.6rem, 4vw, 2.2rem); letter-spacing: .01em; color: var(--accent-2); }
+    .lead { margin: 0; color: var(--muted); }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 8px; }
+    nav a {
+      padding: 6px 12px; color: var(--text); text-decoration: none; font-size: .9rem;
+      border: 1px solid var(--line); border-radius: 999px; background: var(--panel);
+    }
+    nav a:hover, nav a:focus-visible { border-color: var(--accent); outline: none; }
+    .summary { margin: 26px 0 8px; width: 100%; border-collapse: collapse; font-size: .92rem; }
+    .summary th, .summary td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .summary th { color: var(--muted); font-weight: 600; }
+    .summary-wrap { overflow-x: auto; }
+    section.release { margin-top: 34px; padding: 22px clamp(16px, 3vw, 28px) 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .release-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 4px; }
+    .release-head h2 { margin: 0; font-size: 1.5rem; color: var(--accent-2); }
+    .date { color: var(--muted); font-size: .92rem; }
+    .badge { display: inline-block; padding: 2px 10px; font-size: .78rem; font-weight: 700; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--accent-2); }
+    .badge.pending { color: #1b1510; background: var(--accent); border-color: var(--accent); }
+    .intro { margin: 6px 0 14px; color: var(--muted); }
+    h3 { margin: 20px 0 6px; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+    .tag { font-size: .72rem; font-weight: 800; padding: 1px 8px; border-radius: 6px; color: #14110f; }
+    .tag.new { background: var(--new); }
+    .tag.up { background: var(--up); }
+    .tag.fix { background: var(--fix); }
+    .tag.dev { background: var(--dev); }
+    ul { margin: 6px 0 0; padding-left: 1.25em; }
+    li { margin: 4px 0; }
+    li::marker { color: var(--accent); }
+    table.data { width: 100%; margin: 10px 0 4px; border-collapse: collapse; font-size: .9rem; }
+    table.data th, table.data td { padding: 7px 9px; text-align: left; border: 1px solid var(--line); }
+    table.data th { background: var(--panel-2); color: var(--muted); font-weight: 600; }
+    .table-wrap { overflow-x: auto; }
+    .note {
+      margin: 14px 0 0; padding: 10px 14px; font-size: .92rem;
+      border-left: 4px solid var(--warn); border-radius: 6px; background: var(--panel-2);
+    }
+    .note.info { border-left-color: var(--accent); }
+    code { padding: 1px 6px; font-size: .88em; border-radius: 5px; background: var(--panel-2); }
+    footer { margin-top: 40px; color: var(--muted); font-size: .85rem; }
+    @media print {
+      body { background: #fff; color: #000; }
+      section.release { break-inside: avoid; border-color: #bbb; background: #fff; }
+      nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mangostone 업데이트 내역</h1>
+    <p class="lead">버전별로 바뀐 점을 정리했습니다. 최신 버전이 위에 있습니다. 날짜는 한국 시간 기준입니다.</p>
+    <nav aria-label="버전 바로가기">
+      <a href="#v1-0-5">v1.0.5</a>
+      <a href="#v1-0-3">v1.0.3</a>
+      <a href="#v1-0-2">v1.0.2</a>
+      <a href="#v1-0-1">v1.0.1</a>
+    </nav>
+  </header>
+
+  <div class="summary-wrap">
+    <table class="summary">
+      <thead><tr><th>버전</th><th>배포일</th><th>한 줄 요약</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#v1-0-5">v1.0.5</a></td><td>2026-11-19</td><td>주문·영웅 능력 고유 연출 35종, 일반·하드 난이도 상향, 직업 밸런스 조정</td></tr>
+        <tr><td><a href="#v1-0-3">v1.0.3</a></td><td>2026-11-12</td><td>주문 대상 선택 규칙 통일, 승리 연출 타이밍과 보스 카드 일러스트 보완</td></tr>
+        <tr><td><a href="#v1-0-2">v1.0.2</a></td><td>2026-10-30</td><td>첫 플레이 튜토리얼, 하드 난이도 원정, 일반·하드 랭킹 분리</td></tr>
+        <tr><td><a href="#v1-0-1">v1.0.1</a></td><td>2026-10-30</td><td>버전 표시를 시작한 첫 정식 배포 (기준 게임)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== v1.0.5 ===================== -->
+  <section class="release" id="v1-0-5">
+    <div class="release-head">
+      <h2>v1.0.5</h2>
+      <span class="badge">배포됨</span>
+      <span class="date">2026-11-19 · 포함 기간 2026-11-13 ~ 2026-11-19</span>
+    </div>
+    <p class="intro">전투가 더 화려하고 더 어려워졌습니다. 영웅 능력과 주문마다 고유한 연출과 소리가 생기고, 두 번째 전투부터 적이 더 강하게 싸웁니다.</p>
+
+    <h3><span class="tag new">신규</span> 주문·영웅 능력 고유 연출과 소리 (35종)</h3>
+    <ul>
+      <li>영웅 능력 3종(방패 다지기, 그림자 습격, 하급 악마 소환), 플레이어 주문 24장(공용 15장, 직업 9장), 보스 전용 주문 8장 각각에 <strong>고유한 연출과 고유한 소리</strong>가 들어갔습니다.</li>
+      <li>주문을 쓰면 카드 그림이 날아가던 연출이 주문별 <strong>시전 연출</strong>(마법진, 기운 응집 등)로 바뀌고, 대상 위치에서 주문마다 다른 효과가 이어집니다.</li>
+      <li>연출 길이는 일반 주문 약 1.2초 이내, 대형 주문(일식, 영혼 폭풍, 유성 파편)과 보스 주문은 2초 이내라 전투 템포는 거의 그대로입니다.</li>
+      <li>적이 같은 주문을 쓸 때도 같은 연출이 나옵니다. 피해 단계, 방어 막힘, 빗나감, 보스 광역 공격 연출은 기존 그대로입니다.</li>
+      <li>소리는 기존 효과음 위에 합성 소리가 겹쳐집니다. 음소거와 효과음 볼륨 설정이 그대로 적용됩니다.</li>
+      <li>연출이 없는 카드는 기존 연출로 표시되므로 화면이 깨지지 않습니다.</li>
+    </ul>
+
+    <h3><span class="tag up">조정</span> 난이도 상향 (첫 전투와 튜토리얼은 그대로)</h3>
+    <ul>
+      <li><strong>두 번째 전투부터</strong> 적이 더 강해집니다. 원정 첫 전투(튜토리얼 포함)는 기존 난이도를 유지합니다.</li>
+      <li><strong>일반 난이도</strong>: 모든 적 하수인의 공격력과 체력이 +1, 적 영웅 체력은 2·3페이즈에 +4/+8 올랐습니다.</li>
+      <li><strong>일반 난이도 적 AI</strong>: 한 턴 전체의 카드 조합과 순서를 미리 계획합니다. 플레이어의 손패나 덱 순서는 보지 않습니다.</li>
+      <li><strong>하드 난이도</strong>: 적 하수인 보너스가 공격력 +1/+1/+2, 체력 +2/+1/+2(1/2/3페이즈)로 조정되었습니다. 영웅 체력 보너스(0/+8/+16)는 그대로입니다.</li>
+      <li>목표 수준은 시뮬레이션 봇 기준 평균 완주율 일반 약 55~65%, 하드 약 6~10%이며, 최종 측정에서 일반 62.9%, 하드 6.3%였습니다(이전에는 일반 약 99.8%, 하드 약 17%). 봇은 사람보다 단순해서 실제 체감은 더 쉬울 수 있습니다.</li>
+    </ul>
+
+    <h3><span class="tag up">조정</span> 직업 밸런스</h3>
+    <p class="intro">세 직업의 하드 난이도 완주율 차이가 24%p에서 약 2~5%p로 줄도록 조정했습니다.</p>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>직업</th><th>대상</th><th>변경</th></tr></thead>
+        <tbody>
+          <tr><td>전사</td><td>영웅 능력 방패 다지기</td><td>방어도 2 → 4</td></tr>
+          <tr><td>전사</td><td>맹세의 기사</td><td>공격력 3 → 4</td></tr>
+          <tr><td>암살자</td><td>그림자 결투가</td><td>비용 3 → 4</td></tr>
+          <tr><td rowspan="6">악마술사</td><td>임프 소환사</td><td>비용 2 → 3</td></tr>
+          <tr><td>구덩이 의식술사</td><td>비용 3 → 4, 체력 4 → 3</td></tr>
+          <tr><td>악마 사냥개 조련사</td><td>비용 4 → 5</td></tr>
+          <tr><td>지옥불 수호자</td><td>비용 4 → 5</td></tr>
+          <tr><td>심연의 소환사</td><td>비용 5 → 6, 체력 5 → 4</td></tr>
+          <tr><td>심연의 여군주</td><td>비용 6 → 7, 체력 6 → 5</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3><span class="tag dev">개발</span> 내부 도구와 운영 (플레이에 영향 없음)</h3>
+    <ul>
+      <li>밸런스 측정용 시뮬레이션 봇과 보고서 도구가 추가되었습니다(개발 전용, 게임 번들에는 포함되지 않음).</li>
+      <li>주문·영웅 능력 연출 미리보기 페이지가 추가되었습니다(개발 서버 전용).</li>
+      <li>배포 스크립트가 실제 업로드와 사이트 반영을 확인하지 못하면 실패하도록 강화되었습니다.</li>
+    </ul>
+
+    <p class="note info"><strong>버전 번호 안내</strong> v1.0.4는 배포되지 않았습니다. v1.0.4로 준비했던 내용은 모두 이 v1.0.5에 포함되어 있습니다.</p>
+  </section>
+
+  <!-- ===================== v1.0.3 ===================== -->
+  <section class="release" id="v1-0-3">
+    <div class="release-head">
+      <h2>v1.0.3</h2>
+      <span class="badge">배포됨</span>
+      <span class="date">2026-11-12</span>
+    </div>
+    <p class="intro">주문 대상 선택이 플레이어와 적 모두 같은 규칙을 따르도록 바로잡고, 마무리 다듬기를 했습니다.</p>
+
+    <h3><span class="tag fix">수정</span> 주문 대상 선택</h3>
+    <ul>
+      <li>피해 주문의 대상 제한 규칙이 플레이어와 적 모두에게 똑같이 적용됩니다.</li>
+      <li>주문 대상 선택 화면의 동작이 일관되게 정리되었습니다.</li>
+    </ul>
+
+    <h3><span class="tag fix">수정</span> 연출과 일러스트</h3>
+    <ul>
+      <li>승리 연출의 타이밍을 마무리했습니다.</li>
+      <li>누락되어 있던 보스 소환 카드 일러스트(가시 새끼, 심연의 악마, 화염 비룡 새끼)를 복구했습니다.</li>
+    </ul>
+
+    <h3><span class="tag dev">개발</span> 품질</h3>
+    <ul>
+      <li>테스트 기준을 현재 규칙에 맞추고 코드 점검 오류를 모두 정리했습니다.</li>
+    </ul>
+  </section>
+
+  <!-- ===================== v1.0.2 ===================== -->
+  <section class="release" id="v1-0-2">
+    <div class="release-head">
+      <h2>v1.0.2</h2>
+      <span class="badge">배포됨</span>
+      <span class="date">2026-10-30</span>
+    </div>
+    <p class="intro">처음 하는 사람을 위한 튜토리얼과, 더 어려운 하드 난이도 원정이 추가되었습니다.</p>
+
+    <h3><span class="tag new">신규</span> 첫 플레이 튜토리얼</h3>
+    <ul>
+      <li>첫 전투를 진행하면서 조작을 안내합니다.</li>
+      <li>튜토리얼 완료 여부가 계정별로 저장됩니다. 튜토리얼이 끝나거나 건너뛰면 아군 체력이 전투 시작 상태로 복구됩니다.</li>
+    </ul>
+
+    <h3><span class="tag new">신규</span> 하드 난이도 원정</h3>
+    <ul>
+      <li>원정을 시작할 때 일반과 하드 난이도를 고를 수 있고, 선택한 난이도가 저장되어 이어서 할 수 있습니다.</li>
+      <li>하드에서는 적이 페이즈가 올라갈수록 더 강해집니다(적 영웅 체력, 하수인 스탯).</li>
+      <li>하드 보스는 전용 카드와 광역 공격을 사용하고, 적 AI가 한 턴을 미리 계획하며 더 전술적으로 싸웁니다.</li>
+    </ul>
+
+    <h3><span class="tag new">신규</span> 일반·하드 랭킹 분리</h3>
+    <ul>
+      <li>랭킹이 일반과 하드 탭으로 나뉘어 따로 집계됩니다.</li>
+    </ul>
+
+    <h3><span class="tag dev">운영</span></h3>
+    <ul>
+      <li>배포 대상 Static Web App 설정을 바로잡았습니다.</li>
+    </ul>
+  </section>
+
+  <!-- ===================== v1.0.1 ===================== -->
+  <section class="release" id="v1-0-1">
+    <div class="release-head">
+      <h2>v1.0.1</h2>
+      <span class="badge">배포됨</span>
+      <span class="date">2026-10-30</span>
+    </div>
+    <p class="intro">배포 때마다 메인 메뉴에 버전이 표시되기 시작한 첫 버전입니다. 이 시점까지 만들어진 기준 게임(v1.0.0 상당)의 주요 기능은 다음과 같습니다. v1.0.0의 개별 배포 기록은 남아 있지 않습니다.</p>
+
+    <h3><span class="tag new">기본</span> 게임</h3>
+    <ul>
+      <li>어두운 판타지 분위기의 보드형 1인용 카드 로그라이크입니다. 세 페이즈의 원정(페이즈마다 일반 전투 3번과 보스 1번)을 진행하고, 전투에서 이길 때마다 보상 카드로 덱을 강화합니다.</li>
+      <li>원정 로드맵 화면에서 진행 상황을 확인할 수 있습니다.</li>
+      <li>직업 3종(전사, 암살자, 악마술사)과 직업별 영웅 능력, 직업 카드 융합이 있습니다.</li>
+      <li>마나 곡선, 필드 하수인 6마리 제한, 시작 손패 교체, 턴 제한 시간과 경고 연출이 있습니다.</li>
+      <li>적 AI는 적마다 성향이 다르고, 보스는 전용 연출과 광역 공격을 사용합니다.</li>
+      <li>메인 메뉴의 게임 가이드와 게임 제목 Mangostone이 들어갔습니다.</li>
+    </ul>
+
+    <h3><span class="tag new">기본</span> 계정과 저장, 랭킹</h3>
+    <ul>
+      <li>Microsoft Entra 회사 계정으로 로그인합니다.</li>
+      <li>진행 상황은 계정별로 브라우저에 저장됩니다.</li>
+      <li>직원별 최고 진행도(이긴 전투 수) 랭킹이 있습니다.</li>
+    </ul>
+
+    <h3><span class="tag new">기본</span> 연출과 소리, 모바일</h3>
+    <ul>
+      <li>피해량에 따라 달라지는 타격 연출, 하수인 공격 연출, 보스 광역 공격 연출이 있습니다.</li>
+      <li>전투 효과음, 메뉴와 전투 BGM, 버튼 상호작용 효과음이 있습니다.</li>
+      <li>모바일에서 카드를 다루기 쉽도록 조작을 다듬었습니다.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>이 문서는 <code>apps/web/public/changelog.html</code>에 있으며, 사이트를 배포하면 <code>/changelog.html</code>에서 열립니다.</p>
+  </footer>
+</div>
+</body>
+</html>
