@@ -122,7 +122,63 @@ describe("resolveDrop for minions", () => {
   });
 });
 
+const heroPower = { kind: "hero-power", instanceId: "hero-power" } as const;
+
+describe("resolveDrop for the assassin hero power", () => {
+  it("hits a living enemy minion or the enemy hero, even while enemy minions remain", () => {
+    const run = setup({ playerClass: "assassin", enemy: [minion("e", "ash-wolf", "enemy")] });
+    expect(resolveDrop(run, heroPower, { kind: "minion", side: "enemy", instanceId: "e" })).toEqual({ type: "use-hero-power", targetId: "e" });
+    expect(resolveDrop(run, heroPower, { kind: "hero", side: "enemy" })).toEqual({ type: "use-hero-power", targetId: "enemy-hero" });
+    expect(resolveDrop(setup({ playerClass: "assassin" }), heroPower, { kind: "hero", side: "enemy" })).toEqual({ type: "use-hero-power", targetId: "enemy-hero" });
+  });
+
+  it("rejects slots, friendly minions, the player hero and unknown minions", () => {
+    const run = setup({ playerClass: "assassin", player: [minion("p", "ash-wolf", "player")], enemy: [minion("e", "ash-wolf", "enemy")] });
+    expect(resolveDrop(run, heroPower, { kind: "slot", slotIndex: 1 })).toBeNull();
+    expect(resolveDrop(run, heroPower, { kind: "minion", side: "player", instanceId: "p" })).toBeNull();
+    expect(resolveDrop(run, heroPower, { kind: "hero", side: "player" })).toBeNull();
+    expect(resolveDrop(run, heroPower, { kind: "minion", side: "enemy", instanceId: "missing" })).toBeNull();
+  });
+
+  it("is only for the assassin and only while the power is usable", () => {
+    const enemy = [minion("e", "ash-wolf", "enemy")];
+    const target = { kind: "minion", side: "enemy", instanceId: "e" } as const;
+    expect(resolveDrop(setup({ playerClass: "warrior", enemy }), heroPower, target)).toBeNull();
+    expect(resolveDrop(setup({ playerClass: "demonist", enemy }), heroPower, target)).toBeNull();
+    expect(resolveDrop(setup({ playerClass: "assassin", enemy, mana: 1 }), heroPower, target)).toBeNull();
+    expect(resolveDrop(setup({ playerClass: "assassin", enemy, mana: 2 }), heroPower, target)).toEqual({ type: "use-hero-power", targetId: "e" });
+
+    const used = setup({ playerClass: "assassin", enemy });
+    used.battle!.heroPowerUsed = true;
+    expect(resolveDrop(used, heroPower, target)).toBeNull();
+  });
+
+  it("does nothing on the enemy's turn, after the battle ended, or while a discard is pending", () => {
+    const enemy = [minion("e", "ash-wolf", "enemy")];
+    const target = { kind: "minion", side: "enemy", instanceId: "e" } as const;
+    const enemyTurn = setup({ playerClass: "assassin", enemy });
+    enemyTurn.battle!.activeSide = "enemy";
+    expect(resolveDrop(enemyTurn, heroPower, target)).toBeNull();
+    const finished = setup({ playerClass: "assassin", enemy });
+    finished.battle!.status = "playerWon";
+    expect(resolveDrop(finished, heroPower, target)).toBeNull();
+    const discarding = setup({ playerClass: "assassin", enemy });
+    discarding.battle!.pendingDiscardBeforeDraw = true;
+    expect(resolveDrop(discarding, heroPower, target)).toBeNull();
+  });
+});
+
 describe("getValidDropTargets", () => {
+  it("lists the enemy minions and the enemy hero for the assassin hero power, and nothing else", () => {
+    const run = setup({ playerClass: "assassin", player: [minion("p", "ash-wolf", "player")], enemy: [minion("e1", "ash-wolf", "enemy"), minion("e2", "ash-wolf", "enemy")] });
+    expect(getValidDropTargets(run, heroPower)).toEqual([
+      { kind: "minion", side: "enemy", instanceId: "e1" },
+      { kind: "minion", side: "enemy", instanceId: "e2" },
+      { kind: "hero", side: "enemy" },
+    ]);
+    expect(getValidDropTargets(setup({ playerClass: "warrior", enemy: [minion("e", "ash-wolf", "enemy")] }), heroPower)).toEqual([]);
+  });
+
   it("lists the empty slots for a minion card", () => {
     const run = setup({ hand: [{ instanceId: "wolf", cardId: "ash-wolf" }], player: [minion("a", "ash-wolf", "player"), minion("b", "ash-wolf", "player")] });
     expect(getValidDropTargets(run, card("wolf"))).toEqual([2, 3, 4, 5].map((slotIndex) => ({ kind: "slot", slotIndex })));

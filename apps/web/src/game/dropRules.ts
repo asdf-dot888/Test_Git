@@ -7,7 +7,11 @@ export type DropAction =
   | { type: "play-minion"; instanceId: string; slotIndex: number }
   | { type: "cast-spell"; instanceId: string; targetId: string }
   | { type: "attack"; attackerId: string; targetId: string }
-  | { type: "fuse-minions"; firstMinionId: string; secondMinionId: string };
+  | { type: "fuse-minions"; firstMinionId: string; secondMinionId: string }
+  | { type: "use-hero-power"; targetId: string };
+
+/** Mana cost of a hero power; mirrors the engine (`useHeroPower`) and `HeroPowerControl`. */
+export const HERO_POWER_MANA_COST = 2;
 
 /** A friendly minion can attack when it was not summoned this turn, has not attacked, and is not rooted. */
 export function canMinionAttack(battle: BattleState, minion: MinionState): boolean {
@@ -79,10 +83,24 @@ function resolveMinionDrop(run: RunState, battle: BattleState, attackerId: strin
   return null;
 }
 
+/**
+ * The assassin hero power hits a living enemy minion or the enemy hero. Unlike a minion attack, the hero is a valid
+ * target even while enemy minions remain (matches `useHeroPower` in the engine).
+ */
+function resolveHeroPowerDrop(run: RunState, battle: BattleState, target: DropTarget): DropAction | null {
+  if (run.playerClass !== "assassin" || battle.heroPowerUsed || battle.playerMana.current < HERO_POWER_MANA_COST) return null;
+  if (target.kind === "minion" && target.side === "enemy") {
+    return battle.enemyBoard.some((minion) => minion.instanceId === target.instanceId) ? { type: "use-hero-power", targetId: target.instanceId } : null;
+  }
+  if (target.kind === "hero" && target.side === "enemy") return { type: "use-hero-power", targetId: "enemy-hero" };
+  return null;
+}
+
 /** Turns a drag payload dropped on a target into the action to dispatch, or null when the drop is not allowed. */
 export function resolveDrop(run: RunState, payload: DragPayload, target: DropTarget, options: ResolveDropOptions = {}): DropAction | null {
   const battle = run.battle;
   if (!battle || !canAct(battle)) return null;
+  if (payload.kind === "hero-power") return resolveHeroPowerDrop(run, battle, target);
   return payload.kind === "card"
     ? resolveCardDrop(run, battle, payload.instanceId, target, options)
     : resolveMinionDrop(run, battle, payload.instanceId, target);

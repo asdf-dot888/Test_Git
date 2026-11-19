@@ -34,6 +34,8 @@
 - **Rationale**: Touch users should not be told to “select” a card when selection no longer exists on their device.
 
 ## D08. Assassin hero power target (added while planning; default, not asked)
+> **Superseded 2026-11-19** by [2026-11-19-assassin-hero-power-touch.md](./2026-11-19-assassin-hero-power-touch.md): the user chose to support both tap-then-tap and dragging the button onto a target. Not yet implemented.
+
 - **Chosen**: The assassin hero power still needs a target and has no card to drag. It stays two-step on touch: tap the hero power button to enter target mode, then a tap on a valid enemy target selects it (the details tap is suspended only while target mode `hero-power` is active). Tapping the hero power button again cancels, as today. The warrior and demonist hero powers need no target and are unchanged.
 - **Rationale**: Without this the assassin hero power could not be used on touch devices once taps open details. The user may overrule this default (for example by dragging the hero power button onto a target).
 

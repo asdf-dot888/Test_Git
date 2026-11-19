@@ -5,15 +5,15 @@ import type { DropTarget } from "./dragInteractions.js";
 export const DRAG_START_THRESHOLD_PX = TAP_MOVE_TOLERANCE_PX;
 
 export type GestureKind = "pending" | "drag" | "scroll";
-export type DragOrigin = "hand" | "board";
+export type DragOrigin = "hand" | "board" | "hero-power";
 
 /**
  * Decides what a moving finger is doing. Hand cards sit in a horizontally scrollable row, so a mostly horizontal
- * move scrolls it and a vertical or diagonal move picks the card up. Board minions never scroll.
+ * move scrolls it and a vertical or diagonal move picks the card up. Board minions and the hero power button never scroll.
  */
 export function classifyGesture(dx: number, dy: number, origin: DragOrigin): GestureKind {
   if (Math.hypot(dx, dy) <= DRAG_START_THRESHOLD_PX) return "pending";
-  if (origin === "board") return "drag";
+  if (origin !== "hand") return "drag";
   return Math.abs(dx) > Math.abs(dy) ? "scroll" : "drag";
 }
 

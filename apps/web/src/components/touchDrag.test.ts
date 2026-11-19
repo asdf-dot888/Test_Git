@@ -26,6 +26,16 @@ describe("classifyGesture", () => {
   });
 });
 
+describe("classifyGesture for the hero power button", () => {
+  it("stays pending inside the threshold and never scrolls, even on a horizontal move", () => {
+    expect(classifyGesture(6, -7, "hero-power")).toBe("pending");
+    expect(classifyGesture(40, 2, "hero-power")).toBe("drag");
+    expect(classifyGesture(-40, 0, "hero-power")).toBe("drag");
+    expect(classifyGesture(0, -40, "hero-power")).toBe("drag");
+    expect(classifyGesture(-25, 25, "hero-power")).toBe("drag");
+  });
+});
+
 describe("drop target attribute", () => {
   const targets: DropTarget[] = [
     { kind: "slot", slotIndex: 0 },

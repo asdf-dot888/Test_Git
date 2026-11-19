@@ -1,7 +1,10 @@
 
 import type { DragEvent } from "react";
 
-export type DragPayload = { kind: "card" | "minion"; instanceId: string };
+export type DragPayload =
+  | { kind: "card" | "minion"; instanceId: string }
+  /** The assassin hero power button dragged onto a target. Touch drag only; the browser's own drag never carries it. */
+  | { kind: "hero-power"; instanceId: "hero-power" };
 export type DropTarget =
   | { kind: "slot"; slotIndex: number }
   | { kind: "minion"; side: "player" | "enemy"; instanceId: string }
