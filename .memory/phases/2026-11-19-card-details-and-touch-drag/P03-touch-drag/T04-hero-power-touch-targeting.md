@@ -1,6 +1,6 @@
 # Task: T04 Assassin Hero Power on Touch
 
-## Status: todo
+## Status: done
 
 ## Goal
 Keep the assassin hero power usable on touch devices after taps open details: tapping the hero power button enters target mode, and while it is active a tap on a valid target selects it.
@@ -39,6 +39,6 @@ Task: T04-hero-power-touch-targeting
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. No new production code was needed: the `tapDetails={targetMode !== "hero-power"}` wiring came with P02-T02, and the target banner (“영웅 능력 대상을 선택하세요” + 취소 button, `TargetPicker`) and the hero power button's “대상을 선택하세요” status already existed, so the blueprint's I02 banner was not added. This task pinned the behavior with tests.
+- [x] validation passed: build clean, lint clean, 1091 tests (97 files). New `App.touch.test.tsx` runs whole-screen touch flows: drag a spell onto an enemy minion, drag a minion card onto a slot, a plain tap only opens details, attack by dragging a minion, Assassin hero power (tap button, tap target), and cancelling the target mode so taps open details again.
+- commit: see Git history
