@@ -1,6 +1,6 @@
 # Task: T02 Touch Drag Engine
 
-## Status: todo
+## Status: done
 
 ## Goal
 A reusable pointer-event drag controller for touch input: starts after a 10 px move, shows a floating card ghost, hit-tests the drop target under the finger, reports valid targets for highlighting, and cancels cleanly. It is not wired into the cards yet.
@@ -68,6 +68,6 @@ Task: T02-touch-drag-engine
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `touchDrag.ts` (pure: `classifyGesture`, `formatDropTarget`, `parseDropTargetValue`, `parseDropTarget`, `sameDropTarget`, `DRAG_START_THRESHOLD_PX`) and `useTouchDrag.tsx` (hook returning `handlers`, `ghostPortal`, `dragging`). Pointer capture is requested only once a drag starts, so a plain tap still targets the original element. The ghost's content comes from the current render's `options.ghost()`. CSS added: `.touch-drag-ghost`, `body.touch-dragging`, `.is-drop-valid`, `.is-drop-hover`. The hook is not attached to any component yet (P03-T03).
+- [x] validation passed: build clean, lint clean, 35 new tests (touchDrag.test.ts, useTouchDrag.test.tsx) pass, and the full suite passes.
+- commit: see Git history
