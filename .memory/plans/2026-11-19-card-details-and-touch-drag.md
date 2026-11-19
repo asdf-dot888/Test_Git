@@ -4,7 +4,7 @@
 - Decisions:
   - [2026-11-19-discard-card-hover-preview](../decisions/2026-11-19-discard-card-hover-preview.md)
   - [2026-11-19-mobile-card-tap-details-and-touch-drag](../decisions/2026-11-19-mobile-card-tap-details-and-touch-drag.md)
-- Status: done (2026-11-19). All 10 tasks implemented and covered by automated checks; the touch behavior still needs the user's check on a real phone (checklist in P04-T02). Not released.
+- Status: done (2026-11-19). All 10 tasks implemented and covered by automated checks; the touch behavior still needs the user's check on a real phone (checklist in P04-T02). Released in v1.0.6 (2026-11-19, release commit 84d27af).
 
 ## Goal
 1. PC: hovering a card in the discard picker (and the “추가할 카드” line of the reward-overflow case) shows a fixed-size (about 220×320) card preview with art, cost, name, kind, stats and effect text.

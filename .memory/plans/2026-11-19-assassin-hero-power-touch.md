@@ -2,7 +2,7 @@
 
 - Date: 2026-11-19
 - Decisions: [2026-11-19-assassin-hero-power-touch](../decisions/2026-11-19-assassin-hero-power-touch.md) (replaces D08 of [mobile tap details and touch drag](../decisions/2026-11-19-mobile-card-tap-details-and-touch-drag.md))
-- Status: done (2026-11-19). All 4 tasks implemented and covered by automated checks; the touch behavior still needs the user's check on a real phone (addendum in the previous plan's P04-T02). Not released.
+- Status: done (2026-11-19). All 4 tasks implemented and covered by automated checks; the touch behavior still needs the user's check on a real phone (addendum in the previous plan's P04-T02). Released in v1.0.6 (2026-11-19, release commit 84d27af).
 
 ## Goal
 On touch devices the assassin hero power (“그림자 습격”, 2 mana, 2 damage to an enemy minion or the enemy hero) can be used in two ways:
