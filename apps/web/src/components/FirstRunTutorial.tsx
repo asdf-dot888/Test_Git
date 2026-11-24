@@ -17,7 +17,7 @@ const STEP_COPY: Record<TutorialStepId, { title: string; description: string }> 
   "inspect-hand": { title: "손패와 마나 확인", description: "손패 카드의 비용과 현재 마나를 확인해 보세요. 준비되면 계속을 누르세요." },
   "play-card": { title: "카드 내기", description: "마나가 충분한 카드 한 장을 손패에서 선택해 사용하세요." },
   "end-first-turn": { title: "첫 턴 종료", description: "턴 종료를 눌러 적의 행동을 확인하세요." },
-  attack: { title: "하수인 공격", description: "공격 가능한 아군 하수인을 선택한 뒤 적 하수인 또는 적 영웅을 공격하세요." },
+  attack: { title: "하수인 공격", description: "공격 가능한 아군 하수인을 선택한 뒤 적 하수인 또는 적 영웅을 공격하세요. 도발 하수인이 있으면 도발부터 공격해야 합니다." },
   "end-second-turn": { title: "두 번째 턴 종료", description: "행동을 마쳤다면 턴 종료를 눌러 튜토리얼을 마치세요." },
 };
 
@@ -26,7 +26,7 @@ const TOUCH_STEP_COPY: Record<TutorialStepId, { title: string; description: stri
   ...STEP_COPY,
   "inspect-hand": { title: "손패와 마나 확인", description: "손패 카드의 비용과 현재 마나를 확인해 보세요. 카드를 탭하면 자세히 볼 수 있습니다. 준비되면 계속을 누르세요." },
   "play-card": { title: "카드 내기", description: "마나가 충분한 카드를 손패에서 위로 끌어 놓아 사용하세요. 하수인은 빈 칸에, 주문은 대상 위에 놓습니다." },
-  attack: { title: "하수인 공격", description: "공격 가능한 아군 하수인을 끌어 적 하수인 또는 적 영웅 위에 놓아 공격하세요." },
+  attack: { title: "하수인 공격", description: "공격 가능한 아군 하수인을 끌어 적 하수인 또는 적 영웅 위에 놓아 공격하세요. 도발 하수인이 있으면 도발부터 공격해야 합니다." },
 };
 
 export function FirstRunTutorial({ step, attackUnavailable = false, inputMode, onAction, onSkip }: FirstRunTutorialProps): ReactElement {

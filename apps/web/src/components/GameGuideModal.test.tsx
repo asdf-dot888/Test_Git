@@ -22,7 +22,13 @@ describe("GameGuideModal", () => {
     expect(dialog.textContent).toContain("일반 난이도에서는 3턴마다, 하드에서는 2턴마다");
     expect(dialog.textContent).toContain("전투는 마나 1/1로 시작하고");
     expect(dialog.textContent).toContain("최대 마나가 1씩 늘어 10까지");
-    expect(dialog.textContent).toContain("카드를 5장 뽑고");
+    expect(dialog.textContent).toContain("카드를 1장 뽑고");
+    expect(dialog.textContent).not.toContain("5장 뽑");
+    expect(dialog.textContent).toContain("탈진");
+    expect(dialog.textContent).toContain("뒷면 카드 두 장 중 한 장을 고릅니다");
+    expect(dialog.textContent).toContain("동전");
+    expect(dialog.textContent).toContain("도발 하수인이 상대 전장에 있으면");
+    expect(dialog.textContent).not.toContain("전체 공격");
     expect(dialog.textContent).toContain("양쪽 모두 상대 하수인의 공격력만큼 피해");
     expect(dialog.textContent).toContain("마력의 샘");
     expect(dialog.textContent).toContain("카드 보상을 선택하거나 건너뜁니다");

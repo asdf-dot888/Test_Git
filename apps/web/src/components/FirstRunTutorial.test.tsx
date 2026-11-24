@@ -28,7 +28,7 @@ describe("FirstRunTutorial", () => {
     const { rerender } = render(<FirstRunTutorial step="play-card" inputMode="pointer" onAction={vi.fn()} onSkip={vi.fn()} />);
     expect(screen.getByText("마나가 충분한 카드 한 장을 손패에서 선택해 사용하세요.")).toBeTruthy();
     rerender(<FirstRunTutorial step="attack" inputMode="pointer" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText("공격 가능한 아군 하수인을 선택한 뒤 적 하수인 또는 적 영웅을 공격하세요.")).toBeTruthy();
+    expect(screen.getByText("공격 가능한 아군 하수인을 선택한 뒤 적 하수인 또는 적 영웅을 공격하세요. 도발 하수인이 있으면 도발부터 공격해야 합니다.")).toBeTruthy();
   });
 
   it("explains tap-for-details and drag-to-act on touch devices instead of selecting", () => {
