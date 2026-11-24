@@ -671,8 +671,23 @@ function selectEnemySpellTarget(effect: SpellEffect, battle: BattleState, diffic
   return undefined;
 }
 
+/** An effect that would change nothing right now: healing a hero at full health, mana already at the maximum, a draw into a full hand. */
+function isEnemySpellEffectWasted(effect: SpellEffect, battle: BattleState): boolean {
+  if (effect.kind === "heal") {
+    return effect.target === "playerHero"
+      ? battle.enemyHero.health >= battle.enemyHero.maxHealth
+      : !battle.enemyBoard.some((minion) => minion.health < minion.maxHealth);
+  }
+  if (effect.kind === "gainMana") return battle.enemyMana.current - battle.enemyMana.temporary >= battle.enemyMana.max;
+  if (effect.kind === "draw") return battle.enemyHand.length >= MAX_HAND;
+  return false;
+}
+
 function isEnemyCardTargetPlayable(card: CardDefinition, battle: BattleState): boolean {
   if (card.kind === "minion") return battle.enemyBoard.length < MAX_BOARD;
+  // A spell whose every effect would be wasted is never cast (no healing at full health).
+  const effects = card.spellEffects ?? [];
+  if (effects.length > 0 && effects.every((effect) => isEnemySpellEffectWasted(effect, battle))) return false;
   return (card.spellEffects ?? []).every((effect) => {
     if (effect.kind === "summon") return battle.enemyBoard.length < MAX_BOARD;
     if (effect.kind === "cleave" || (effect.kind === "damage" && effect.target === "enemyMinion")) {

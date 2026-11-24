@@ -312,7 +312,7 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
       const firstSlot = first ? slotOf(next.enemyBoard, first.instanceId) : Math.min(gameConstants.maxBoard - 1, previous.enemyBoard.length);
       pushEvent(events, firstEventId, record.cardId, "summon", source, { kind: "minion", side: "enemy", slot: Math.max(0, firstSlot) }, ["summon"]);
       for (const extra of summoned.slice(1)) {
-        pushEvent(events, firstEventId, record.cardId, "summon", { kind: "minion", side: "enemy", slot: Math.max(0, firstSlot) }, { kind: "minion", side: "enemy", slot: slotOf(next.enemyBoard, extra.instanceId) }, ["summon"]);
+        pushEvent(events, firstEventId, extra.cardId, "summon", { kind: "minion", side: "enemy", slot: Math.max(0, firstSlot) }, { kind: "minion", side: "enemy", slot: slotOf(next.enemyBoard, extra.instanceId) }, ["summon"]);
       }
       continue;
     }
@@ -424,11 +424,13 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
       const effect = definition.minion?.effect;
       if (effect?.kind === "battlecryBuff") {
         const target = effect.target === "self" ? summoned : next.playerBoard.find((minion) => minion.instanceId !== card.instanceId);
-        if (target) pushEvent(events, firstEventId, card.cardId, "buff", { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, target.instanceId) }, ["spell"]);
+        // The played card already flew in; the buff shows the generic impact instead of a second copy of the same card.
+        if (target) pushEvent(events, firstEventId, null, "buff", { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, target.instanceId) }, ["spell"]);
       }
       if (effect?.kind === "battlecrySummon") {
         const extra = next.playerBoard.find((minion) => minion.cardId === effect.cardId && !previous.playerBoard.some((old) => old.instanceId === minion.instanceId) && minion.instanceId !== card.instanceId);
-        if (extra) pushEvent(events, firstEventId, card.cardId, "summon", { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, extra.instanceId) }, ["summon"]);
+        // The summoned token shows its own art, not a second copy of the played card.
+        if (extra) pushEvent(events, firstEventId, extra.cardId, "summon", { kind: "minion", side: "player", slot: Math.min(gameConstants.maxBoard - 1, targetSlot) }, { kind: "minion", side: "player", slot: slotOf(next.playerBoard, extra.instanceId) }, ["summon"]);
       }
     }
   } else if (action.type === "cast-spell") {

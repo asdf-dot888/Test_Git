@@ -153,6 +153,7 @@
 .minion-stats { position: absolute; top: 4px; left: 0; z-index: 1; width: 100%; padding: 0 2px; display: flex; justify-content: space-between; font-size: 11px; pointer-events: none; }
 .minion-stats b { min-width: 23px; color: #231e18; text-align: center; background: #edbe69; border-radius: 20px; }
 .minion-stats b:last-child { background: #e68b70; }
+.minion-stats b.is-boosted { background: #9be28f; box-shadow: 0 0 6px 1px rgb(155 226 143 / 70%); }
 .minion-stats small { font-size: 8px; }
 .is-selected { outline: 3px solid var(--gold-bright); outline-offset: 3px; box-shadow: 0 0 0 6px rgb(213 168 92 / 20%), 0 9px 24px rgb(0 0 0 / 38%); }
 .is-targetable { cursor: crosshair; }

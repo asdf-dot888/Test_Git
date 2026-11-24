@@ -1950,19 +1950,19 @@ describe("Hard expedition enemy health and tactical AI", () => {
 
 
 describe("enemy turn characterization (first battle and Hard planner stay unchanged)", () => {
-  // Hashes were re-captured on 2026-11-24 for the new enemy rules (enemy mana +2 per turn, no minion health bonus); older captures predate the Normal turn planner.
+  // Hashes were re-captured on 2026-11-24 for the new enemy rules (enemy mana +2 per turn, no minion health bonus, no wasted heals); older captures predate the Normal turn planner.
   const GOLDEN_HASHES: Record<string, string> = {
     "normal-first-9101": "eba9d2850c0d",
     "normal-first-9102": "652364184c4f",
     "normal-first-9103": "7bea4cbc30d3",
-    "normal-first-9104": "25b524ce4bd7",
+    "normal-first-9104": "87e496918bb6",
     "normal-first-9105": "4c2ea579d501",
     "hard-first-9201": "1142bf91b38d",
     "hard-first-9202": "bace8e48b0e9",
     "hard-first-9203": "e27d8f902682",
     "hard-second-9301": "2dab74d663e5",
     "hard-second-9302": "c5768de42a3a",
-    "hard-second-9303": "dc7184f09568",
+    "hard-second-9303": "1ce6a62e9554",
   };
 
   function summarize(run: RunState) {
@@ -2414,5 +2414,42 @@ describe("enemy card plan never idles while it can play (second battle onward)",
     const result = resolveEnemyTurn(run);
     expect(result.battle?.enemyBoard).toHaveLength(0);
     expect(result.battle?.enemyHand.map(({ cardId }) => cardId)).toEqual(["eclipse"]);
+  });
+});
+
+describe("enemy never casts a spell that would change nothing", () => {
+  function enemyWith(cardIds: string[], completedBattles: number, mutate: (battle: BattleState) => void = () => undefined): RunState {
+    const run = asEnemyTurn(createRun(990, "warrior", "hard"));
+    run.completedBattles = completedBattles;
+    const battle = activeBattle(run);
+    battle.turnNumber = 3;
+    battle.enemyBoard = [];
+    battle.playerBoard = [];
+    battle.enemyMana = { current: 6, max: 10, temporary: 0 };
+    battle.enemyHand = cardIds.map((cardId, index) => instance(`enemy-${index}`, cardId));
+    battle.enemyStarterDeck = [];
+    battle.enemyDrawPile = [];
+    mutate(battle);
+    return run;
+  }
+
+  it.each([0, 1])("does not cast Healing Mist at full health (completed battles: %i) but does when hurt", (completedBattles) => {
+    const full = resolveEnemyTurn(enemyWith(["healing-mist"], completedBattles));
+    expect(full.battle?.enemyHand.map(({ cardId }) => cardId)).toEqual(["healing-mist"]);
+    expect(full.battle?.enemyDiscardPile.some(({ cardId }) => cardId === "healing-mist")).toBe(false);
+
+    const hurt = resolveEnemyTurn(enemyWith(["healing-mist"], completedBattles, (battle) => { battle.enemyHero.health = battle.enemyHero.maxHealth - 5; }));
+    expect(hurt.battle?.enemyHand).toHaveLength(0);
+    expect(hurt.battle?.enemyHero.health).toBe(hurt.battle!.enemyHero.maxHealth - 1);
+  });
+
+  it("does not heal a minion nobody damaged, and skips Mana Spring at maximum mana and Rune Surge with a full hand", () => {
+    const unhurtMinion = resolveEnemyTurn(enemyWith(["life-thread"], 1, (battle) => { battle.enemyBoard = [minion({ instanceId: "fine", owner: "enemy", health: 4, maxHealth: 4, summonedTurn: 0 })]; }));
+    expect(unhurtMinion.battle?.enemyHand.map(({ cardId }) => cardId)).toEqual(["life-thread"]);
+
+    const maxMana = resolveEnemyTurn(enemyWith(["mana-spring"], 1, (battle) => { battle.enemyMana = { current: 10, max: 10, temporary: 0 }; }));
+    expect(maxMana.battle?.enemyHand.map(({ cardId }) => cardId)).toEqual(["mana-spring"]);
+    const lowMana = resolveEnemyTurn(enemyWith(["mana-spring"], 1));
+    expect(lowMana.battle?.enemyHand).toHaveLength(0);
   });
 });

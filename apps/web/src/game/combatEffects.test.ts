@@ -135,7 +135,8 @@ describe("collectCombatEffectEvents", () => {
 
     expect(events.map(({ effectKind, assetCardId, soundCues }) => [effectKind, assetCardId, soundCues])).toEqual([
       ["summon", "mire-witch", ["summon"]],
-      ["summon", "mire-witch", ["summon"]],
+      // The summoned token shows its own art instead of a second copy of the played card.
+      ["summon", "bone-rat", ["summon"]],
     ]);
     expect(events.every((event) => !("damageTarget" in event))).toBe(true);
   });

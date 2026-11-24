@@ -18,6 +18,9 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
   const name = card?.name ?? "알 수 없는 하수인";
   const faction = minion.owner === "enemy" ? "적" : "아군";
   const tooltipId = `minion-ability-${minion.instanceId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const baseAttack = card?.minion?.attack ?? minion.attack;
+  // Shown when the attack is higher than the card's printed attack (enemy bonuses, battlecry buffs).
+  const boostedAttack = minion.attack > baseAttack;
   const statuses = minion.statusEffects ?? [];
   const statusLabels = statuses.map((status) => status.kind === "root"
     ? "Rooted: cannot attack this turn"
@@ -39,7 +42,7 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
     >
       <span className="minion-art-frame"><img src={`/art/cards/${card?.artKey ?? minion.cardId}.png`} alt="" draggable={false} /></span>
       <span className="minion-name">{name}</span>
-      <span className="minion-stats"><b aria-label={`공격력 ${minion.attack}`}>{minion.attack}</b><b aria-label={`체력 ${minion.health}/${minion.maxHealth}`}>{minion.health}<small>/{minion.maxHealth}</small></b></span>
+      <span className="minion-stats"><b aria-label={`공격력 ${minion.attack}`} {...(boostedAttack ? { className: "is-boosted", title: `기본 공격력 ${baseAttack} → ${minion.attack}` } : {})}>{minion.attack}</b><b aria-label={`체력 ${minion.health}/${minion.maxHealth}`}>{minion.health}<small>/{minion.maxHealth}</small></b></span>
       {statuses.length > 0 && <span className="minion-statuses" aria-label={statusLabels.join("; ")}>
         {statuses.map((status, index) => <span className={`minion-status minion-status--${status.kind}`} key={`${status.kind}-${index}`} role="status" title={statusLabels[index]}>
           {status.kind === "root" ? "ROOT" : status.kind === "burn" ? `BURN ${status.turnsRemaining}` : `CURSE ${status.turnsRemaining}`}
