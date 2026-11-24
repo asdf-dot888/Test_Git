@@ -1,6 +1,6 @@
 # Task: T02 Card Rustle Hover Sound
 
-## Status: todo
+## Status: done
 
 ## Goal
 Replace the sharp two-note hover sparkle with a soft card rustle ("사락") so it can no longer be confused with the timer warning, and let the user listen to it on `/?effects-preview`.
@@ -44,6 +44,7 @@ Task: T02-card-rustle-hover-sound
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `playHoverCue` in `game/audio.ts` now plays the shared noise buffer (`getNoiseBuffer`, random start offset) through a band-pass filter (1 800 -> 4 200 Hz, Q 0.9) and a 0.1 s envelope (8 ms attack, peak 0.9), master volume `HOVER_CUE_VOLUME = 0.12` (was 0.22); constants sit at the top of the file. Hover cue entries are now `{ master, sources }`. `EffectsPreview` has the button "호버 소리 (카드 사락)" (respects the 소리 checkbox). The timer warning is untouched.
+- Heads-up for the user: Claude cannot hear it. If it should be softer, shorter, lower or quieter, tell which and retune the five constants.
+- [x] validation passed: build clean, lint clean, 1166 tests (101 files); `audio.test.ts`, `App.interactions.test.tsx` and `EffectsPreview.test.tsx` updated for the noise cue.
+- commit: see Git history

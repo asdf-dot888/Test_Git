@@ -42,9 +42,29 @@ class FakeOscillatorNode {
   stop(): void {}
 }
 
+class FakeBufferSourceNode {
+  buffer: unknown = null;
+  loop = false;
+  onended: (() => void) | null = null;
+  connect(): void {}
+  disconnect(): void {}
+  start(): void {}
+  stop(): void {}
+}
+
+class FakeBiquadFilterNode {
+  type = "lowpass";
+  frequency = new FakeAudioParam();
+  Q = new FakeAudioParam();
+  connect(): void {}
+  disconnect(): void {}
+}
+
 class FakeAudioContext {
   static instances: FakeAudioContext[] = [];
   currentTime = 0;
+  sampleRate = 8000;
+  bufferSources: FakeBufferSourceNode[] = [];
   state: AudioContextState = "running";
   destination = {} as AudioDestinationNode;
   oscillators: FakeOscillatorNode[] = [];
@@ -52,6 +72,15 @@ class FakeAudioContext {
   resume = vi.fn(async () => undefined);
   constructor() { FakeAudioContext.instances.push(this); }
   createGain(): FakeGainNode { return new FakeGainNode(); }
+  createBiquadFilter(): FakeBiquadFilterNode { return new FakeBiquadFilterNode(); }
+  createBufferSource(): FakeBufferSourceNode {
+    const source = new FakeBufferSourceNode();
+    this.bufferSources.push(source);
+    return source;
+  }
+  createBuffer(_channels: number, length: number, sampleRate: number): { duration: number; getChannelData(): Float32Array } {
+    return { duration: length / sampleRate, getChannelData: () => new Float32Array(length) };
+  }
   createOscillator(): FakeOscillatorNode {
     const oscillator = new FakeOscillatorNode();
     this.oscillators.push(oscillator);
@@ -319,19 +348,19 @@ describe("game pointer and keyboard interactions", () => {
 
     dispatchPointerOver(menuButton, "mouse", document.body);
     const context = FakeAudioContext.instances[0]!;
-    expect(context.oscillators).toHaveLength(2);
+    expect(context.bufferSources).toHaveLength(1);
     const nested = document.createElement("span");
     menuButton.append(nested);
     dispatchPointerOver(nested, "mouse", menuButton);
-    expect(context.oscillators).toHaveLength(2);
+    expect(context.bufferSources).toHaveLength(1);
 
     dispatchPointerOver(menuButton, "touch", document.body);
-    expect(context.oscillators).toHaveLength(2);
+    expect(context.bufferSources).toHaveLength(1);
     const disabled = document.createElement("button");
     disabled.disabled = true;
     document.body.append(disabled);
     dispatchPointerOver(disabled, "mouse", document.body);
-    expect(context.oscillators).toHaveLength(2);
+    expect(context.bufferSources).toHaveLength(1);
     disabled.remove();
   });
 

@@ -53,6 +53,13 @@ export function EffectsPreview() {
     }
   }, [caster, damage, ensureAudio, slowMotion, soundOn, target]);
 
+  const playHoverSound = useCallback(() => {
+    const controller = ensureAudio();
+    if (!controller) return;
+    controller.setSettings({ musicVolume: 0, effectsVolume: 0.72, muted: !soundOn });
+    controller.playEffect("ui-hover");
+  }, [ensureAudio, soundOn]);
+
   const playAll = useCallback(async () => {
     const token = playAllToken.current + 1;
     playAllToken.current = token;
@@ -100,6 +107,7 @@ export function EffectsPreview() {
         <label className="effects-preview__check"><input type="checkbox" checked={slowMotion} onChange={(event) => setSlowMotion(event.target.checked)} />슬로 모션</label>
         <label className="effects-preview__check"><input type="checkbox" checked={soundOn} onChange={(event) => setSoundOn(event.target.checked)} />소리</label>
         <button type="button" className="effects-preview__play" onClick={() => play(selected)} disabled={!selectedSpec}>재생</button>
+        <button type="button" onClick={playHoverSound}>호버 소리 (카드 사락)</button>
         {playingAll
           ? <button type="button" onClick={stopAll}>전체 재생 중지</button>
           : <button type="button" onClick={() => void playAll()}>등록된 효과 전체 재생</button>}

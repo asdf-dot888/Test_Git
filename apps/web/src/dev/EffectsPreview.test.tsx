@@ -91,6 +91,15 @@ describe("EffectsPreview", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelector(".combat-effect-hero-hit-flash")).not.toBeNull();
     expect(document.body.querySelector<HTMLElement>(".combat-effect-hero-hit-flash")?.style.animationDelay).toBe("520ms");
+    expect(document.body.querySelector(".combat-float-number.is-damage")?.textContent).toBe("-3");
+  });
+
+  it("has a button that plays the card rustle hover sound without breaking when audio is unavailable", () => {
+    render(<EffectsPreview />);
+    const button = screen.getByRole("button", { name: "호버 소리 (카드 사락)" });
+    expect(() => fireEvent.click(button)).not.toThrow();
+    fireEvent.click(screen.getByLabelText("소리"));
+    expect(() => fireEvent.click(button)).not.toThrow();
   });
 
   it("plays all registered effects one after another and can be stopped", async () => {

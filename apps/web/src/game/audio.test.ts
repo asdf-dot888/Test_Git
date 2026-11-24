@@ -290,7 +290,7 @@ describe("createAudioController", () => {
     muted.dispose();
   });
 
-  it("synthesizes a short two-note hover sparkle and cleans its nodes after playback", () => {
+  it("synthesizes a short band-passed noise rustle for hover and cleans its nodes after playback", () => {
     FakeAudioContext.instances = [];
     vi.stubGlobal("AudioContext", FakeAudioContext);
     const { controller, players } = setup();
@@ -298,12 +298,19 @@ describe("createAudioController", () => {
 
     const context = FakeAudioContext.instances[0]!;
     expect(players).toHaveLength(0);
-    expect(context.oscillators).toHaveLength(2);
-    expect(context.oscillators.map((oscillator) => oscillator.frequency.value)).toEqual([1046.5, 1568]);
-    expect(context.oscillators.every((oscillator) => oscillator.type === "triangle")).toBe(true);
-    expect(context.gains[0]?.gain.value).toBeCloseTo(0.72 * 0.22);
-    for (const oscillator of context.oscillators) oscillator.onended?.();
-    expect(context.gains[0]?.disconnect).toHaveBeenCalledOnce();
+    // No tonal oscillators: one noise source through one band-pass filter.
+    expect(context.oscillators).toHaveLength(0);
+    expect(context.bufferSources).toHaveLength(1);
+    expect(context.filters).toHaveLength(1);
+    expect(context.filters[0]?.type).toBe("bandpass");
+    const source = context.bufferSources[0]!;
+    expect(source.starts).toHaveLength(1);
+    expect(source.stops[0]).toBeLessThan(0.15);
+    expect(context.masterGains[0]?.gain.value).toBeCloseTo(0.72 * 0.12);
+    source.onended?.();
+    expect(source.disconnect).toHaveBeenCalledOnce();
+    expect(context.filters[0]?.disconnect).toHaveBeenCalledOnce();
+    expect(context.masterGains[0]?.disconnect).toHaveBeenCalledOnce();
     controller.dispose();
   });
 
@@ -323,17 +330,17 @@ describe("createAudioController", () => {
     controller.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: false });
     controller.playEffect("ui-hover");
     controller.playEffect("ui-hover");
-    expect(FakeAudioContext.instances[0]?.oscillators).toHaveLength(2);
+    expect(FakeAudioContext.instances[0]?.bufferSources).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(120);
     controller.playEffect("ui-hover");
-    expect(FakeAudioContext.instances[0]?.oscillators).toHaveLength(4);
+    expect(FakeAudioContext.instances[0]?.bufferSources).toHaveLength(2);
 
     controller.playEffect("ui-click");
     expect(players).toHaveLength(1);
     expect(players[0]?.src).toBe("/audio/sfx/ui-click.ogg");
     const context = FakeAudioContext.instances[0]!;
     controller.dispose();
-    expect(context.oscillators.every((oscillator) => oscillator.stops.length > 0)).toBe(true);
+    expect(context.bufferSources.every((source) => source.stops.length > 0)).toBe(true);
     expect(context.close).toHaveBeenCalledOnce();
   });
 

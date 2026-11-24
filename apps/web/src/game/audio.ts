@@ -47,6 +47,14 @@ const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start" | "ui-hover">
 
 const MAX_SPELL_CUES = 4;
 const SPELL_CUE_VOLUME = 0.5;
+// Card rustle used for hover: a short band-passed noise swish. Retune here if it sounds too loud, long or sharp.
+const HOVER_CUE_VOLUME = 0.12;
+const HOVER_SWISH_SECONDS = 0.1;
+const HOVER_ATTACK_SECONDS = 0.008;
+const HOVER_PEAK_GAIN = 0.9;
+const HOVER_FILTER_START_HZ = 1_800;
+const HOVER_FILTER_END_HZ = 4_200;
+const HOVER_FILTER_Q = 0.9;
 const CROSSFADE_DURATION_MS = 400;
 const CROSSFADE_STEP_MS = 20;
 const DEFAULT_SETTINGS: AudioSettings = { musicVolume: 0.32, effectsVolume: 0.72, muted: false };
@@ -67,7 +75,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
   const timers = new Set<ReturnType<typeof setInterval>>();
   let audioContext: AudioContext | null = null;
   const turnCues = new Set<{ master: GainNode; oscillators: OscillatorNode[] }>();
-  const hoverCues = new Set<{ master: GainNode; oscillators: OscillatorNode[] }>();
+  const hoverCues = new Set<{ master: GainNode; sources: AudioScheduledSourceNode[] }>();
   let lastHoverAt = Number.NEGATIVE_INFINITY;
   interface SpellCue { master: GainNode; scale: number; sources: AudioScheduledSourceNode[]; nodes: AudioNode[] }
   const spellCues: SpellCue[] = [];
@@ -126,52 +134,52 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
     }
   }
 
+  /** A very short band-passed noise swish, like a card sliding over another ("사락"). Constants are at the top of the file. */
   function playHoverCue(): void {
     const now = Date.now();
-    if (disposed || effectVolume(0.22) === 0 || now - lastHoverAt < 120) return;
+    if (disposed || effectVolume(HOVER_CUE_VOLUME) === 0 || now - lastHoverAt < 120) return;
     lastHoverAt = now;
     const context = getAudioContext();
     if (!context) return;
     try {
+      const buffer = getNoiseBuffer(context);
+      if (!buffer) return;
       const master = context.createGain();
-      master.gain.setValueAtTime(effectVolume(0.22), context.currentTime);
+      master.gain.setValueAtTime(effectVolume(HOVER_CUE_VOLUME), context.currentTime);
       master.connect(context.destination);
-      const cue = { master, oscillators: [] as OscillatorNode[] };
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      const filter = context.createBiquadFilter();
+      const envelope = context.createGain();
+      const start = context.currentTime;
+      const end = start + HOVER_SWISH_SECONDS;
+      filter.type = "bandpass";
+      filter.Q.setValueAtTime(HOVER_FILTER_Q, start);
+      filter.frequency.setValueAtTime(HOVER_FILTER_START_HZ, start);
+      filter.frequency.exponentialRampToValueAtTime(HOVER_FILTER_END_HZ, end);
+      envelope.gain.setValueAtTime(0.0001, start);
+      envelope.gain.linearRampToValueAtTime(HOVER_PEAK_GAIN, start + HOVER_ATTACK_SECONDS);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, end);
+      source.connect(filter);
+      filter.connect(envelope);
+      envelope.connect(master);
+      const cue = { master, sources: [source] as AudioScheduledSourceNode[] };
       hoverCues.add(cue);
-      const notes = [
-        { frequency: 1046.5, start: 0, duration: 0.075 },
-        { frequency: 1568, start: 0.045, duration: 0.11 },
-      ];
-      for (const note of notes) {
-        const oscillator = context.createOscillator();
-        const envelope = context.createGain();
-        const start = context.currentTime + note.start;
-        oscillator.type = "triangle";
-        oscillator.frequency.setValueAtTime(note.frequency, start);
-        envelope.gain.setValueAtTime(0.0001, start);
-        envelope.gain.linearRampToValueAtTime(0.32, start + 0.012);
-        envelope.gain.exponentialRampToValueAtTime(0.0001, start + note.duration);
-        oscillator.connect(envelope);
-        envelope.connect(master);
-        oscillator.onended = () => {
-          oscillator.disconnect();
-          envelope.disconnect();
-          cue.oscillators = cue.oscillators.filter((active) => active !== oscillator);
-          if (cue.oscillators.length === 0) {
-            master.disconnect();
-            hoverCues.delete(cue);
-          }
-        };
-        cue.oscillators.push(oscillator);
-        oscillator.start(start);
-        oscillator.stop(start + note.duration + 0.01);
-      }
+      source.onended = () => {
+        source.disconnect();
+        filter.disconnect();
+        envelope.disconnect();
+        master.disconnect();
+        hoverCues.delete(cue);
+      };
+      // Start somewhere inside the shared noise buffer so repeated hovers do not sound identical.
+      source.start(start, Math.random() * (buffer.duration > HOVER_SWISH_SECONDS * 2 ? buffer.duration - HOVER_SWISH_SECONDS * 2 : 0));
+      source.stop(end + 0.01);
     } catch {
       // Audio support is optional; a missing WebAudio implementation must not affect gameplay.
     }
   }
 
-  /** One second of deterministic white noise, generated once per context and looped by noise layers. */
   function getNoiseBuffer(context: AudioContext): AudioBuffer | null {
     if (noiseBuffer) return noiseBuffer;
     try {
@@ -418,7 +426,7 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       if (currentMusic && !fadingMusic.has(currentMusic)) currentMusic.volume = musicVolume();
       for (const [player, scale] of effectPlayers) player.volume = effectVolume(scale);
       for (const cue of turnCues) cue.master.gain.setValueAtTime(effectVolume(0.35), audioContext?.currentTime ?? 0);
-      for (const cue of hoverCues) cue.master.gain.setValueAtTime(effectVolume(0.22), audioContext?.currentTime ?? 0);
+      for (const cue of hoverCues) cue.master.gain.setValueAtTime(effectVolume(HOVER_CUE_VOLUME), audioContext?.currentTime ?? 0);
       for (const cue of spellCues) cue.master.gain.setValueAtTime(effectVolume(SPELL_CUE_VOLUME * cue.scale), audioContext?.currentTime ?? 0);
     },
 
@@ -439,9 +447,9 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       }
       turnCues.clear();
       for (const cue of hoverCues) {
-        for (const oscillator of cue.oscillators) {
-          try { oscillator.stop(); } catch { /* Oscillator may already have stopped. */ }
-          oscillator.disconnect();
+        for (const source of cue.sources) {
+          try { source.stop(); } catch { /* Source may already have stopped. */ }
+          source.disconnect();
         }
         cue.master.disconnect();
       }
