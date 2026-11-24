@@ -2379,3 +2379,40 @@ describe("enemy attack planning (second battle onward)", () => {
     expect(Date.now() - startedAt).toBeLessThan(5_000);
   });
 });
+
+describe("enemy card plan never idles while it can play (second battle onward)", () => {
+  function behindOnBoardRun(difficulty: "normal" | "hard", completedBattles = 1): RunState {
+    const run = asEnemyTurn(createRun(980, "warrior", difficulty));
+    run.completedBattles = completedBattles;
+    const battle = activeBattle(run);
+    battle.enemyBoard = [];
+    battle.playerBoard = [1, 2, 3, 4, 5].map((index) => minion({ instanceId: `strong-${index}`, owner: "player", attack: 6, health: 8, maxHealth: 8, summonedTurn: 0 }));
+    battle.enemyHand = [instance("enemy-wolf", "ash-wolf"), instance("enemy-guard", "crypt-guard")];
+    battle.enemyStarterDeck = [];
+    battle.enemyDrawPile = [];
+    battle.enemyMana = { current: 4, max: 10, temporary: 0 };
+    battle.turnNumber = 3;
+    return run;
+  }
+
+  it.each(["normal", "hard"] as const)("plays an affordable minion on %s even when the player's board is far stronger", (difficulty) => {
+    const result = resolveEnemyTurn(behindOnBoardRun(difficulty));
+    expect(result.battle?.enemyBoard.length ?? 0).toBeGreaterThan(0);
+    expect(result.battle?.enemyMana.current).toBeLessThan(4 + gameConstants.enemyManaRecovery);
+  });
+
+  it("spends its mana: with 4 mana and a Crypt Guard (2) and an Ash Wolf (1) in hand it plays both", () => {
+    const result = resolveEnemyTurn(behindOnBoardRun("hard"));
+    expect(result.battle?.enemyBoard.map(({ cardId }) => cardId).sort()).toEqual(["ash-wolf", "crypt-guard"]);
+  });
+
+  it("only leaves the hand untouched when nothing is affordable", () => {
+    const run = behindOnBoardRun("normal");
+    activeBattle(run).enemyMana = { current: 0, max: 10, temporary: 0 };
+    activeBattle(run).turnNumber = 1;
+    activeBattle(run).enemyHand = [instance("enemy-eclipse", "eclipse")];
+    const result = resolveEnemyTurn(run);
+    expect(result.battle?.enemyBoard).toHaveLength(0);
+    expect(result.battle?.enemyHand.map(({ cardId }) => cardId)).toEqual(["eclipse"]);
+  });
+});

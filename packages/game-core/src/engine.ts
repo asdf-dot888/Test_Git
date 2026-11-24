@@ -872,7 +872,24 @@ interface HardPlanNode {
   run: RunState;
   sequence: string[];
   score: number;
+  /** Mana the plan spends; equal-scoring plans prefer spending more. */
+  manaSpent: number;
   tieBreak: Array<{ handSlot: number; instanceId: string }>;
+}
+
+/**
+ * Added to a plan for every card it plays. Plan scores subtract the value of the player's board, so against a much stronger
+ * board every extra card used to lower the score and the enemy would play nothing at all; this keeps "play more" ahead of that.
+ */
+const ENEMY_PLAN_PLAY_BONUS = 200;
+/** Extra score per mana spent by a plan (0 = only a tie-break); a difficulty knob for the balance simulation. */
+const ENEMY_MANA_USE_WEIGHT = 0;
+
+function betterPlan(candidate: HardPlanNode, current: HardPlanNode | null): boolean {
+  if (!current) return true;
+  if (candidate.score !== current.score) return candidate.score > current.score;
+  if (candidate.manaSpent !== current.manaSpent) return candidate.manaSpent > current.manaSpent;
+  return comparePlanTieBreak(candidate, current) < 0;
 }
 
 function enemyBoardValue(battle: BattleState): number {
@@ -909,8 +926,9 @@ function planEnemyTurn(run: RunState, enemy: EnemyDefinition): string[] {
   const initialSlots = new Map(initialBattle.enemyHand.map((instance, index) => [instance.instanceId, index]));
   const isHard = run.difficulty === "hard";
   const beamWidth = isHard ? hardAiBeamWidth(run.completedBattles) : normalAiBeamWidth(run.completedBattles);
-  let beam: HardPlanNode[] = [{ run: cloneRun(run), sequence: [], score: 0, tieBreak: [] }];
-  let best: HardPlanNode = beam[0]!;
+  let beam: HardPlanNode[] = [{ run: cloneRun(run), sequence: [], score: 0, manaSpent: 0, tieBreak: [] }];
+  // Best plan that plays at least one card: the enemy only plays nothing when nothing is playable.
+  let best: HardPlanNode | null = null;
   const maxDepth = Math.min(30, initialBattle.enemyHand.length + initialBattle.enemyDrawPile.length + 1);
 
   for (let depth = 0; depth < maxDepth; depth += 1) {
@@ -931,18 +949,19 @@ function planEnemyTurn(run: RunState, enemy: EnemyDefinition): string[] {
         const candidate: HardPlanNode = {
           run: simulated,
           sequence: [...node.sequence, instance.instanceId],
-          score: node.score + transitionScore + enemyBoardValue(simulated.battle),
+          score: node.score + transitionScore + enemyBoardValue(simulated.battle) + ENEMY_PLAN_PLAY_BONUS + ENEMY_MANA_USE_WEIGHT * card.cost,
+          manaSpent: node.manaSpent + card.cost,
           tieBreak: [...node.tieBreak, { handSlot, instanceId: instance.instanceId }],
         };
         expanded.push(candidate);
-        if (candidate.score > best.score || (candidate.score === best.score && comparePlanTieBreak(candidate, best) < 0)) best = candidate;
+        if (betterPlan(candidate, best)) best = candidate;
       }
     }
     if (expanded.length === 0) break;
-    expanded.sort((left, right) => right.score - left.score || comparePlanTieBreak(left, right));
+    expanded.sort((left, right) => right.score - left.score || right.manaSpent - left.manaSpent || comparePlanTieBreak(left, right));
     beam = expanded.slice(0, beamWidth);
   }
-  return best.sequence;
+  return best?.sequence ?? [];
 }
 
 function playEnemyCard(run: RunState, handInstanceId: string, deferDefeat = false): RunState {

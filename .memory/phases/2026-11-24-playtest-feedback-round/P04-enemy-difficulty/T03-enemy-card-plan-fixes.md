@@ -1,6 +1,6 @@
 # Task: T03 Enemy Card Plan: No Idle Turns, Spend More Mana
 
-## Status: todo
+## Status: done
 
 ## Goal
 Fix the enemy sometimes playing no card at all although it has mana and playable cards, and make ties go to the plan that spends more mana.
@@ -44,7 +44,7 @@ Task: T03-enemy-card-plan-fixes
 (If the reproduction shows the cause is not real, change the type to `feat(core)`, say so in the body and in the Progress notes.)
 
 ## Progress
-- [ ] reproduction written (failing before the fix: yes/no)
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] reproduction written and **confirmed**: second battle, three to five strong player minions (5 x 6/8) against an empty enemy board with 4 mana and an Ash Wolf plus a Crypt Guard in hand: before the fix the enemy played nothing (both difficulties); with 3 x 5/6 minions it still played, so the bug needs a clearly stronger player board. (Tests: "enemy card plan never idles while it can play".)
+- [x] implementation complete. `planEnemyTurn`: `best` starts as `null` and the plan returned is the best one that plays at least one card; every played card adds `ENEMY_PLAN_PLAY_BONUS = 200` to the plan score so a negative board value no longer makes extra plays look worse (the enemy plays everything affordable); `HardPlanNode.manaSpent` and `betterPlan` prefer more mana spent on equal scores (also in the beam sort); `ENEMY_MANA_USE_WEIGHT = 0` is the knob for P04-T04. Existing planner tests and the characterization hashes did not change. There is no dedicated test for the mana tie-break (equal plan scores are very rare to construct and the helper is not exported); it is covered by the "plays both cards" test only indirectly.
+- [x] validation passed: build clean, lint clean, 1194 tests (101 files). Smoke simulation (100 runs): normal 30.0%, hard 6.0% average completion, nearly the same as before this task.
+- commit: see Git history
