@@ -148,6 +148,7 @@ function ruleMessage(error: GameRuleError): string {
     REWARD_NOT_PENDING: "선택할 보상이 없습니다.",
     ENCOUNTER_NOT_READY: "다음 전투를 시작할 수 없습니다.",
     DISCARD_NOT_PENDING: "지금은 버릴 카드를 선택할 수 없습니다.",
+    TURN_ORDER_PENDING: "먼저 선후공을 정하세요.",
   };
   return messages[error.code];
 }

@@ -7,7 +7,7 @@
 [P01 Engine Rules](./phases/2026-11-24-hearthstone-rules-and-taunt/P01-engine-rules/phase.md)
 
 ## Active Task
-[P01-T03 Turn-Order Pick, Opening Hands and the Coin](./phases/2026-11-24-hearthstone-rules-and-taunt/P01-engine-rules/T03-turn-order-and-coin.md) — status `todo`.
+[P01-T04 Enemy AI, Simulation Bot and Constants Follow the New Rules](./phases/2026-11-24-hearthstone-rules-and-taunt/P01-engine-rules/T04-enemy-ai-and-bot.md) — status `todo`.
 
 ## Plan Overview (10 tasks)
 - P01 engine: T01 fatigue and 1 draw (+API fields), T02 taunt and attack rules (10 cards), T03 turn-order pick and the Coin (+API fields), T04 enemy AI and simulation bot.
@@ -27,4 +27,4 @@
 - Browser note: sound problems were Safari-only (`.ogg`); the user decided to use Chrome and dropped the `.m4a` conversion.
 
 ## Next Step (IMPORTANT)
-Continue with P01-T03 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.
+Continue with P01-T04 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.

@@ -48,7 +48,7 @@ describe("reduceGameAction timer snapshots", () => {
 
     session = reduceGameAction(session, { type: "redraw-opening-hand" });
     expect(session.run?.openingHandRedrawAvailable).toBe(false);
-    expect(session.run?.battle?.hand).toHaveLength(3);
+    expect(session.run?.battle?.hand).toHaveLength(4);
 
     const actionRun = createRun(544);
     const afterTurn = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run: actionRun }), { type: "end-turn" });

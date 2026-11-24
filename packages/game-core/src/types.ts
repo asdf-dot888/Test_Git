@@ -3,6 +3,8 @@ export type RewardTier = "normal" | "boss";
 export type PlayerSide = "player" | "enemy";
 export type PlayerClass = "warrior" | "assassin" | "demonist";
 export type RunDifficulty = "normal" | "hard";
+/** What a face-down turn-order card turns out to be: the chosen role of the player in this battle. */
+export type TurnOrderRole = "first" | "second";
 
 export type SpellEffect =
   | { kind: "damage"; amount: number; target: "enemyHero" | "enemyMinion" }
@@ -114,6 +116,13 @@ export interface BattleState {
   rngState: number;
   status: "active" | "playerWon" | "playerLost";
   /** Empty draws so far in this battle; the n-th one deals n damage to that side's hero (fatigue). Missing = 0. */
+  /**
+   * Who plays first in this battle. `null` while the turn order is still to be chosen (two face-down cards, see `chooseTurnOrder`);
+   * missing in battles saved before the rule existed, which were always player-first.
+   */
+  firstSide?: PlayerSide | null;
+  /** What is behind face-down card 0 and 1 of the turn-order pick. */
+  turnOrderCards?: [TurnOrderRole, TurnOrderRole];
   playerFatigue?: number;
   enemyFatigue?: number;
   pendingDiscardBeforeDraw?: boolean;

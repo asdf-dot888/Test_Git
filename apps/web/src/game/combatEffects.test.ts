@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
+import { CARD_BY_ID, CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
 import { __setSpellVisualSpecsForTest, type SpellVisualSpec } from "./spellEffectCatalog.js";
 import { CARD_COMBAT_VISUAL_PROFILES, combatEventSounds, combatImpactSounds, spellCueFor, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
@@ -691,8 +691,14 @@ describe("boss spells use their registered visuals", () => {
 });
 
 describe("every spell card has exactly one primary effect per cast", () => {
-  const castable = CARD_CATALOG.filter((card) => card.kind === "spell" && !card.enemyOnly);
+  const castable = CARD_CATALOG.filter((card) => card.kind === "spell" && !card.enemyOnly && !card.tokenOnly);
   const bossSpells = CARD_CATALOG.filter((card) => card.kind === "spell" && card.enemyOnly);
+
+  it("plays the Mana Spring visual for the Coin", () => {
+    const coin = CARD_BY_ID.get("the-coin")!;
+    expect(coin.tokenOnly).toBe(true);
+    expect(coin.artKey).toBe("mana-spring");
+  });
 
   it("covers the 24 player spells and the 8 boss spells", () => {
     expect(castable).toHaveLength(24);

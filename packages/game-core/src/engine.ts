@@ -1,4 +1,4 @@
-import { BOSSES, CARD_BY_ID, CARD_CATALOG, ENEMY_BY_ID, FUSION_RECIPES, NORMAL_ENEMIES_BY_PHASE, PLAYER_CLASS_DEFINITIONS, SHARED_STARTER_CARD_IDS } from "./catalog.js";
+import { BOSSES, CARD_BY_ID, COIN_CARD_ID, CARD_CATALOG, ENEMY_BY_ID, FUSION_RECIPES, NORMAL_ENEMIES_BY_PHASE, PLAYER_CLASS_DEFINITIONS, SHARED_STARTER_CARD_IDS } from "./catalog.js";
 import { GameRuleError } from "./errors.js";
 import { normalizeSeed, pickIndex, shuffle } from "./random.js";
 import type {
@@ -16,6 +16,7 @@ import type {
   RunState,
   RunDifficulty,
   SpellEffect,
+  TurnOrderRole,
 } from "./types.js";
 
 const MAX_HAND = 10;
@@ -108,8 +109,13 @@ function assertActiveRun(run: RunState): BattleState {
   return run.battle;
 }
 
+function assertTurnOrderChosen(battle: BattleState): void {
+  if (battle.firstSide === null) fail("TURN_ORDER_PENDING", "Choose who plays first before the battle starts.");
+}
+
 function assertPlayerTurn(run: RunState): BattleState {
   const battle = assertActiveRun(run);
+  assertTurnOrderChosen(battle);
   if (battle.activeSide !== "player" || battle.pendingDiscardBeforeDraw) {
     fail("WRONG_TURN", "This action is unavailable during the current turn state.");
   }
@@ -194,7 +200,8 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   const hasTemporaryMana = Number.isInteger(battle.playerMana?.temporary) && Number.isInteger(battle.enemyMana?.temporary);
   const hasObsoleteCharge = Object.prototype.hasOwnProperty.call(battle, "pendingEnemyCharge");
   const hasFatigue = Number.isInteger(battle.playerFatigue) && Number.isInteger(battle.enemyFatigue);
-  if (hasEnemyZones && hasClassResources && hasTemporaryMana && hasFatigue && !hasObsoleteCharge && run.openingHandRedrawAvailable !== undefined) return run;
+  const hasTurnOrder = battle.firstSide !== undefined;
+  if (hasEnemyZones && hasClassResources && hasTemporaryMana && hasFatigue && hasTurnOrder && !hasObsoleteCharge && run.openingHandRedrawAvailable !== undefined) return run;
 
   const next = cloneRun(run);
   next.openingHandRedrawAvailable ??= false;
@@ -217,6 +224,8 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   current.heroPowerUsed ??= false;
   current.playerFatigue ??= 0;
   current.enemyFatigue ??= 0;
+  // A battle saved before the turn-order pick existed was always player-first.
+  if (current.firstSide === undefined) current.firstSide = "player";
   delete (current as BattleState & { pendingEnemyCharge?: unknown }).pendingEnemyCharge;
   return next;
 }
@@ -344,19 +353,20 @@ function expireTemporaryMana(mana: BattleState["playerMana"]): void {
 }
 
 /**
- * The opening hand is the first three cards of the shuffled deck, except that it always holds a card the player can pay for on turn 1
- * (cost 1 or less, as turn 1 has 1 mana): if there is none, the first such card of the deck replaces the third card.
+ * The opening hand is the first `handSize` cards of the shuffled deck (3 for the first player, 4 for the second), except that
+ * it always holds a card the player can pay for on turn 1 (cost 1 or less, as turn 1 has 1 mana): if there is none, the first
+ * such card of the deck replaces the last card of the hand.
  */
-function openingHandAndDrawPile(shuffled: CardInstance[]): { hand: CardInstance[]; drawPile: CardInstance[] } {
-  const hand = shuffled.slice(0, 3);
-  const rest = shuffled.slice(3);
+function openingHandAndDrawPile(shuffled: CardInstance[], handSize = 3): { hand: CardInstance[]; drawPile: CardInstance[] } {
+  const hand = shuffled.slice(0, handSize);
+  const rest = shuffled.slice(handSize);
   const isCheap = (card: CardInstance) => getCard(card.cardId).cost <= INITIAL_MANA;
   if (!hand.some(isCheap)) {
     const cheapIndex = rest.findIndex(isCheap);
-    if (cheapIndex >= 0 && hand.length === 3) {
+    if (cheapIndex >= 0 && hand.length === handSize) {
       const [cheap] = rest.splice(cheapIndex, 1);
-      rest.splice(cheapIndex, 0, hand[2]!);
-      hand[2] = cheap!;
+      rest.splice(cheapIndex, 0, hand[handSize - 1]!);
+      hand[handSize - 1] = cheap!;
     }
   }
   return { hand, drawPile: rest };
@@ -644,7 +654,11 @@ function applySpellEffect(
   }
 }
 
-function startPlayerTurn(run: RunState): RunState {
+/**
+ * Starts the player's turn. The round number grows after the second side of a round has played, so it grows here only when the
+ * player is the first side; the very first turn of a battle never advances it.
+ */
+function startPlayerTurn(run: RunState, advanceRound = true): RunState {
   const battle = run.battle;
   if (!battle || battle.status !== "active") return run;
   const burns = battle.playerHero.statusEffects?.filter((status) => status.kind === "burn") ?? [];
@@ -655,7 +669,7 @@ function startPlayerTurn(run: RunState): RunState {
       .filter((status) => status.turnsRemaining > 0);
   }
   if (battle.playerHero.health === 0) return finishDefeat(run);
-  battle.turnNumber += 1;
+  if (advanceRound && battle.firstSide !== "enemy") battle.turnNumber += 1;
   battle.activeSide = "player";
   // A fresh full mana every turn; temporary mana and carried-over mana from earlier rules are dropped.
   const playerCap = manaCapForTurn(battle.turnNumber);
@@ -1024,7 +1038,7 @@ function playEnemyCard(run: RunState, handInstanceId: string, deferDefeat = fals
     return run;
   }
 
-  battle.enemyDiscardPile.push(instance);
+  if (card.id !== COIN_CARD_ID) battle.enemyDiscardPile.push(instance);
   const eventEffects: Array<{ kind: SpellEffect["kind"]; targetId: string | null; amount?: number; transferredCardInstanceId?: string }> = [];
   for (const effect of card.spellEffects ?? []) {
     const targetId = selectEnemySpellTarget(effect, battle, run.difficulty);
@@ -1292,7 +1306,7 @@ function expirePlayerTurnStatuses(battle: BattleState): void {
   }
 }
 
-function beginEncounter(run: RunState, encounterIndex: number, battleSeed: number): RunState {
+function beginEncounter(run: RunState, encounterIndex: number, battleSeed: number, pickTurnOrder = false): RunState {
   const encounter = run.encounters[encounterIndex];
   if (!encounter || encounter.status !== "pending") fail("ENCOUNTER_NOT_READY", "The next encounter is not pending.");
   const enemy = ENEMY_BY_ID.get(encounter.enemyId);
@@ -1316,11 +1330,13 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     playerArmor: 0,
     soulShards: 0,
     heroPowerUsed: false,
-    ...openingHandAndDrawPile(shuffled.items),
+    // The hands are dealt when the turn order is chosen (3 cards for the first side, 4 and the Coin for the second).
+    hand: [],
+    drawPile: shuffled.items,
     discardPile: [],
     enemyStarterDeck: enemyDeck.starterDeck,
-    enemyHand: enemyDeck.shuffledDeck.slice(0, 3),
-    enemyDrawPile: enemyDeck.shuffledDeck.slice(3),
+    enemyHand: [],
+    enemyDrawPile: enemyDeck.shuffledDeck,
     enemyDiscardPile: [],
     playerBoard: [],
     enemyBoard: [],
@@ -1329,12 +1345,44 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     status: "active",
     playerFatigue: 0,
     enemyFatigue: 0,
+    firstSide: null,
+    turnOrderCards: normalizeSeed(battleSeed ^ 0x5bd1e995) % 2 === 0 ? ["first", "second"] : ["second", "first"],
   };
   nextRun.battle = battle;
-  return nextRun;
+  // Without a pick (tests, the tutorial, the simulation default) the player simply goes first.
+  return pickTurnOrder ? nextRun : dealTurnOrder(nextRun, "first");
 }
 
-export function createRun(seed: number, playerClass: PlayerClass = "warrior", difficulty: RunDifficulty = "normal"): RunState {
+/** Applies the chosen role: deals the opening hands, gives the second side the Coin and starts the first side's turn. */
+function dealTurnOrder(run: RunState, role: TurnOrderRole): RunState {
+  const battle = run.battle!;
+  const playerFirst = role === "first";
+  battle.firstSide = playerFirst ? "player" : "enemy";
+  Object.assign(battle, openingHandAndDrawPile(battle.drawPile, playerFirst ? 3 : 4));
+  const enemyHandSize = playerFirst ? 4 : 3;
+  battle.enemyHand = battle.enemyDrawPile.slice(0, enemyHandSize);
+  battle.enemyDrawPile = battle.enemyDrawPile.slice(enemyHandSize);
+  const coin = makeInstance(run, COIN_CARD_ID, "coin");
+  run.nextInstanceNumber += 1;
+  (playerFirst ? battle.enemyHand : battle.hand).push(coin);
+  if (playerFirst) return startPlayerTurn(run, false);
+  battle.activeSide = "enemy";
+  return run;
+}
+
+/**
+ * The player picks one of the two face-down cards of a new battle; what is behind it decides whether the player plays first or
+ * second. When the enemy is first the caller runs `resolveEnemyTurnWithPlayback` next.
+ */
+export function chooseTurnOrder(run: RunState, cardIndex: 0 | 1): RunState {
+  const next = cloneRun(run);
+  const battle = assertActiveRun(next);
+  if (battle.firstSide !== null || !battle.turnOrderCards) fail("INVALID_ACTION", "The turn order was already chosen.");
+  if (cardIndex !== 0 && cardIndex !== 1) fail("INVALID_ACTION", "Choose one of the two cards.");
+  return dealTurnOrder(next, battle.turnOrderCards[cardIndex]);
+}
+
+export function createRun(seed: number, playerClass: PlayerClass = "warrior", difficulty: RunDifficulty = "normal", options: { pickTurnOrder?: boolean } = {}): RunState {
   const normalizedSeed = normalizeSeed(seed);
   let randomState = normalizedSeed;
   const encounters: EncounterState[] = [];
@@ -1370,20 +1418,26 @@ export function createRun(seed: number, playerClass: PlayerClass = "warrior", di
     pendingReward: null,
     encounters,
   };
-  return beginEncounter(run, 0, randomState);
+  return beginEncounter(run, 0, randomState, options.pickTurnOrder === true);
 }
 
 export function redrawOpeningHand(run: RunState): RunState {
   const battle = run.battle;
+  if (battle && battle.firstSide === null) assertTurnOrderChosen(battle);
   if (run.openingHandRedrawAvailable !== true || run.completedBattles !== 0 || run.encounterInPhase !== 0
-    || run.status !== "active" || !battle || battle.status !== "active" || battle.activeSide !== "player"
-    || battle.turnNumber !== 1 || battle.hand.length !== 3) {
+    || run.status !== "active" || !battle || battle.status !== "active" || battle.firstSide === null || battle.firstSide === undefined
+    || battle.activeSide !== "player" || battle.turnNumber !== 1) {
     fail("INVALID_ACTION", "The opening hand redraw is no longer available.");
   }
   const next = cloneRun(run);
   const currentBattle = next.battle!;
-  const shuffled = shuffle([...currentBattle.hand, ...currentBattle.drawPile], currentBattle.rngState);
-  Object.assign(currentBattle, openingHandAndDrawPile(shuffled.items));
+  // The Coin stays in the hand; every other card is shuffled back and the same number of cards is dealt again.
+  const coins = currentBattle.hand.filter((card) => card.cardId === COIN_CARD_ID);
+  const others = currentBattle.hand.filter((card) => card.cardId !== COIN_CARD_ID);
+  const shuffled = shuffle([...others, ...currentBattle.drawPile], currentBattle.rngState);
+  const dealt = openingHandAndDrawPile(shuffled.items, others.length);
+  currentBattle.hand = [...dealt.hand, ...coins];
+  currentBattle.drawPile = dealt.drawPile;
   currentBattle.rngState = shuffled.state;
   next.openingHandRedrawAvailable = false;
   return next;
@@ -1466,13 +1520,13 @@ export function fuseMinions(run: RunState, firstMinionId: string, secondMinionId
   return consumeOpeningHandRedraw(triggerMinionEffect(made.run, made.minion));
 }
 
-export function startBattle(run: RunState, enemyId: string): RunState {
+export function startBattle(run: RunState, enemyId: string, options: { pickTurnOrder?: boolean } = {}): RunState {
   if (run.status !== "active" || run.battle) fail("ENCOUNTER_NOT_READY", "A new battle cannot start now.");
   const encounterIndex = run.encounters.findIndex((encounter) => encounter.status === "pending");
   if (encounterIndex < 0 || run.encounters[encounterIndex]?.enemyId !== enemyId) {
     fail("ENCOUNTER_NOT_READY", "The requested enemy is not the next encounter.");
   }
-  return beginEncounter(cloneRun(run), encounterIndex, normalizeSeed(run.seed + run.completedBattles + 1));
+  return beginEncounter(cloneRun(run), encounterIndex, normalizeSeed(run.seed + run.completedBattles + 1), options.pickTurnOrder === true);
 }
 
 export function playMinion(run: RunState, handInstanceId: string, slotIndex?: number): RunState {
@@ -1530,7 +1584,8 @@ export function castSpellWithResolution(run: RunState, handInstanceId: string, t
   }
 
   const [instance] = battle.hand.splice(handIndex, 1);
-  battle.discardPile.push(instance!);
+  // The Coin leaves the game after use; every other spell goes to the discard pile.
+  if (card.id !== COIN_CARD_ID) battle.discardPile.push(instance!);
   spendMana(battle, "player", card.cost);
   let current = next;
   const effects: ResolvedSpellEffect[] = [];
@@ -1614,6 +1669,7 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   let next = cloneRun(run);
   const steps: EnemyTurnPlaybackStep[] = [];
   let battle = assertActiveRun(next);
+  assertTurnOrderChosen(battle);
   if (battle.activeSide !== "enemy") fail("WRONG_TURN", "The enemy turn is not active.");
   const enemy = ENEMY_BY_ID.get(battle.enemyId);
   if (!enemy) fail("INVALID_ACTION", `Unknown enemy: ${battle.enemyId}`);
@@ -1680,6 +1736,8 @@ export function endPlayerTurnWithPlayback(run: RunState): EnemyTurnResolution {
   consumeOpeningHandRedraw(next);
   expirePlayerTurnStatuses(battle);
   battle.activeSide = "enemy";
+  // The player was the second side of this round: the next round starts with the enemy.
+  if (battle.firstSide === "enemy") battle.turnNumber += 1;
   expireTemporaryMana(battle.playerMana);
   battle.enemyBoard = battle.enemyBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   return resolveEnemyTurnWithPlayback(next);
@@ -1743,7 +1801,7 @@ export function acknowledgeVictory(run: RunState): RunState {
   return next;
 }
 
-export function advanceRun(run: RunState, nextSeed: number): RunState {
+export function advanceRun(run: RunState, nextSeed: number, options: { pickTurnOrder?: boolean } = {}): RunState {
   if (run.status !== "active" || run.pendingReward || !run.battle || run.battle.status !== "playerWon") {
     fail("ENCOUNTER_NOT_READY", "Resolve the battle reward before advancing.");
   }
@@ -1751,7 +1809,7 @@ export function advanceRun(run: RunState, nextSeed: number): RunState {
   if (encounterIndex < 0) {
     return { ...cloneRun(run), status: "victory", battle: null };
   }
-  return beginEncounter(cloneRun(run), encounterIndex, normalizeSeed(nextSeed));
+  return beginEncounter(cloneRun(run), encounterIndex, normalizeSeed(nextSeed), options.pickTurnOrder === true);
 }
 
 export const gameConstants = {
@@ -1766,4 +1824,5 @@ export const gameConstants = {
   enemyPhaseBonus: ENEMY_PHASE_BONUS,
   bossAreaCadence: BOSS_AREA_ATTACK_EVERY_N_TURNS,
   turnDrawCount: TURN_DRAW_COUNT,
+  coinCardId: COIN_CARD_ID,
 } as const;

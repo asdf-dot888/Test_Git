@@ -11,7 +11,8 @@ export type GameRuleErrorCode =
   | "CARD_NOT_FOUND"
   | "REWARD_NOT_PENDING"
   | "ENCOUNTER_NOT_READY"
-  | "DISCARD_NOT_PENDING";
+  | "DISCARD_NOT_PENDING"
+  | "TURN_ORDER_PENDING";
 
 export class GameRuleError extends Error {
   constructor(

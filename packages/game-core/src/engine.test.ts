@@ -21,6 +21,7 @@ import {
   castSpell,
   castSpellWithResolution,
   chooseReward,
+  chooseTurnOrder,
   chooseRewardAndDiscard,
   createRun as createRunWithRealMana,
   discardBeforeDraw,
@@ -248,10 +249,10 @@ describe("card and enemy catalog", () => {
   });
 
   it("contains unique base, class, and token cards with complete effect descriptions", () => {
-    expect(CARD_CATALOG).toHaveLength(89);
-    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(89);
+    expect(CARD_CATALOG).toHaveLength(90);
+    expect(new Set(CARD_CATALOG.map((card) => card.id)).size).toBe(90);
     expect(CARD_CATALOG.filter((card) => card.kind === "minion")).toHaveLength(57);
-    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(32);
+    expect(CARD_CATALOG.filter((card) => card.kind === "spell")).toHaveLength(33);
     for (const card of CARD_CATALOG) {
       expect(card.cost).toBeGreaterThanOrEqual(0);
       expect(card.cost).toBeLessThanOrEqual(10);
@@ -361,12 +362,13 @@ describe("seeded run setup and random helpers", () => {
       expect(encounters.map((encounter) => encounter.kind)).toEqual(["normal", "normal", "normal", "boss"]);
       expect(encounters[3]?.enemyId).toBe(BOSSES[phase - 1]?.id);
     }
-    expect(first.battle?.hand).toHaveLength(3);
+    expect(first.battle?.hand).toHaveLength(4); // 3 opening cards and the turn-1 draw
     expect(first.battle?.playerMana).toEqual({ current: 10, max: 10, temporary: 0 });
     expect(first.battle?.enemyMana).toEqual({ current: 10, max: 10, temporary: 0 });
     expect(first.battle?.enemyStarterDeck).toHaveLength(30);
-    expect(first.battle?.enemyHand).toHaveLength(3);
-    expect(first.battle?.enemyDrawPile).toHaveLength(27);
+    expect(first.battle?.enemyHand).toHaveLength(5); // the second side starts with 4 cards and the Coin
+    expect(first.battle?.enemyHand.at(-1)?.cardId).toBe("the-coin");
+    expect(first.battle?.enemyDrawPile).toHaveLength(26);
     expect(first.battle?.playerHero.health).toBe(30);
     expect(first.battle).not.toHaveProperty("pendingEnemyCharge");
     expect(first.starterDeck).toHaveLength(30);
@@ -425,7 +427,7 @@ describe("seeded run setup and random helpers", () => {
     }
     expect(sawSoulBargain).toBe(true);
     expect(STARTER_DECK_CARD_IDS).not.toContain("soul-bargain");
-    expect(first.battle?.enemyDrawPile).toHaveLength(27);
+    expect(first.battle?.enemyDrawPile).toHaveLength(26);
     expect(first.battle?.rngState).toBe(second.battle?.rngState);
   });
 
@@ -504,8 +506,8 @@ describe("one-time opening hand redraw", () => {
 
     const redrawn = redrawOpeningHand(first);
     expect(redrawn).toEqual(redrawOpeningHand(second));
-    expect(activeBattle(redrawn).hand).toHaveLength(3);
-    expect(activeBattle(redrawn).drawPile).toHaveLength(27);
+    expect(activeBattle(redrawn).hand).toHaveLength(4);
+    expect(activeBattle(redrawn).drawPile).toHaveLength(26);
     expect([...activeBattle(redrawn).hand, ...activeBattle(redrawn).drawPile].map(({ instanceId }) => instanceId).sort()).toEqual(allBefore);
     expect(activeBattle(redrawn).rngState).not.toBe(activeBattle(first).rngState);
     expect(redrawn.deck).toEqual(first.deck);
@@ -1737,7 +1739,7 @@ describe("enemy turns, rewards, and run progression", () => {
     expect(next.battle?.enemyId).toBe(nextEncounter!.enemyId);
     expect(next.battle?.playerHero.health).toBe(30);
     expect(next.battle?.playerMana).toEqual({ current: 1, max: 1, temporary: 0 });
-    expect(next.battle?.hand).toHaveLength(3);
+    expect(next.battle?.hand).toHaveLength(4);
     expect(next.battle?.playerBoard).toHaveLength(0);
     expect(next.encounters[next.completedBattles]?.status).toBe("active");
     expect(() => startBattle(waiting, "boss-void-titan")).toThrowError(expect.objectContaining({ code: "ENCOUNTER_NOT_READY" }));
@@ -2037,17 +2039,17 @@ describe("Hard expedition enemy health and tactical AI", () => {
 describe("enemy turn characterization (first battle and Hard planner stay unchanged)", () => {
   // Hashes were re-captured on 2026-11-24 for the new enemy rules (enemy mana +2 per turn, no minion health bonus, no wasted heals, Hearthstone mana curve, 5 draws per turn, all-attack); older captures predate the Normal turn planner.
   const GOLDEN_HASHES: Record<string, string> = {
-    "normal-first-9101": "9ef028178e45",
-    "normal-first-9102": "645f42d63b38",
-    "normal-first-9103": "d86868685a11",
-    "normal-first-9104": "e733fe6a5fbe",
-    "normal-first-9105": "54de9b755d2e",
-    "hard-first-9201": "b895d5529356",
-    "hard-first-9202": "122f4b01e5b6",
-    "hard-first-9203": "25b57867fe7f",
-    "hard-second-9301": "db3cfa3f0f7b",
-    "hard-second-9302": "67fca0ae2c3a",
-    "hard-second-9303": "d24b12c392b9",
+    "normal-first-9101": "0246db8f1ca2",
+    "normal-first-9102": "7542fc27a638",
+    "normal-first-9103": "b75676a28d17",
+    "normal-first-9104": "8cfd79b1b00f",
+    "normal-first-9105": "de92e731a0ff",
+    "hard-first-9201": "5fcb4ee3766a",
+    "hard-first-9202": "426e9ba2f857",
+    "hard-first-9203": "eeaa6733ebce",
+    "hard-second-9301": "e2440bda65c7",
+    "hard-second-9302": "bae7ec97b8d1",
+    "hard-second-9303": "68b9bed4b590",
   };
 
   function summarize(run: RunState) {
@@ -2573,14 +2575,14 @@ describe("enemy never casts a spell that would change nothing", () => {
 });
 
 describe("opening hand on a 1-mana first turn", () => {
-  it("always holds a card that costs 1 or less, also after the redraw, and keeps 3 cards", () => {
+  it("always holds a card that costs 1 or less, also after the redraw, and keeps 4 cards (3 and the turn-1 draw)", () => {
     for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
       for (let seed = 1; seed <= 80; seed += 1) {
         const run = createRunWithRealMana(seed, playerClass);
-        expect(run.battle?.hand).toHaveLength(3);
+        expect(run.battle?.hand).toHaveLength(4);
         expect(run.battle!.hand.some(({ cardId }) => CARD_BY_ID.get(cardId)!.cost <= 1)).toBe(true);
         const redrawn = redrawOpeningHand(run);
-        expect(redrawn.battle?.hand).toHaveLength(3);
+        expect(redrawn.battle?.hand).toHaveLength(4);
         expect(redrawn.battle!.hand.some(({ cardId }) => CARD_BY_ID.get(cardId)!.cost <= 1)).toBe(true);
         expect(new Set([...redrawn.battle!.hand, ...redrawn.battle!.drawPile].map(({ instanceId }) => instanceId)).size).toBe(30);
       }
@@ -2673,5 +2675,176 @@ describe("taunt", () => {
     battle.enemyBoard = [minion({ instanceId: "e1", owner: "enemy", cardId: "ash-wolf", attack: 4, health: 4, maxHealth: 4, summonedTurn: 0 })];
     battle.playerBoard = [minion({ instanceId: "blocker", cardId: "ash-wolf", attack: 1, health: 6, maxHealth: 6, summonedTurn: 0 })];
     expect(resolveEnemyTurn(run).status).toBe("defeat");
+  });
+});
+
+describe("turn order pick and the Coin", () => {
+  const pending = (seed: number, playerClass: "warrior" | "assassin" | "demonist" = "warrior") =>
+    createRunWithRealMana(seed, playerClass, "normal", { pickTurnOrder: true });
+  const indexOf = (run: RunState, role: "first" | "second"): 0 | 1 => (activeBattle(run).turnOrderCards![0] === role ? 0 : 1);
+
+  it("starts a battle without hands and refuses every action until a card is picked", () => {
+    const run = pending(1801);
+    const battle = activeBattle(run);
+    expect(battle.firstSide).toBeNull();
+    expect([...battle.turnOrderCards!].sort()).toEqual(["first", "second"]);
+    expect(battle.hand).toHaveLength(0);
+    expect(battle.enemyHand).toHaveLength(0);
+    expect(battle.drawPile).toHaveLength(30);
+    expect(battle.enemyDrawPile).toHaveLength(30);
+    const pendingError = expect.objectContaining({ code: "TURN_ORDER_PENDING" });
+    expect(() => endPlayerTurn(run)).toThrowError(pendingError);
+    expect(() => playMinion(run, "x")).toThrowError(pendingError);
+    expect(() => redrawOpeningHand(run)).toThrowError(pendingError);
+    expect(() => resolveEnemyTurn(run)).toThrowError(pendingError);
+    const chosen = chooseTurnOrder(run, 0);
+    expect(() => chooseTurnOrder(chosen, 1)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+    expect(activeBattle(run).firstSide).toBeNull(); // the input run is untouched
+  });
+
+  it("places the roles randomly behind the two cards, deterministically per seed", () => {
+    let firstOnLeft = 0;
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const roles = activeBattle(pending(seed)).turnOrderCards!;
+      expect(roles).toEqual(activeBattle(pending(seed)).turnOrderCards);
+      if (roles[0] === "first") firstOnLeft += 1;
+    }
+    expect(firstOnLeft).toBeGreaterThan(70);
+    expect(firstOnLeft).toBeLessThan(130);
+  });
+
+  it("deals 3 cards plus the turn-1 draw to the first player and 4 cards plus the Coin to the enemy", () => {
+    const run = pending(1802);
+    const first = chooseTurnOrder(run, indexOf(run, "first"));
+    const battle = activeBattle(first);
+    expect(battle.firstSide).toBe("player");
+    expect(battle.activeSide).toBe("player");
+    expect(battle.turnNumber).toBe(1);
+    expect(battle.playerMana).toEqual({ current: 1, max: 1, temporary: 0 });
+    expect(battle.hand).toHaveLength(4);
+    expect(battle.hand.some(({ cardId }) => cardId === "the-coin")).toBe(false);
+    expect(battle.drawPile).toHaveLength(26);
+    expect(battle.enemyHand).toHaveLength(5);
+    expect(battle.enemyHand.filter(({ cardId }) => cardId === "the-coin")).toHaveLength(1);
+    expect(battle.enemyDrawPile).toHaveLength(26);
+  });
+
+  it("makes the enemy play first when the player is second: 4 cards and the Coin for the player, mana 1 for both", () => {
+    const run = pending(1803);
+    const second = chooseTurnOrder(run, indexOf(run, "second"));
+    const dealt = activeBattle(second);
+    expect(dealt.firstSide).toBe("enemy");
+    expect(dealt.activeSide).toBe("enemy");
+    expect(dealt.hand).toHaveLength(5);
+    expect(dealt.hand.filter(({ cardId }) => cardId === "the-coin")).toHaveLength(1);
+    expect(dealt.enemyHand).toHaveLength(3);
+    expect(dealt.turnNumber).toBe(1);
+
+    const afterEnemy = resolveEnemyTurn(second);
+    const battle = activeBattle(afterEnemy);
+    expect(battle.activeSide).toBe("player");
+    expect(battle.turnNumber).toBe(1);
+    expect(battle.enemyMana.max).toBe(1);
+    expect(battle.playerMana).toEqual({ current: 1, max: 1, temporary: 0 });
+    expect(battle.hand).toHaveLength(6); // 4 cards, the Coin and the turn-1 draw
+  });
+
+  it.each(["first", "second"] as const)("gives each side the mana of its own n-th turn, min(10, n), when the player is %s", (role) => {
+    const run = pending(1804 + (role === "first" ? 0 : 1));
+    let current = chooseTurnOrder(run, indexOf(run, role));
+    if (role === "second") current = resolveEnemyTurn(current);
+    const seen: Array<{ player: number; enemy: number }> = [];
+    for (let turn = 1; turn <= 12 && current.status === "active"; turn += 1) {
+      const battle = activeBattle(current);
+      battle.playerHero.health = 30;
+      battle.enemyBoard = [];
+      battle.enemyHero.health = battle.enemyHero.maxHealth;
+      expect(battle.playerMana.max).toBe(Math.min(10, turn));
+      expect(battle.turnNumber).toBe(turn);
+      current = endPlayerTurn(current);
+      if (current.status !== "active") break;
+      // The enemy's turn n has just been played (first) or the enemy's turn n + 1 (second): its mana cap is its own turn count.
+      seen.push({ player: battle.playerMana.max, enemy: activeBattle(current).enemyMana.max });
+    }
+    for (const [index, entry] of seen.entries()) {
+      expect(entry.enemy).toBe(Math.min(10, role === "first" ? index + 1 : index + 2));
+    }
+  });
+
+  it("lets a minion summoned in a side's turn attack only on that side's next turn, for both orders", () => {
+    for (const role of ["first", "second"] as const) {
+      const run = pending(1810);
+      let current = chooseTurnOrder(run, indexOf(run, role));
+      if (role === "second") current = resolveEnemyTurn(current);
+      const battle = activeBattle(current);
+      battle.playerMana = { current: 10, max: 10, temporary: 0 };
+      battle.hand = [instance("wolf", "ash-wolf")];
+      const summoned = playMinion(current, "wolf");
+      expect(() => attackWithMinion(summoned, "wolf", activeBattle(summoned).enemyHero.id)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+      const wolf = activeBattle(summoned).playerBoard[0]!;
+      const later = copyRun(summoned);
+      activeBattle(later).turnNumber = wolf.summonedTurn + 1;
+      expect(attackWithMinion(later, "wolf", activeBattle(later).enemyHero.id).battle?.playerBoard[0]?.hasAttacked).toBe(true);
+    }
+  });
+
+  it("makes the Coin give +1 mana for this turn and then leave the game", () => {
+    const run = pending(1820);
+    const second = resolveEnemyTurn(chooseTurnOrder(run, indexOf(run, "second")));
+    const battle = activeBattle(second);
+    const coin = battle.hand.find(({ cardId }) => cardId === "the-coin")!;
+    const cast = castSpell(second, coin.instanceId);
+    const after = activeBattle(cast);
+    expect(after.playerMana).toEqual({ current: 2, max: 1, temporary: 1 });
+    expect(after.hand.some(({ cardId }) => cardId === "the-coin")).toBe(false);
+    expect(after.discardPile.some(({ cardId }) => cardId === "the-coin")).toBe(false);
+    // The extra mana is gone when the turn ends.
+    const nextTurn = endPlayerTurn(cast);
+    expect(activeBattle(nextTurn).playerMana).toEqual({ current: 2, max: 2, temporary: 0 });
+  });
+
+  it("keeps a card of cost 1 or less in a 4-card opening hand and keeps the Coin through the redraw", () => {
+    for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
+      for (let seed = 1; seed <= 60; seed += 1) {
+        const run = pending(seed, playerClass);
+        const second = chooseTurnOrder(run, indexOf(run, "second"));
+        const hand = activeBattle(second).hand;
+        expect(hand.filter(({ cardId }) => cardId !== "the-coin").some(({ cardId }) => CARD_BY_ID.get(cardId)!.cost <= 1)).toBe(true);
+        const played = resolveEnemyTurn(second);
+        const redrawn = redrawOpeningHand(played);
+        const redrawnBattle = activeBattle(redrawn);
+        expect(redrawnBattle.hand).toHaveLength(activeBattle(played).hand.length);
+        expect(redrawnBattle.hand.filter(({ cardId }) => cardId === "the-coin")).toHaveLength(1);
+        expect(redrawnBattle.hand.filter(({ cardId }) => cardId !== "the-coin").some(({ cardId }) => CARD_BY_ID.get(cardId)!.cost <= 1)).toBe(true);
+      }
+    }
+  });
+
+  it("treats a saved battle without a turn-order field as player-first and keeps a pending one pending", () => {
+    const legacy = copyRun(createRun(1830));
+    delete activeBattle(legacy).firstSide;
+    delete activeBattle(legacy).playerFatigue;
+    expect(hydrateRunForCurrentBattle(legacy).battle?.firstSide).toBe("player");
+    const waiting = copyRun(pending(1831));
+    delete activeBattle(waiting).playerFatigue;
+    expect(hydrateRunForCurrentBattle(waiting).battle?.firstSide).toBeNull();
+  });
+
+  it("lets the enemy use its Coin", () => {
+    const run = asEnemyTurn(createRun(1840));
+    const battle = activeBattle(run);
+    battle.turnNumber = 3;
+    battle.enemyMana = { current: 3, max: 3, temporary: 0 };
+    battle.enemyHand = [instance("enemy-coin", "the-coin"), instance("enemy-big", "moon-stag")];
+    run.completedBattles = 1;
+    const result = resolveEnemyTurn(run);
+    // Moon Stag costs 5: with 3 mana and the Coin the enemy still cannot pay, so it keeps both cards; with 4 it plays both.
+    expect(result.battle?.enemyBoard).toHaveLength(0);
+    const richer = copyRun(run);
+    activeBattle(richer).enemyMana = { current: 4, max: 4, temporary: 0 };
+    activeBattle(richer).turnNumber = 4;
+    const played = resolveEnemyTurn(richer);
+    expect(played.battle?.enemyBoard.map(({ cardId }) => cardId)).toEqual(["moon-stag"]);
+    expect(played.battle?.enemyDiscardPile.some(({ cardId }) => cardId === "the-coin")).toBe(false);
   });
 });

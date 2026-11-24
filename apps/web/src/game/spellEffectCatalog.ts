@@ -56,11 +56,11 @@ export function heroPowerVisualId(playerClass: PlayerClass): string {
 const HERO_POWER_VISUAL_IDS: readonly string[] = (["warrior", "assassin", "demonist"] as const).map(heroPowerVisualId);
 
 /**
- * Every effect that must eventually have a unique visual: all spell cards (player and boss-only)
+ * Every effect that must eventually have a unique visual: all spell cards (player and boss-only; token spells such as the Coin reuse another effect)
  * plus the three hero powers. A new spell card fails the completeness checks until it gets a visual.
  */
 export const REQUIRED_SPELL_VISUAL_IDS: readonly string[] = [
-  ...CARD_CATALOG.filter((card) => card.kind === "spell").map((card) => card.id),
+  ...CARD_CATALOG.filter((card) => card.kind === "spell" && !card.tokenOnly).map((card) => card.id),
   ...HERO_POWER_VISUAL_IDS,
 ];
 

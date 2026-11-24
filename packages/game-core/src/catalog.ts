@@ -1,5 +1,8 @@
 import type { CardDefinition, EnemyDefinition, FusionRecipe, MinionEffect, PlayerClass, PlayerClassDefinition, SpellEffect } from "./types.js";
 
+/** The card the second player of a battle receives (Hearthstone's Coin): +1 mana for the turn, then it leaves the game. */
+export const COIN_CARD_ID = "the-coin";
+
 const SUMMONED_CARD_NAMES: Readonly<Record<string, string>> = {
   "bone-rat": "뼈 쥐",
   "cinder-imp": "불씨 임프",
@@ -137,6 +140,7 @@ const BASE_CARD_CATALOG: readonly CardDefinition[] = [
   spell("soul-lance", "영혼 창", 2, [{ kind: "damage", amount: 3, target: "enemyMinion" }]),
   spell("healing-mist", "치유 안개", 2, [{ kind: "heal", amount: 4, target: "playerHero" }]),
   spell("mana-spring", "마력의 샘", 0, [{ kind: "gainMana", amount: 1 }], "normal", true),
+  { ...spell(COIN_CARD_ID, "동전", 0, [{ kind: "gainMana", amount: 1 }]), artKey: "mana-spring", tokenOnly: true },
   spell("soul-bargain", "영혼의 거래", 1, [{ kind: "discardRandom" }, { kind: "gainTemporaryMana", amount: 3 }]),
   spell("raise-bones", "뼈 무리", 3, [{ kind: "summon", cardId: "bone-rat", count: 2 }]),
   spell("rune-surge", "룬의 파동", 2, [{ kind: "buff", attack: 2, health: 1, target: "playerMinion" }]),

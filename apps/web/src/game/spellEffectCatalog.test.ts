@@ -33,7 +33,8 @@ describe("spell visual registry", () => {
     expect(REQUIRED_SPELL_VISUAL_IDS).toHaveLength(35);
     expect(new Set(REQUIRED_SPELL_VISUAL_IDS).size).toBe(35);
     for (const id of ["hero-power-warrior", "hero-power-assassin", "hero-power-demonist"]) expect(REQUIRED_SPELL_VISUAL_IDS).toContain(id);
-    const spellIds = CARD_CATALOG.filter((card) => card.kind === "spell").map((card) => card.id);
+    // The Coin is a token spell that plays the Mana Spring visual, so it needs no effect of its own.
+    const spellIds = CARD_CATALOG.filter((card) => card.kind === "spell" && !card.tokenOnly).map((card) => card.id);
     expect(spellIds).toHaveLength(32);
     for (const id of spellIds) expect(REQUIRED_SPELL_VISUAL_IDS).toContain(id);
   });

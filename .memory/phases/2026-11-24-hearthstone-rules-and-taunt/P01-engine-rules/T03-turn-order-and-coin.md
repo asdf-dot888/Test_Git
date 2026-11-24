@@ -1,6 +1,6 @@
 # Task: T03 Turn-Order Pick, Opening Hands and the Coin
 
-## Status: todo
+## Status: done
 
 ## Goal
 Every battle starts in a "turn order pending" state with two face-down cards; the player picks one (a random placement of "first" and "second"); the engine then deals Hearthstone opening hands (first side 3 cards, second side 4 cards plus the Coin) and starts the first side's turn. The enemy can be the first side.
@@ -53,4 +53,5 @@ Task: T03-turn-order-and-coin
 ```
 
 ## Progress
-- [ ] done
+- [x] done. Implemented with an option instead of a test-helper wrapper: `createRun/startBattle/advanceRun(..., { pickTurnOrder })`; default = player first (hands dealt, turn started), `pickTurnOrder: true` = pending battle (`firstSide: null`, empty hands) until `chooseTurnOrder`. New: `COIN_CARD_ID` token spell (gainMana 1, artKey mana-spring, leaves the game after use), `TurnOrderRole`, `TURN_ORDER_PENDING`, `dealTurnOrder`, opening hand of 3/4 with the cheap-card guarantee, redraw keeps the Coin, round-number rule (`startPlayerTurn(run, advanceRound)`, increment in `endPlayerTurnWithPlayback` when the enemy is first), hydrate default `firstSide = player`, API schema fields. Web: coin reuses the Mana Spring visual and is excluded from the required spell-visual list; `ruleMessage` knows the new code. Tests: new describe 'turn order pick and the Coin', old expectations (4 cards, enemy 5 cards, catalog 90) updated, 11 golden hashes re-captured. 1245 tests (101 files), lint and build pass.
+- commit: see Git history

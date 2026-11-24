@@ -154,7 +154,7 @@ describe("authenticated Run API", () => {
     expect(repository.save).toHaveBeenCalledWith(userId, ownerId, "etag-1", expect.objectContaining({ seed: 88 }), instant);
     expect(repository.save.mock.calls[0]?.[3]).not.toHaveProperty("userId");
     expect(repository.save.mock.calls[0]?.[3].battle?.enemyStarterDeck).toHaveLength(30);
-    expect(repository.save.mock.calls[0]?.[3].battle?.enemyHand).toHaveLength(3);
+    expect(repository.save.mock.calls[0]?.[3].battle?.enemyHand).toHaveLength(5);
     expect(repository.save.mock.calls[0]?.[3].pendingVictoryAcknowledgement).toBe(true);
     expect(repository.save.mock.calls[0]?.[3].openingHandRedrawAvailable).toBe(true);
   });
@@ -269,6 +269,31 @@ describe("authenticated Run API", () => {
     expect(response.status).toBe(200);
     expect(repository.save.mock.calls[0]?.[3].battle?.playerFatigue).toBe(3);
     expect(repository.save.mock.calls[0]?.[3].battle?.enemyFatigue).toBe(2);
+  });
+
+  it("keeps a pending turn-order pick and the chosen side through a save", async () => {
+    await repository.create(userId, createRun(17), ownerId, instant);
+    const pending = createRun(91, "warrior", "normal", { pickTurnOrder: true });
+    const response = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run: pending }),
+    });
+    expect(response.status).toBe(200);
+    const saved = repository.save.mock.calls[0]?.[3].battle;
+    expect(saved?.firstSide).toBeNull();
+    expect(saved?.turnOrderCards).toEqual(pending.battle?.turnOrderCards);
+    expect(saved?.hand).toHaveLength(0);
+
+    const enemyFirst = createRun(92);
+    enemyFirst.battle!.firstSide = "enemy";
+    const second = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-2", "x-run-owner": ownerId },
+      body: JSON.stringify({ run: enemyFirst }),
+    });
+    expect(second.status).toBe(200);
+    expect(repository.save.mock.calls[1]?.[3].battle?.firstSide).toBe("enemy");
   });
 
   it("accepts a legacy battle without enemy zones and saves its hydrated state", async () => {

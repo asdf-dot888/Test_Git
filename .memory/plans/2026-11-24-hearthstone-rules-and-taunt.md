@@ -14,6 +14,7 @@ Make the game follow Hearthstone's rules: 1 draw per turn, fatigue instead of re
 - New battle fields (all optional in saved data, filled by `hydrateRunForCurrentBattle`): `playerFatigue`, `enemyFatigue` (default 0), `firstSide` (`"player" | "enemy" | null`; `null` = turn order not chosen yet; saved in-progress battles default to `"player"`), `turnOrderCards` (what is behind the two face-down cards).
 - The API (`apps/api/src/routes/runRoutes.ts`) parses runs with a zod `battleSchema` that **strips unknown keys**: every new battle field must be added there or a saved run silently loses it.
 - The Coin is `gainMana` 1 (the existing Mana Spring effect: +1 mana for this turn, capped at 10), cost 0, `tokenOnly`, removed from the game after use.
+- Turn-order API (decided while implementing P01-T03): `createRun`, `startBattle` and `advanceRun` take `{ pickTurnOrder?: boolean }`. Without it the battle starts with the player first (hands dealt, turn started), so tests and the tutorial keep working; with `pickTurnOrder: true` the battle is pending (`firstSide === null`) until `chooseTurnOrder(run, cardIndex)`. The web and the API switch to `pickTurnOrder: true` in P02-T03.
 - `attackAllReadyMinions` stays in the engine (rewritten to hit the hero only when no taunt) until P02-T01 removes it together with the web button, so the web build stays green between tasks.
 
 ## Phases

@@ -204,7 +204,9 @@ function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardI
  * primary event (the first event of the spec's focus effect, else the first event) and the rest as follow-ups.
  * Casts without a registered visual stay untagged so they keep the generic presentation.
  */
-function tagSpellVisual(events: CombatEffectEvent[], startIndex: number, visualId: string): void {
+function tagSpellVisual(events: CombatEffectEvent[], startIndex: number, castVisualId: string): void {
+  // The Coin has no visual of its own: it plays the Mana Spring effect.
+  const visualId = castVisualId === gameConstants.coinCardId ? "mana-spring" : castVisualId;
   const spec = getSpellVisualSpec(visualId);
   const cast = events.slice(startIndex);
   if (!spec || cast.length === 0) return;
