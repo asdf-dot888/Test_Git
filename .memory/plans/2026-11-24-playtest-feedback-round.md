@@ -30,7 +30,7 @@ Besides the enemy's low mana (fixed in P04-T01), `planEnemyTurn` starts from an 
 | P01 | `done` | All-attack and end-turn button positions (PC and mobile), turn badge, board border and turn banner, 30-second timer, boss panel text | [P01](../phases/2026-11-24-playtest-feedback-round/P01-battle-layout-and-turn-clarity/phase.md) |
 | P02 | `done` | Floating damage and heal numbers for every source, card rustle hover sound with preview | [P02](../phases/2026-11-24-playtest-feedback-round/P02-combat-feedback/phase.md) |
 | P03 | `done` | Player mana recovery 2/3/4 and two Mana Springs in the starter deck | [P03](../phases/2026-11-24-playtest-feedback-round/P03-mana-and-starter-deck/phase.md) |
-| P04 | `todo` | Enemy minion health bonus removed, enemy mana +2, attack planning, mana-efficient card plans, balance tuning with the simulation | [P04](../phases/2026-11-24-playtest-feedback-round/P04-enemy-difficulty/phase.md) |
+| P04 | `done` | Enemy minion health bonus removed, enemy mana +2, attack planning, mana-efficient card plans, balance tuning with the simulation | [P04](../phases/2026-11-24-playtest-feedback-round/P04-enemy-difficulty/phase.md) |
 | P05 | `todo` | Guide and docs, phone checklist addendum, full audit and close-out | [P05](../phases/2026-11-24-playtest-feedback-round/P05-close-out/phase.md) |
 
 ## Risks

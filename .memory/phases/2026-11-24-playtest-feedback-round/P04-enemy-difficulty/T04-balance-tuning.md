@@ -1,6 +1,6 @@
 # Task: T04 Balance Tuning with the Simulation
 
-## Status: todo
+## Status: done (averages reached; class gap target NOT reached, reported to the user)
 
 ## Goal
 After P03 (faster player mana, two Mana Springs) and P04-T01..T03 (enemy changes), tune the enemy until the average completion rate is inside the README targets and write the reports.
@@ -46,7 +46,9 @@ Task: T04-balance-tuning
 Commit the code, README and the `docs/balance/2026-11-24-feedback-round-*.md` reports by explicit path (intermediate rounds may go in the same commit).
 
 ## Progress
-- [ ] baseline recorded
-- [ ] rounds recorded (list: round, knobs changed, normal %, hard %, class gap)
-- [ ] final run meets the targets
-- commit: pending
+- [x] baseline recorded (`docs/balance/2026-11-24-feedback-round-baseline.md`, 300 runs): normal 30.7%, hard 7.6%.
+- [x] rounds recorded in `docs/balance/2026-11-24-feedback-round-summary.md` (7 rounds, each with its own report file). Final knobs: normal enemy `minionAttack {0, 1, 1}` and `heroHealth {0, 0, 0}`; hard unchanged (`heroHealth {0, 8, 16}`, `minionAttack {1, 1, 2}`); `minionHealth` 0 for both; attack beam width normal 3 / hard 8 and weights unchanged; `ENEMY_MANA_USE_WEIGHT` 0; enemy mana +2. The biggest lever is the normal attack bonus (+1 gives about 30%, 0 gives about 96%); hero health bonus and attack beam width barely matter.
+- [x] final run: **normal 55.7%** (49.2 / 61.3 / 56.6, 1000 runs, in range but near the lower edge), **hard 7.1%** (3.7 / 13.4 / 4.2, 1000 runs, in range).
+- [ ] **Not met: class gap within 5 points** (normal 12.1, hard 9.7; warrior lowest, assassin highest, with many "stalled" warrior battles). The allowed knobs do not move it; the earlier balance rounds fixed gaps by retuning class cards and hero powers, which was outside the decided design, so it was left for the user to decide.
+- [x] validation passed: build clean, lint clean, 1194 tests (101 files). README difficulty paragraph updated.
+- commit: see Git history

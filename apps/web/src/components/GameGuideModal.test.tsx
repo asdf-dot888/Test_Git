@@ -19,6 +19,7 @@ describe("GameGuideModal", () => {
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(screen.getByText("MANGO STONE")).toBeTruthy();
     expect(dialog.textContent).toContain("일반 전투 3회 후 보스 전투 1회");
+    expect(dialog.textContent).toContain("일반 난이도에서는 3턴마다, 하드에서는 2턴마다");
     expect(dialog.textContent).toContain("전투는 마나 5/10으로 시작합니다");
     expect(dialog.textContent).toContain("2~3턴에 2, 4~6턴에 3, 7턴부터 4씩");
     expect(dialog.textContent).toContain("양쪽 모두 상대 하수인의 공격력만큼 피해");

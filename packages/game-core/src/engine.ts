@@ -44,8 +44,8 @@ interface EnemyPhaseBonus {
 // Enemy minions keep the health of the same card the player uses (minionHealth stays 0); difficulty comes from attack, hero health, mana and smarter play.
 const ENEMY_PHASE_BONUS: Record<RunDifficulty, EnemyPhaseBonus> = {
   normal: {
-    heroHealth: { 1: 0, 2: 4, 3: 8 },
-    minionAttack: { 1: 1, 2: 1, 3: 1 },
+    heroHealth: { 1: 0, 2: 0, 3: 0 },
+    minionAttack: { 1: 0, 2: 1, 3: 1 },
     minionHealth: { 1: 0, 2: 0, 3: 0 },
   },
   hard: {

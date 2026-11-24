@@ -68,3 +68,17 @@ Not verified by Claude (no phone or browser available). Please try on a real pho
 5. The page does not scroll or zoom while dragging the button, and no image-save or text-selection menu appears on iOS Safari and Android Chrome.
 6. The button is small (34–40 px): check that a finger can start the drag easily and that the ghost is not hidden under the finger.
 7. Warrior and demonist: the button still works with a single tap and cannot be dragged.
+
+### Addendum (2026-11-24, plan `2026-11-24-playtest-feedback-round`): PC and phone checklist for the playtest feedback changes
+Not verified by Claude (no phone, browser or speakers available). Please try:
+PC:
+1. The all-attack button is left of the end-turn button in the bottom toolbar; pressing it attacks, then the turn ends as before.
+2. The top bar badge says `내 턴` / `상대 턴`, the board border turns gold / red with the turn, and a banner shows for about one second at each turn change; the banner never blocks a click.
+3. Every hit shows a red `-N`, heals show a green `+N`, boss area attacks show one number per target, armor shows a shield mark `⬟ -N`; the numbers do not cover the minion stats.
+4. Hovering a card makes a soft rustle that cannot be confused with the timer warning (say: keep, softer, shorter, lower or quieter; the five `HOVER_*` constants in `game/audio.ts` are the knobs). You can also press "호버 소리 (카드 사락)" on `/?effects-preview`.
+5. The turn lasts 30 seconds; the boss panel names `3·6·9` on normal and `2·4·6` on hard.
+Phone (width <= 760px):
+6. The end-turn button sits above the hero portrait (gold, small), all-attack takes the old end-turn spot in the bottom toolbar, nothing overlaps the hero power button, and both are easy to hit.
+7. The turn badge and banner are visible; the damage numbers are readable.
+Game feel:
+8. The enemy plays cards regularly (it no longer idles when behind on board and has 2 mana per turn), the same cards have the same health on both sides, and normal and hard feel at their target difficulty.

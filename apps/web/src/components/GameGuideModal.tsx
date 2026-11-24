@@ -26,7 +26,7 @@ export function GameGuideModal({ open, onClose, onReplayTutorial, inputMode }: G
         <div className="game-guide-content">
           <section>
             <h3>원정 진행</h3>
-            <p>원정은 총 3페이즈로 진행됩니다. 각 페이즈에서 일반 전투 3회 후 보스 전투 1회를 치릅니다.</p>
+            <p>원정은 총 3페이즈로 진행됩니다. 각 페이즈에서 일반 전투 3회 후 보스 전투 1회를 치릅니다. 보스는 카드 행동 뒤 일반 난이도에서는 3턴마다, 하드에서는 2턴마다 내 하수인과 영웅 모두에게 피해 1을 줍니다.</p>
           </section>
           <section>
             <h3>마나와 카드</h3>
