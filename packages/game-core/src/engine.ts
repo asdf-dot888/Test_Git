@@ -27,8 +27,8 @@ function manaCapForTurn(turnNumber: number): number {
   return Math.min(MAX_MANA, Math.max(1, turnNumber));
 }
 const INITIAL_MANA = manaCapForTurn(1);
-/** Cards each side draws at the start of every turn after the first; cards beyond the hand limit go to the discard pile. */
-const TURN_DRAW_COUNT = 5;
+/** Cards each side draws at the start of its own turn (Hearthstone); cards beyond the hand limit go to the discard pile. */
+const TURN_DRAW_COUNT = 1;
 /** The cost up to which hard enemy decks favor cards when they are built (the old starting mana). */
 const CHEAP_CARD_COST = 5;
 /** The boss area attack comes every Nth turn: every 3rd on normal, every 2nd on hard. */
@@ -172,7 +172,8 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   const hasClassResources = Number.isInteger(battle.playerArmor) && Number.isInteger(battle.soulShards) && typeof battle.heroPowerUsed === "boolean";
   const hasTemporaryMana = Number.isInteger(battle.playerMana?.temporary) && Number.isInteger(battle.enemyMana?.temporary);
   const hasObsoleteCharge = Object.prototype.hasOwnProperty.call(battle, "pendingEnemyCharge");
-  if (hasEnemyZones && hasClassResources && hasTemporaryMana && !hasObsoleteCharge && run.openingHandRedrawAvailable !== undefined) return run;
+  const hasFatigue = Number.isInteger(battle.playerFatigue) && Number.isInteger(battle.enemyFatigue);
+  if (hasEnemyZones && hasClassResources && hasTemporaryMana && hasFatigue && !hasObsoleteCharge && run.openingHandRedrawAvailable !== undefined) return run;
 
   const next = cloneRun(run);
   next.openingHandRedrawAvailable ??= false;
@@ -193,6 +194,8 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   current.playerArmor ??= 0;
   current.soulShards ??= 0;
   current.heroPowerUsed ??= false;
+  current.playerFatigue ??= 0;
+  current.enemyFatigue ??= 0;
   delete (current as BattleState & { pendingEnemyCharge?: unknown }).pendingEnemyCharge;
   return next;
 }
@@ -319,22 +322,6 @@ function expireTemporaryMana(mana: BattleState["playerMana"]): void {
   mana.temporary = 0;
 }
 
-function refillDrawPile(run: RunState, battle: BattleState): void {
-  const recycled = run.starterDeck.map((instance) => {
-    const copy = makeInstance(run, instance.cardId, "recycle");
-    run.nextInstanceNumber += 1;
-    return copy;
-  });
-  const result = shuffle(recycled, battle.rngState);
-  battle.rngState = result.state;
-  battle.drawPile.push(...result.items);
-}
-
-function takeDraw(run: RunState, battle: BattleState): CardInstance | null {
-  if (battle.drawPile.length === 0) refillDrawPile(run, battle);
-  return battle.drawPile.shift() ?? null;
-}
-
 /**
  * The opening hand is the first three cards of the shuffled deck, except that it always holds a card the player can pay for on turn 1
  * (cost 1 or less, as turn 1 has 1 mana): if there is none, the first such card of the deck replaces the third card.
@@ -354,40 +341,41 @@ function openingHandAndDrawPile(shuffled: CardInstance[]): { hand: CardInstance[
   return { hand, drawPile: rest };
 }
 
-function drawForPlayerTurn(run: RunState, battle: BattleState): void {
-  for (let drawn = 0; drawn < TURN_DRAW_COUNT; drawn += 1) {
-    const card = takeDraw(run, battle);
-    if (!card) return;
-    if (battle.hand.length < MAX_HAND) battle.hand.push(card);
-    else battle.discardPile.push(card);
+/**
+ * Fatigue (Hearthstone): drawing from an empty draw pile does not reshuffle anything; it deals 1, then 2, then 3, ...
+ * damage to the drawing side's hero. Armor absorbs it for the player.
+ */
+function applyFatigue(run: RunState, side: PlayerSide, deferDefeat = false): RunState {
+  const battle = run.battle;
+  if (!battle) return run;
+  if (side === "player") {
+    battle.playerFatigue = (battle.playerFatigue ?? 0) + 1;
+    return dealDamageToPlayerHero(run, battle.playerFatigue, deferDefeat);
   }
+  battle.enemyFatigue = (battle.enemyFatigue ?? 0) + 1;
+  return dealDamageToEnemyHero(run, battle.enemyFatigue);
 }
 
-function refillEnemyDrawPile(run: RunState, battle: BattleState): void {
-  const recycled = battle.enemyStarterDeck.map((instance) => {
-    const copy = makeInstance(run, instance.cardId, "enemy-recycle");
-    run.nextInstanceNumber += 1;
-    return copy;
-  });
-  const result = shuffle(recycled, battle.rngState);
-  battle.rngState = result.state;
-  battle.enemyDrawPile.push(...result.items);
+/** Draws one card for a side into its hand (overflow goes to its discard pile), or applies fatigue when its draw pile is empty. */
+function drawIntoHand(run: RunState, side: PlayerSide, deferDefeat = false): RunState {
+  const battle = run.battle;
+  if (!battle) return run;
+  const pile = side === "player" ? battle.drawPile : battle.enemyDrawPile;
+  const card = pile.shift();
+  if (!card) return applyFatigue(run, side, deferDefeat);
+  const hand = side === "player" ? battle.hand : battle.enemyHand;
+  const discard = side === "player" ? battle.discardPile : battle.enemyDiscardPile;
+  if (hand.length < MAX_HAND) hand.push(card);
+  else discard.push(card);
+  return run;
 }
 
-function takeEnemyDraw(run: RunState, battle: BattleState): CardInstance | null {
-  if (battle.enemyDrawPile.length === 0) refillEnemyDrawPile(run, battle);
-  return battle.enemyDrawPile.shift() ?? null;
-}
-
-function drawForSpell(run: RunState, battle: BattleState, count: number, side: PlayerSide): void {
+function drawForSpell(run: RunState, count: number, side: PlayerSide, deferDefeat = false): RunState {
   for (let drawn = 0; drawn < count; drawn += 1) {
-    const hand = side === "player" ? battle.hand : battle.enemyHand;
-    const discard = side === "player" ? battle.discardPile : battle.enemyDiscardPile;
-    const card = side === "player" ? takeDraw(run, battle) : takeEnemyDraw(run, battle);
-    if (!card) return;
-    if (hand.length < MAX_HAND) hand.push(card);
-    else discard.push(card);
+    run = drawIntoHand(run, side, deferDefeat);
+    if (run.status !== "active" || run.battle?.status !== "active") break;
   }
+  return run;
 }
 
 function summonOnBoard(
@@ -566,8 +554,7 @@ function applySpellEffect(
       return run;
     }
     case "draw":
-      drawForSpell(run, battle, effect.count, caster);
-      return run;
+      return drawForSpell(run, effect.count, caster, deferDefeat);
     case "gainMana": {
       // Like Hearthstone's Coin: extra mana for this turn only, up to 10 in total.
       const mana = caster === "player" ? battle.playerMana : battle.enemyMana;
@@ -654,8 +641,7 @@ function startPlayerTurn(run: RunState): RunState {
   battle.playerMana = { current: playerCap, max: playerCap, temporary: 0 };
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   battle.heroPowerUsed = false;
-  drawForPlayerTurn(run, battle);
-  return run;
+  return drawIntoHand(run, "player");
 }
 
 function selectEnemySpellTarget(effect: SpellEffect, battle: BattleState, difficulty: RunDifficulty = "normal"): string | undefined {
@@ -1299,6 +1285,8 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     enemyId: encounter.enemyId,
     rngState: enemyDeck.state,
     status: "active",
+    playerFatigue: 0,
+    enemyFatigue: 0,
   };
   nextRun.battle = battle;
   return nextRun;
@@ -1575,9 +1563,7 @@ export function discardBeforeDraw(run: RunState, handInstanceId: string): RunSta
   const [discarded] = battle.hand.splice(index, 1);
   battle.discardPile.push(discarded!);
   battle.pendingDiscardBeforeDraw = false;
-  const card = takeDraw(next, battle);
-  if (card) battle.hand.push(card);
-  return next;
+  return drawIntoHand(next, "player");
 }
 
 export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution {
@@ -1592,12 +1578,10 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   const enemyCap = manaCapForTurn(battle.turnNumber);
   battle.enemyMana = { current: enemyCap, max: enemyCap, temporary: 0 };
 
-  // The enemy acts second, so it already draws on its first turn (the player draws from its second turn on).
+  // The enemy draws at the start of each of its turns (its first included); an empty draw pile means fatigue.
   for (let drawn = 0; drawn < TURN_DRAW_COUNT; drawn += 1) {
-    const card = takeEnemyDraw(next, battle);
-    if (!card) break;
-    if (battle.enemyHand.length < MAX_HAND) battle.enemyHand.push(card);
-    else battle.enemyDiscardPile.push(card);
+    next = drawIntoHand(next, "enemy", true);
+    if (next.status !== "active" || next.battle?.status !== "active") return { run: next, steps };
   }
 
   const turnPlan = next.completedBattles > 0 ? planEnemyTurn(next, enemy) : null;

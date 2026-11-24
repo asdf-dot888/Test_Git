@@ -85,9 +85,11 @@ function asEnemyTurn(run: RunState): RunState {
   activeBattle(next).activeSide = "enemy";
   // Enemy mana is min(10, turn number): scenarios play on a late turn so the enemy has its full 10 mana.
   activeBattle(next).turnNumber = Math.max(activeBattle(next).turnNumber, 10);
-  // The enemy draws 5 cards per turn: scenarios start with an empty draw pile (and no refill source) so only the cards a test sets up are in play.
+  // Scenarios start with an empty enemy draw pile so only the cards a test sets up are in play. An empty draw is fatigue
+  // (1, 2, 3 ... damage); the counter starts at -1 here so the first empty draw of a scenario deals 0 and leaves hero health untouched.
   activeBattle(next).enemyDrawPile = [];
   activeBattle(next).enemyStarterDeck = [];
+  activeBattle(next).enemyFatigue = -1;
   return next;
 }
 
@@ -765,6 +767,7 @@ describe("random, cleave, and deck-theft spells", () => {
     battle.enemyHand = [instance("enemy-theft", "stolen-fate")];
     battle.enemyDrawPile = [];
     battle.enemyStarterDeck = [];
+    battle.enemyFatigue = -1; // the empty turn draw deals 0, so the enemy hero stays at full health
     // Healing Mist is never cast at full health, so the stolen card stays in the hand to be found.
     battle.drawPile = [instance("player-draw-identity", "healing-mist")];
     const resolution = resolveEnemyTurnWithPlayback(run);
@@ -963,7 +966,7 @@ describe("player actions and battle rules", () => {
       const cap = Math.min(10, turn);
       expect(run.battle?.turnNumber).toBe(turn);
       expect(run.battle?.playerMana).toEqual({ current: cap, max: cap, temporary: 0 });
-      expect(run.battle?.hand).toHaveLength(5);
+      expect(run.battle?.hand).toHaveLength(1); // one draw per turn
     }
   });
 
@@ -976,18 +979,25 @@ describe("player actions and battle rules", () => {
     expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 5, max: 5, temporary: 0 });
   });
 
-  it("draws five cards per turn up to the hand limit and burns the rest into the discard pile", () => {
+  it("draws one card per turn and burns it into the discard pile when the hand is full", () => {
     const run = copyRun(createRun(224));
     const battle = activeBattle(run);
     battle.playerHero.health = 30;
-    battle.hand = Array.from({ length: 8 }, (_, index) => instance(`kept-${index}`, "ash-wolf"));
-    battle.drawPile = ["a", "b", "c", "d", "e", "f"].map((id) => instance(`draw-${id}`, "bone-rat"));
+    battle.hand = Array.from({ length: 10 }, (_, index) => instance(`kept-${index}`, "ash-wolf"));
+    battle.drawPile = ["a", "b", "c"].map((id) => instance(`draw-${id}`, "bone-rat"));
     battle.discardPile = [];
     const next = endPlayerTurn(run);
     expect(next.battle?.hand).toHaveLength(10);
-    expect(next.battle?.discardPile.map(({ instanceId }) => instanceId)).toEqual(["draw-c", "draw-d", "draw-e"]);
-    expect(next.battle?.drawPile.map(({ instanceId }) => instanceId)).toEqual(["draw-f"]);
+    expect(next.battle?.discardPile.map(({ instanceId }) => instanceId)).toEqual(["draw-a"]);
+    expect(next.battle?.drawPile.map(({ instanceId }) => instanceId)).toEqual(["draw-b", "draw-c"]);
     expect(next.battle?.pendingDiscardBeforeDraw).toBeFalsy();
+
+    const open = copyRun(createRun(225));
+    activeBattle(open).playerHero.health = 30;
+    activeBattle(open).hand = [instance("only", "ash-wolf")];
+    activeBattle(open).drawPile = ["a", "b"].map((id) => instance(`draw-${id}`, "bone-rat"));
+    const drawn = endPlayerTurn(open);
+    expect(drawn.battle?.hand.map(({ instanceId }) => instanceId)).toEqual(["only", "draw-a"]);
   });
 
   it("refills the enemy's mana too, whatever it spent or kept", () => {
@@ -1233,7 +1243,6 @@ describe("player actions and battle rules", () => {
     expect(run.battle?.pendingDiscardBeforeDraw).toBeFalsy();
     expect(run.battle?.hand).toHaveLength(10);
     expect(run.battle?.discardPile.some((card) => card.instanceId === "next-draw")).toBe(true);
-    expect(run.battle?.discardPile.length).toBeGreaterThanOrEqual(5);
     // A saved run from before this rule can still be waiting for a discard before its draw.
     const pending = copyRun(createRun(13));
     activeBattle(pending).hand = Array.from({ length: gameConstants.maxHand }, (_, index) => instance(`held-${index}`, "ash-wolf"));
@@ -1248,19 +1257,66 @@ describe("player actions and battle rules", () => {
     expect(discarded.battle?.discardPile.some((card) => card.instanceId === "held-4")).toBe(true);
   });
 
-  it("refills an empty draw pile from a shuffled fresh copy of the initial 30 cards", () => {
+  it("never reshuffles: an empty draw pile deals fatigue 1, 2, 3 to the player's hero and armor absorbs it", () => {
     const run = copyRun(createRun(14));
     const battle = activeBattle(run);
     battle.drawPile = [];
     battle.hand = [instance("one", "ash-wolf")];
-    battle.enemyBoard = Array.from({ length: gameConstants.maxBoard }, (_, index) => minion({ instanceId: `full-enemy-${index}`, owner: "enemy", summonedTurn: 99 }));
-    const drawn = endPlayerTurn(run);
-    expect(drawn.battle?.hand).toHaveLength(6);
-    expect(drawn.battle?.drawPile).toHaveLength(25);
-    expect(drawn.battle?.drawPile.every((card) => run.starterDeck.some((starter) => starter.cardId === card.cardId))).toBe(true);
-    expect(drawn.battle?.drawPile.every((card) => card.instanceId.startsWith("recycle-") || card.instanceId.startsWith("card-"))).toBe(true);
-    expect(drawn.nextInstanceNumber).toBe(run.nextInstanceNumber + 30);
-    expect(run.battle?.drawPile).toHaveLength(0);
+    battle.enemyHand = [];
+    battle.enemyDrawPile = [];
+    battle.enemyFatigue = -1;
+    battle.enemyBoard = [];
+    battle.playerHero.health = 30;
+    const first = endPlayerTurn(run);
+    expect(first.battle?.hand).toHaveLength(1);
+    expect(first.battle?.drawPile).toHaveLength(0);
+    expect(first.battle?.playerFatigue).toBe(1);
+    expect(first.battle?.playerHero.health).toBe(29);
+    expect(first.nextInstanceNumber).toBe(run.nextInstanceNumber);
+    const second = endPlayerTurn(first);
+    expect(second.battle?.playerFatigue).toBe(2);
+    expect(second.battle?.playerHero.health).toBe(27);
+    const third = endPlayerTurn(second);
+    expect(third.battle?.playerFatigue).toBe(3);
+    expect(third.battle?.playerHero.health).toBe(24);
+
+    const armored = copyRun(first);
+    activeBattle(armored).playerArmor = 1;
+    activeBattle(armored).playerHero.health = 29;
+    const withArmor = endPlayerTurn(armored);
+    expect(withArmor.battle?.playerArmor).toBe(0);
+    expect(withArmor.battle?.playerHero.health).toBe(28);
+  });
+
+  it("ends the run when fatigue kills the player and wins the battle when it kills the enemy", () => {
+    const dying = copyRun(createRun(17));
+    activeBattle(dying).drawPile = [];
+    activeBattle(dying).playerFatigue = 4;
+    activeBattle(dying).playerHero.health = 5;
+    activeBattle(dying).enemyHand = [];
+    activeBattle(dying).enemyDrawPile = [];
+    activeBattle(dying).enemyFatigue = -1;
+    expect(endPlayerTurn(dying).status).toBe("defeat");
+
+    const enemyDying = copyRun(createRun(18));
+    activeBattle(enemyDying).enemyHand = [];
+    activeBattle(enemyDying).enemyDrawPile = [];
+    activeBattle(enemyDying).enemyFatigue = 4;
+    activeBattle(enemyDying).enemyHero.health = 5;
+    const won = endPlayerTurn(enemyDying);
+    expect(won.battle?.status).toBe("playerWon");
+    expect(won.battle?.enemyHero.health).toBe(0);
+  });
+
+  it("makes a draw spell on an empty draw pile cause fatigue", () => {
+    const run = copyRun(createRun(19));
+    const battle = activeBattle(run);
+    battle.hand = [instance("spell", "dark-insight")];
+    battle.drawPile = [];
+    const next = castSpell(run, "spell");
+    // Dark Insight draws 2: the first empty draw deals 1, the second 2.
+    expect(next.battle?.playerFatigue).toBe(2);
+    expect(next.battle?.playerHero.health).toBe(battle.playerHero.health - 3);
   });
 
   it("fills a sixth board slot with a battlecry summon and keeps death summons within capacity", () => {
@@ -1445,7 +1501,7 @@ describe("enemy turns, rewards, and run progression", () => {
     expect(result.battle?.playerHero.health).toBe(30);
   });
 
-  it("burns the draws that do not fit a full enemy hand and refills from the seeded starter deck", () => {
+  it("burns the draw that does not fit a full enemy hand and applies fatigue instead of refilling", () => {
     const run = asEnemyTurn(createRun(52));
     const battle = activeBattle(run);
     battle.enemyId = "bandit-scout";
@@ -1461,10 +1517,13 @@ describe("enemy turns, rewards, and run progression", () => {
     recycledBattle.enemyStarterDeck = Array.from({ length: 30 }, (_, index) => instance(`starter-${index}`, "healing-mist"));
     recycledBattle.enemyHand = [];
     recycledBattle.enemyDrawPile = [];
+    recycledBattle.enemyFatigue = 0;
     const result = resolveEnemyTurn(recycled);
-    expect(result.battle?.enemyHand).toHaveLength(5);
-    expect(result.battle?.enemyDrawPile).toHaveLength(25);
-    expect(result.battle?.enemyHand[0]?.instanceId).toMatch(/^enemy-recycle-/);
+    // The starter deck is never reshuffled in: an empty draw pile is fatigue for the enemy hero.
+    expect(result.battle?.enemyHand).toHaveLength(0);
+    expect(result.battle?.enemyDrawPile).toHaveLength(0);
+    expect(result.battle?.enemyFatigue).toBe(1);
+    expect(result.battle?.enemyHero.health).toBe(result.battle!.enemyHero.maxHealth - 1);
   });
 
   it("keeps Normal boss attacks on turns 3, 6, and 9 and schedules Hard attacks every 2 turns", () => {
@@ -1973,17 +2032,17 @@ describe("Hard expedition enemy health and tactical AI", () => {
 describe("enemy turn characterization (first battle and Hard planner stay unchanged)", () => {
   // Hashes were re-captured on 2026-11-24 for the new enemy rules (enemy mana +2 per turn, no minion health bonus, no wasted heals, Hearthstone mana curve, 5 draws per turn, all-attack); older captures predate the Normal turn planner.
   const GOLDEN_HASHES: Record<string, string> = {
-    "normal-first-9101": "e9c645d7d582",
-    "normal-first-9102": "d8205e8e6874",
-    "normal-first-9103": "4de87dd59e97",
-    "normal-first-9104": "a2861fe92308",
-    "normal-first-9105": "c7a26abaafd4",
-    "hard-first-9201": "b95ddf23e390",
-    "hard-first-9202": "f87374908df2",
-    "hard-first-9203": "ea594f0a4f52",
-    "hard-second-9301": "c5a42689d9c8",
-    "hard-second-9302": "995ce62ddf19",
-    "hard-second-9303": "788ee4ed060b",
+    "normal-first-9101": "9ef028178e45",
+    "normal-first-9102": "645f42d63b38",
+    "normal-first-9103": "d86868685a11",
+    "normal-first-9104": "e733fe6a5fbe",
+    "normal-first-9105": "54de9b755d2e",
+    "hard-first-9201": "b895d5529356",
+    "hard-first-9202": "122f4b01e5b6",
+    "hard-first-9203": "25b57867fe7f",
+    "hard-second-9301": "db3cfa3f0f7b",
+    "hard-second-9302": "67fca0ae2c3a",
+    "hard-second-9303": "d24b12c392b9",
   };
 
   function summarize(run: RunState) {
@@ -2281,9 +2340,9 @@ describe("enemy bonuses after the playtest feedback round", () => {
     }
   });
 
-  it("gives the enemy the same mana curve as the player (min(10, turn), refilled) and 5 draws every turn (hand limit 10)", () => {
+  it("gives the enemy the same mana curve as the player (min(10, turn), refilled) and 1 draw every turn (hand limit 10)", () => {
     expect(gameConstants.initialMana).toBe(1);
-    expect(gameConstants.turnDrawCount).toBe(5);
+    expect(gameConstants.turnDrawCount).toBe(1);
     // Healing Mist is never cast at full health, so nothing is played and only the draws are visible.
     const setup = (turnNumber: number, handSize: number, mana: number) => {
       const run = asEnemyTurn(createRun(910));
@@ -2297,15 +2356,15 @@ describe("enemy bonuses after the playtest feedback round", () => {
     };
     const turnTwo = resolveEnemyTurn(setup(2, 2, 0));
     expect(turnTwo.battle?.enemyMana).toEqual({ current: 2, max: 2, temporary: 0 });
-    expect(turnTwo.battle?.enemyHand).toHaveLength(7);
+    expect(turnTwo.battle?.enemyHand).toHaveLength(3);
     const firstTurn = resolveEnemyTurn(setup(1, 3, 0));
     expect(firstTurn.battle?.enemyMana).toEqual({ current: 1, max: 1, temporary: 0 });
-    expect(firstTurn.battle?.enemyHand).toHaveLength(8);
+    expect(firstTurn.battle?.enemyHand).toHaveLength(4);
     const lateTurn = resolveEnemyTurn(setup(12, 2, 0));
     expect(lateTurn.battle?.enemyMana).toEqual({ current: 10, max: 10, temporary: 0 });
-    const fullHand = resolveEnemyTurn(setup(4, 9, 10));
+    const fullHand = resolveEnemyTurn(setup(4, 10, 10));
     expect(fullHand.battle?.enemyHand).toHaveLength(10);
-    expect(fullHand.battle?.enemyDiscardPile).toHaveLength(4);
+    expect(fullHand.battle?.enemyDiscardPile).toHaveLength(1);
   });
 
 

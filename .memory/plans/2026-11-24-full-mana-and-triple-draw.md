@@ -2,7 +2,7 @@
 
 - Date: 2026-11-24
 - Decisions: [2026-11-24-full-mana-and-triple-draw](../decisions/2026-11-24-full-mana-and-triple-draw.md)
-- Status: engine, texts and tests done (1198 tests); balance retune pending (T03)
+- Status: engine, texts and tests done (1198 tests); T03 balance retune **superseded** by [2026-11-24-hearthstone-rules-and-taunt](./2026-11-24-hearthstone-rules-and-taunt.md) P03-T01 (5 draws per turn is replaced there by 1 draw plus fatigue and taunt)
 - Shell setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`, repository root `/Users/gimjinhyeon/Downloads/Mango_Stone`.
 
 ## Goal

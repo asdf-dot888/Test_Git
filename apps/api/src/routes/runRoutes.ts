@@ -53,6 +53,8 @@ const battleSchema = z.object({
   enemyId: id,
   rngState: z.number().int().safe(),
   status: z.enum(["active", "playerWon", "playerLost"]),
+  playerFatigue: z.number().int().min(0).max(1000).optional(),
+  enemyFatigue: z.number().int().min(0).max(1000).optional(),
   pendingDiscardBeforeDraw: z.boolean().optional().transform((value) => value ?? false),
 });
 const runSchema = z.object({

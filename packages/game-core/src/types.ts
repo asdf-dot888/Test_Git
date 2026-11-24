@@ -113,6 +113,9 @@ export interface BattleState {
   enemyId: string;
   rngState: number;
   status: "active" | "playerWon" | "playerLost";
+  /** Empty draws so far in this battle; the n-th one deals n damage to that side's hero (fatigue). Missing = 0. */
+  playerFatigue?: number;
+  enemyFatigue?: number;
   pendingDiscardBeforeDraw?: boolean;
   pendingEnemyCharge?: EnemyChargeState | null;
   enemyTurnEvents?: EnemyCombatRecord[];

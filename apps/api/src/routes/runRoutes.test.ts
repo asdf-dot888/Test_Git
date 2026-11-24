@@ -255,6 +255,22 @@ describe("authenticated Run API", () => {
     expect(repository.save.mock.calls[0]?.[3].openingHandRedrawAvailable).toBe(false);
   });
 
+  it("keeps the fatigue counters of a battle through a save", async () => {
+    await repository.create(userId, createRun(17), ownerId, instant);
+    const run = createRun(90);
+    run.battle!.playerFatigue = 3;
+    run.battle!.enemyFatigue = 2;
+    const response = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(repository.save.mock.calls[0]?.[3].battle?.playerFatigue).toBe(3);
+    expect(repository.save.mock.calls[0]?.[3].battle?.enemyFatigue).toBe(2);
+  });
+
   it("accepts a legacy battle without enemy zones and saves its hydrated state", async () => {
     await repository.create(userId, createRun(17), ownerId, instant);
     const run = createRun(88);

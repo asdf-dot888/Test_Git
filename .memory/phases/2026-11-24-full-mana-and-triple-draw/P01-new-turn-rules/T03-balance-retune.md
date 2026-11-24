@@ -1,6 +1,6 @@
 # Task: T03 Balance Retune
 
-## Status: todo
+## Status: superseded (see plan 2026-11-24-hearthstone-rules-and-taunt, P03-T01)
 
 ## Implementation
 - `npm run balance:sim -- --runs 300 ...` baseline, then adjust the enemy knobs (`ENEMY_PHASE_BONUS` attack and hero health, AI beam widths and weights) until normal 55-65% and hard 6-10% average completion; record reports under `docs/balance/2026-11-24-full-mana-*.md` and a summary. The class gap target (5 points) is reported, not forced. Stop and tell the user if the averages cannot be reached with these knobs.
