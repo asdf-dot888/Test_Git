@@ -982,7 +982,7 @@ describe("player actions and battle rules", () => {
     expect(next.battle?.playerMana).toEqual({ current: recovery, max: 10, temporary: 0 });
   });
 
-  it("adds the incoming turn recovery to carried mana and preserves enemy +1 recovery", () => {
+  it("adds the incoming turn recovery to carried mana and gives the enemy its own +2 recovery", () => {
     const run = copyRun(createRun(307));
     const battle = activeBattle(run);
     battle.turnNumber = 6;
@@ -994,7 +994,7 @@ describe("player actions and battle rules", () => {
 
     const next = endPlayerTurn(run);
     expect(next.battle?.playerMana).toEqual({ current: 8, max: 10, temporary: 0 });
-    expect(next.battle?.enemyMana).toEqual({ current: 1, max: 10, temporary: 0 });
+    expect(next.battle?.enemyMana).toEqual({ current: 2, max: 10, temporary: 0 });
   });
 
   it("enforces minion target priority and applies damage from both minions", () => {
@@ -1366,7 +1366,7 @@ describe("enemy turns, rewards, and run progression", () => {
     activeBattle(nextEnemyTurn).enemyMana.current = 0;
     activeBattle(nextEnemyTurn).enemyDrawPile = [instance("still-expensive", "eclipse")];
     const refreshed = resolveEnemyTurn(nextEnemyTurn);
-    expect(refreshed.battle?.enemyMana.current).toBe(1);
+    expect(refreshed.battle?.enemyMana.current).toBe(2);
   });
 
   it("spends mana on targeted damage spells and always chooses player minions first", () => {
@@ -1789,7 +1789,7 @@ describe("Hard expedition enemy health and tactical AI", () => {
     activeBattle(hardDirect).enemyStarterDeck = [];
     activeBattle(hardDirect).enemyDrawPile = [];
     const directResult = resolveEnemyTurn(hardDirect);
-    expect(directResult.battle?.enemyBoard).toContainEqual(expect.objectContaining({ cardId: "ash-wolf", attack: 3, health: 2, maxHealth: 2 }));
+    expect(directResult.battle?.enemyBoard).toContainEqual(expect.objectContaining({ cardId: "ash-wolf", attack: 3, health: 1, maxHealth: 1 }));
 
     const hardSummon = asEnemyTurn(startAtEnemy("boss-grave-king", "hard", 3));
     activeBattle(hardSummon).enemyMana.current = 10;
@@ -1799,8 +1799,8 @@ describe("Hard expedition enemy health and tactical AI", () => {
     const summonResult = resolveEnemyTurn(hardSummon);
     expect(summonResult.battle?.enemyBoard.filter(({ cardId }) => cardId === "grave-king-demon")).toHaveLength(2);
     expect(summonResult.battle?.enemyBoard).toEqual(expect.arrayContaining([
-      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 6, maxHealth: 6 }),
-      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 6, maxHealth: 6 }),
+      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 4, maxHealth: 4 }),
+      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 4, maxHealth: 4 }),
     ]));
 
     const playerRun = startAtEnemy("fallen-elf-scout", "hard", 3);
@@ -1950,18 +1950,18 @@ describe("Hard expedition enemy health and tactical AI", () => {
 
 
 describe("enemy turn characterization (first battle and Hard planner stay unchanged)", () => {
-  // Hashes were captured from the engine before the Normal turn planner was added.
+  // Hashes were re-captured on 2026-11-24 for the new enemy rules (enemy mana +2 per turn, no minion health bonus); older captures predate the Normal turn planner.
   const GOLDEN_HASHES: Record<string, string> = {
-    "normal-first-9101": "86f8d8b9555d",
+    "normal-first-9101": "eba9d2850c0d",
     "normal-first-9102": "652364184c4f",
-    "normal-first-9103": "d0a08427ab45",
+    "normal-first-9103": "7bea4cbc30d3",
     "normal-first-9104": "25b524ce4bd7",
-    "normal-first-9105": "ac462d6829b9",
-    "hard-first-9201": "ff716818aecc",
+    "normal-first-9105": "4c2ea579d501",
+    "hard-first-9201": "1142bf91b38d",
     "hard-first-9202": "bace8e48b0e9",
-    "hard-first-9203": "b9b445199362",
-    "hard-second-9301": "252b28f994e5",
-    "hard-second-9302": "454baf62468a",
+    "hard-first-9203": "e27d8f902682",
+    "hard-second-9301": "2dab74d663e5",
+    "hard-second-9302": "c5768de42a3a",
     "hard-second-9303": "dc7184f09568",
   };
 
@@ -2229,5 +2229,60 @@ describe("starter deck Mana Springs", () => {
       expect(run.deck).toHaveLength(30);
       expect(run.deck.filter(({ cardId }) => cardId === "mana-spring")).toHaveLength(2);
     }
+  });
+});
+
+describe("enemy bonuses after the playtest feedback round", () => {
+  function startAtEnemy(enemyId: string, difficulty: "normal" | "hard", phase: 1 | 2 | 3) {
+    const run = copyRun(createRun(8801, "warrior", difficulty));
+    run.battle = null;
+    run.encounters[0]!.status = "pending";
+    run.encounters[0]!.enemyId = enemyId;
+    run.encounters[0]!.phase = phase;
+    return startBattle(run, enemyId);
+  }
+
+  it("never gives enemy minions extra health (same card, same health)", () => {
+    for (const difficulty of ["normal", "hard"] as const) {
+      expect(gameConstants.enemyPhaseBonus[difficulty].minionHealth).toEqual({ 1: 0, 2: 0, 3: 0 });
+      for (const phase of [2, 3] as const) {
+        const run = asEnemyTurn(startAtEnemy("fallen-elf-scout", difficulty, phase));
+        activeBattle(run).enemyMana.current = 5;
+        activeBattle(run).enemyHand = [instance("enemy-ash-wolf", "ash-wolf")];
+        activeBattle(run).enemyStarterDeck = [];
+        activeBattle(run).enemyDrawPile = [];
+        const result = resolveEnemyTurn(run);
+        const wolf = result.battle?.enemyBoard.find(({ cardId }) => cardId === "ash-wolf");
+        expect(wolf).toMatchObject({ health: 1, maxHealth: 1 });
+      }
+    }
+  });
+
+  it("recovers 2 enemy mana per turn after the first turn and caps it at ten", () => {
+    expect(gameConstants.enemyManaRecovery).toBe(2);
+    const run = asEnemyTurn(createRun(910));
+    const battle = activeBattle(run);
+    battle.turnNumber = 3;
+    battle.enemyMana = { current: 4, max: 10, temporary: 0 };
+    battle.enemyHand = [];
+    battle.enemyStarterDeck = [];
+    battle.enemyDrawPile = [];
+    expect(resolveEnemyTurn(run).battle?.enemyMana.current).toBe(6);
+
+    const nearCap = asEnemyTurn(createRun(911));
+    activeBattle(nearCap).turnNumber = 3;
+    activeBattle(nearCap).enemyMana = { current: 9, max: 10, temporary: 0 };
+    activeBattle(nearCap).enemyHand = [];
+    activeBattle(nearCap).enemyStarterDeck = [];
+    activeBattle(nearCap).enemyDrawPile = [];
+    expect(resolveEnemyTurn(nearCap).battle?.enemyMana.current).toBe(10);
+
+    const firstTurn = asEnemyTurn(createRun(912));
+    activeBattle(firstTurn).turnNumber = 1;
+    activeBattle(firstTurn).enemyMana = { current: 5, max: 10, temporary: 0 };
+    activeBattle(firstTurn).enemyHand = [];
+    activeBattle(firstTurn).enemyStarterDeck = [];
+    activeBattle(firstTurn).enemyDrawPile = [];
+    expect(resolveEnemyTurn(firstTurn).battle?.enemyMana.current).toBe(5);
   });
 });

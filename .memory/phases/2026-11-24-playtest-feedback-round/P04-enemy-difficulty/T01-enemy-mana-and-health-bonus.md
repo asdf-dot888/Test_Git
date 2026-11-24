@@ -1,6 +1,6 @@
 # Task: T01 Enemy Mana +2 and No Minion Health Bonus
 
-## Status: todo
+## Status: done
 
 ## Goal
 Enemy minions get the same health as the same card for the player; the enemy instead recovers `+2` mana per turn (was `+1`). Everything else about the enemy bonuses stays as the starting values for tuning.
@@ -38,6 +38,7 @@ Task: T01-enemy-mana-and-health-bonus
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `ENEMY_PHASE_BONUS.*.minionHealth` is `{1: 0, 2: 0, 3: 0}` for both difficulties (field kept as a knob); `ENEMY_MANA_RECOVERY = 2` exported, used in `resolveEnemyTurnWithPlayback` and in `gameConstants.enemyManaRecovery`. README "적 강화" paragraph updated (final wording in P04-T04/P05).
+- Tests: updated the pinned enemy tests (enemy mana 2, ash wolf 3/1 and demon 6/4 in Hard phases); **re-captured seven golden hashes** of the "enemy turn characterization" test because enemy mana changed (the other four hashes are unchanged); added tests that no enemy minion has extra health in phases 2-3 on both difficulties and that enemy mana recovers 2 per turn after turn 1 and caps at 10.
+- [x] validation passed: build clean, lint clean, 1174 tests (101 files).
+- commit: see Git history

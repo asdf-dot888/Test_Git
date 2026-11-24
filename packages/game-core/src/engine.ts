@@ -23,6 +23,8 @@ const MAX_BOARD = 6;
 const HERO_HEALTH = 30;
 const INITIAL_MANA = 5;
 const MAX_MANA = 10;
+/** Mana the enemy recovers every turn after the first (the player recovers 2-4). */
+export const ENEMY_MANA_RECOVERY = 2;
 /** Mana the player recovers at the start of a turn: 2 on turns 2-3, 3 on turns 4-6, 4 from turn 7. Unspent mana carries over up to the maximum. */
 export function playerManaRecovery(turnNumber: number): number {
   return turnNumber <= 3 ? 2 : turnNumber <= 6 ? 3 : 4;
@@ -39,16 +41,17 @@ interface EnemyPhaseBonus {
 
 // Per-difficulty enemy bonuses by expedition phase. They never apply to the first battle of a run
 // (phase 1 with no completed battles; later phases always follow completed battles in real runs).
+// Enemy minions keep the health of the same card the player uses (minionHealth stays 0); difficulty comes from attack, hero health, mana and smarter play.
 const ENEMY_PHASE_BONUS: Record<RunDifficulty, EnemyPhaseBonus> = {
   normal: {
     heroHealth: { 1: 0, 2: 4, 3: 8 },
     minionAttack: { 1: 1, 2: 1, 3: 1 },
-    minionHealth: { 1: 1, 2: 1, 3: 1 },
+    minionHealth: { 1: 0, 2: 0, 3: 0 },
   },
   hard: {
     heroHealth: { 1: 0, 2: 8, 3: 16 },
     minionAttack: { 1: 1, 2: 1, 3: 2 },
-    minionHealth: { 1: 2, 2: 1, 3: 2 },
+    minionHealth: { 1: 0, 2: 0, 3: 0 },
   },
 };
 
@@ -1401,7 +1404,7 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   battle.enemyTurnEvents = [];
   delete (battle as BattleState & { pendingEnemyCharge?: unknown }).pendingEnemyCharge;
   battle.enemyMana.max = MAX_MANA;
-  if (battle.turnNumber > 1) gainRegularMana(battle.enemyMana, 1);
+  if (battle.turnNumber > 1) gainRegularMana(battle.enemyMana, ENEMY_MANA_RECOVERY);
 
   if (battle.enemyHand.length >= MAX_HAND) {
     const scored = battle.enemyHand.map((instance) => ({ instance, score: scoreEnemyCard(getCard(instance.cardId), battle, enemy, next.difficulty, next.completedBattles) }));
@@ -1555,4 +1558,5 @@ export const gameConstants = {
   enemyPhaseBonus: ENEMY_PHASE_BONUS,
   bossAreaCadence: BOSS_AREA_ATTACK_EVERY_N_TURNS,
   playerManaRecovery,
+  enemyManaRecovery: ENEMY_MANA_RECOVERY,
 } as const;
