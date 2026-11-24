@@ -23,6 +23,10 @@ const MAX_BOARD = 6;
 const HERO_HEALTH = 30;
 const INITIAL_MANA = 5;
 const MAX_MANA = 10;
+/** Mana the player recovers at the start of a turn: 2 on turns 2-3, 3 on turns 4-6, 4 from turn 7. Unspent mana carries over up to the maximum. */
+export function playerManaRecovery(turnNumber: number): number {
+  return turnNumber <= 3 ? 2 : turnNumber <= 6 ? 3 : 4;
+}
 /** The boss area attack comes every Nth turn: every 3rd on normal, every 2nd on hard. */
 export const BOSS_AREA_ATTACK_EVERY_N_TURNS: Record<RunDifficulty, number> = { normal: 3, hard: 2 };
 const SOUL_SHARD_HERO_POWER_COST = 3;
@@ -625,7 +629,7 @@ function startPlayerTurn(run: RunState): RunState {
   battle.activeSide = "player";
   // Normalize saved runs created under the previous, growing-cap rule.
   battle.playerMana.max = MAX_MANA;
-  const manaRecovery = battle.turnNumber <= 3 ? 1 : battle.turnNumber <= 6 ? 2 : 3;
+  const manaRecovery = playerManaRecovery(battle.turnNumber);
   gainRegularMana(battle.playerMana, manaRecovery);
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   battle.heroPowerUsed = false;
@@ -1550,4 +1554,5 @@ export const gameConstants = {
   normalAiBeamWidth,
   enemyPhaseBonus: ENEMY_PHASE_BONUS,
   bossAreaCadence: BOSS_AREA_ATTACK_EVERY_N_TURNS,
+  playerManaRecovery,
 } as const;

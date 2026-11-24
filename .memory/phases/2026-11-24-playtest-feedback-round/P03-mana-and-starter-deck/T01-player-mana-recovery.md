@@ -1,6 +1,6 @@
 # Task: T01 Player Mana Recovery 2 / 3 / 4
 
-## Status: todo
+## Status: done
 
 ## Goal
 At the start of each player turn the player recovers 2 mana on turns 2-3, 3 mana on turns 4-6 and 4 mana from turn 7 (was 1 / 2 / 3). Starting mana 5, maximum 10 and carry-over of unspent mana stay.
@@ -41,6 +41,6 @@ Task: T01-player-mana-recovery
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `playerManaRecovery(turnNumber)` exported from `engine.ts` (2 / 3 / 4) and in `gameConstants`; `startPlayerTurn` uses it. Texts updated: `GameGuideModal.tsx` (+ its test), `apps/web/public/game-architecture.html` and its copy `docs/game-architecture.html`. The balance bot has no mana-per-turn assumption. Engine tests updated (tier table, carried mana, empty mana, legacy cap, temporary mana expiry) plus a table test for `gameConstants.playerManaRecovery`.
+- [x] validation passed: build clean, lint clean, 1168 tests (101 files). Balance numbers will drift (the game is easier now); P04-T04 retunes them.
+- commit: see Git history

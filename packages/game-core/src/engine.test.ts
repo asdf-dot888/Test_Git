@@ -935,7 +935,7 @@ describe("player actions and battle rules", () => {
       activeBattle(run).playerHero.health = 30;
       activeBattle(run).hand = [];
       run = endPlayerTurn(run);
-      const recovery = turn <= 3 ? 1 : turn <= 6 ? 2 : 3;
+      const recovery = turn <= 3 ? 2 : turn <= 6 ? 3 : 4;
       expectedMana = Math.min(10, expectedMana + recovery);
       expect(run.battle?.playerMana).toEqual({ current: expectedMana, max: 10, temporary: 0 });
     }
@@ -948,27 +948,27 @@ describe("player actions and battle rules", () => {
     activeBattle(preserved).playerHero.health = 30;
     activeBattle(preserved).hand = [];
     const next = endPlayerTurn(preserved);
-    expect(next.battle?.playerMana).toEqual({ current: 6, max: 10, temporary: 0 });
+    expect(next.battle?.playerMana).toEqual({ current: 7, max: 10, temporary: 0 });
 
     const empty = copyRun(createRun(222));
     activeBattle(empty).playerMana.current = 0;
     activeBattle(empty).playerHero.health = 30;
     activeBattle(empty).hand = [];
-    expect(endPlayerTurn(empty).battle?.playerMana).toEqual({ current: 1, max: 10, temporary: 0 });
+    expect(endPlayerTurn(empty).battle?.playerMana).toEqual({ current: 2, max: 10, temporary: 0 });
 
     const legacy = copyRun(createRun(223));
     activeBattle(legacy).playerMana = { current: 5, max: 6, temporary: 0 };
     activeBattle(legacy).playerHero.health = 30;
     activeBattle(legacy).hand = [];
-    expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 6, max: 10, temporary: 0 });
+    expect(endPlayerTurn(legacy).battle?.playerMana).toEqual({ current: 7, max: 10, temporary: 0 });
   });
 
   it.each([
-    [2, 1],
-    [3, 1],
-    [4, 2],
-    [6, 2],
-    [7, 3],
+    [2, 2],
+    [3, 2],
+    [4, 3],
+    [6, 3],
+    [7, 4],
   ])("recovers %i-turn tier amount on the incoming player turn", (incomingTurn, recovery) => {
     const run = copyRun(createRun(300 + incomingTurn));
     const battle = activeBattle(run);
@@ -993,7 +993,7 @@ describe("player actions and battle rules", () => {
     battle.enemyHand = [instance("enemy-eclipse", "eclipse")];
 
     const next = endPlayerTurn(run);
-    expect(next.battle?.playerMana).toEqual({ current: 7, max: 10, temporary: 0 });
+    expect(next.battle?.playerMana).toEqual({ current: 8, max: 10, temporary: 0 });
     expect(next.battle?.enemyMana).toEqual({ current: 1, max: 10, temporary: 0 });
   });
 
@@ -1135,7 +1135,7 @@ describe("player actions and battle rules", () => {
 
     const nextTurn = endPlayerTurn(run);
     expect(nextTurn.battle?.turnNumber).toBe(2);
-    expect(nextTurn.battle?.playerMana).toEqual({ current: 6, max: 10, temporary: 0 });
+    expect(nextTurn.battle?.playerMana).toEqual({ current: 7, max: 10, temporary: 0 });
   });
 
   it("uses enemy-owned discard and temporary mana, then expires its remainder", () => {
@@ -2210,5 +2210,11 @@ describe("per-difficulty enemy phase bonus tables", () => {
 describe("boss area attack cadence constant", () => {
   it("is every 3rd turn on normal and every 2nd turn on hard", () => {
     expect(gameConstants.bossAreaCadence).toEqual({ normal: 3, hard: 2 });
+  });
+});
+
+describe("player mana recovery by turn", () => {
+  it("recovers 2 on turns 2-3, 3 on turns 4-6 and 4 from turn 7", () => {
+    expect([2, 3, 4, 5, 6, 7, 8, 12].map(gameConstants.playerManaRecovery)).toEqual([2, 2, 3, 3, 3, 4, 4, 4]);
   });
 });
