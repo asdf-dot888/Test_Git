@@ -69,6 +69,7 @@ export function renderReport(cells: readonly CellSummary[], meta: ReportMeta): s
     `- 게임 커밋: ${meta.gameCommit}`,
     `- 기본 시드: ${meta.baseSeed}`,
     `- 셀당 런 수: ${meta.runs}`,
+    "- 규칙: 하스스톤식 마나, 턴당 드로우 1장, 탈진, 도발, 전투마다 선후공 선택(봇은 선공/후공을 번갈아 고름)",
     "- 시드는 모든 직업에 동일하게 적용합니다(쌍 비교).",
     "- 봇은 사람보다 약하므로 절대 승률이 아니라 직업·난이도 간 상대 차이만 의미가 있습니다.",
     "- E1~E12는 원정의 열두 인카운터 순서입니다(페이즈당 일반 3 + 보스 1).",

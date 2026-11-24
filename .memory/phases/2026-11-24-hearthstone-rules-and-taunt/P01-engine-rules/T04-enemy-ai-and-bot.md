@@ -1,6 +1,6 @@
 # Task: T04 Enemy AI, Simulation Bot and Constants Follow the New Rules
 
-## Status: todo
+## Status: done
 
 ## Goal
 The enemy card planner, the enemy turn, the simulation bot and the shared constants use the new rules (taunt, fatigue, turn order, the Coin) so the simulation produces meaningful numbers.
@@ -44,4 +44,5 @@ Task: T04-enemy-ai-and-bot
 ```
 
 ## Progress
-- [ ] done
+- [x] done. Bot: `startBattleAsBot` (picks first/second alternating by seed and battle, plays the enemy's opening turn when second), taunt-aware `chooseAttackTarget` (lethal face, taunt first, bad trade goes face), simulate.ts uses `pickTurnOrder`; engine: `ENEMY_TAUNT_BOARD_BONUS` = 6 in `enemyBoardValue`, `gameConstants.turnOrderRoles/enemyTauntBoardBonus`; the enemy Coin play is covered by the T03 test; report header names the new rules. Smoke simulation (30 runs per cell, ~1 s per cell, report docs/balance/2026-11-24-hs-rules-smoke.md): no stalled battles, about 8 turns per battle, completion 0 % (normal battle win 74-76 %, hard 64-67 %, first boss E4 only 12-42 %); retuning is P03-T01. 1249 tests (101 files), lint and build pass.
+- commit: see Git history

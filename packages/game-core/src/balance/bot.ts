@@ -2,11 +2,14 @@ import { CARD_BY_ID, FUSION_RECIPES } from "../catalog.js";
 import {
   attackWithMinion,
   castSpell,
+  chooseTurnOrder,
   discardBeforeDraw,
   endPlayerTurn,
   fuseMinions,
   gameConstants,
+  hasTaunt,
   playMinion,
+  resolveEnemyTurn,
   redrawOpeningHand,
   useHeroPower,
 } from "../engine.js";
@@ -348,12 +351,24 @@ function heroPowerPhase(ctx: TurnContext): void {
   }
 }
 
+function isReadyToAttack(minion: MinionState, battle: BattleState): boolean {
+  return minion.attack > 0 && minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !isRooted(minion);
+}
+
 function chooseAttackTarget(battle: BattleState, attacker: MinionState): string | null {
-  if (battle.enemyBoard.length === 0) return battle.enemyHero.id;
+  // Hearthstone legality: only taunt minions can be attacked while one stands; otherwise any minion or the hero.
+  const taunts = battle.enemyBoard.filter(hasTaunt);
+  const candidates = taunts.length > 0 ? taunts : battle.enemyBoard;
+  const heroAllowed = taunts.length === 0;
+  if (heroAllowed) {
+    const readyDamage = battle.playerBoard.filter((minion) => isReadyToAttack(minion, battle)).reduce((total, minion) => total + minion.attack, 0);
+    if (readyDamage >= battle.enemyHero.health) return battle.enemyHero.id;
+  }
+  if (candidates.length === 0) return heroAllowed ? battle.enemyHero.id : null;
   const attackerCost = cardCost(attacker.cardId);
   let best: { id: string; score: number; attack: number } | null = null;
   let strongest: MinionState | null = null;
-  for (const target of battle.enemyBoard) {
+  for (const target of candidates) {
     const kills = attacker.attack >= target.health;
     const dies = target.attack >= attacker.health;
     let score: number;
@@ -367,7 +382,22 @@ function chooseAttackTarget(battle: BattleState, attacker: MinionState): string 
     if (!strongest || target.attack > strongest.attack) strongest = target;
   }
   if (best && best.score > 0) return best.id;
+  // A bad trade is not worth it: free damage to the hero when nothing blocks it.
+  if (heroAllowed) return battle.enemyHero.id;
   return battle.playerHero.health <= DESPERATE_HERO_HEALTH && strongest ? strongest.instanceId : null;
+}
+
+/**
+ * Picks one of the two face-down turn-order cards (alternating by seed and battle so both orders get played equally often)
+ * and, when the enemy is first, lets its opening turn play out.
+ */
+export function startBattleAsBot(run: RunState): RunState {
+  const battle = run.battle;
+  if (!battle || battle.firstSide !== null || !battle.turnOrderCards) return run;
+  const wanted = (run.seed + run.completedBattles) % 2 === 0 ? "first" : "second";
+  let next = chooseTurnOrder(run, battle.turnOrderCards[0] === wanted ? 0 : 1);
+  if (next.battle?.activeSide === "enemy") next = resolveEnemyTurn(next);
+  return next;
 }
 
 function attackPhase(ctx: TurnContext): void {

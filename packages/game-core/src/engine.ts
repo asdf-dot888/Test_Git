@@ -946,8 +946,11 @@ function betterPlan(candidate: HardPlanNode, current: HardPlanNode | null): bool
   return comparePlanTieBreak(candidate, current) < 0;
 }
 
+/** Extra value of an own taunt minion on the enemy board: it shields the hero and the other minions. A tuning knob. */
+const ENEMY_TAUNT_BOARD_BONUS = 6;
+
 function enemyBoardValue(battle: BattleState): number {
-  return battle.enemyBoard.reduce((total, minion) => total + 3 * minion.attack + 2 * minion.health, 0)
+  return battle.enemyBoard.reduce((total, minion) => total + 3 * minion.attack + 2 * minion.health + (hasTaunt(minion) ? ENEMY_TAUNT_BOARD_BONUS : 0), 0)
     - battle.playerBoard.reduce((total, minion) => total + 4 * minion.attack + minion.health, 0);
 }
 
@@ -1825,4 +1828,6 @@ export const gameConstants = {
   bossAreaCadence: BOSS_AREA_ATTACK_EVERY_N_TURNS,
   turnDrawCount: TURN_DRAW_COUNT,
   coinCardId: COIN_CARD_ID,
+  turnOrderRoles: ["first", "second"] as const,
+  enemyTauntBoardBonus: ENEMY_TAUNT_BOARD_BONUS,
 } as const;

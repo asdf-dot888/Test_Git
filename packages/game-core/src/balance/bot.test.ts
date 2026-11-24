@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CARD_BY_ID } from "../catalog.js";
 import { createRun } from "../engine.js";
 import type { PlayerClass, RunDifficulty, RunState } from "../types.js";
-import { cardValue, playBotTurn } from "./bot.js";
+import { cardValue, playBotTurn, startBattleAsBot } from "./bot.js";
 
 const CLASSES: PlayerClass[] = ["warrior", "assassin", "demonist"];
 const DIFFICULTIES: RunDifficulty[] = ["normal", "hard"];
@@ -81,3 +81,47 @@ describe("playBotTurn", () => {
     expect(discarded).toContain("test-b");
   });
 });
+
+describe("turn order and taunt", () => {
+  it("picks first and second equally often and plays the enemy's opening turn when it is second", () => {
+    let secondCount = 0;
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const started = startBattleAsBot(createRun(seed, "warrior", "normal", { pickTurnOrder: true }));
+      const battle = started.battle!;
+      expect(battle.firstSide === "player" || battle.firstSide === "enemy").toBe(true);
+      expect(battle.activeSide).toBe("player");
+      if (battle.firstSide === "enemy") {
+        secondCount += 1;
+        expect(battle.hand.some(({ cardId }) => cardId === "the-coin")).toBe(true);
+      }
+    }
+    expect(secondCount).toBeGreaterThan(10);
+    expect(secondCount).toBeLessThan(30);
+  });
+
+  it("attacks the taunt minion first, and goes for the hero when nothing blocks it", () => {
+    const makeMinion = (instanceId: string, cardId: string, owner: "player" | "enemy", attack: number, health: number) =>
+      ({ instanceId, cardId, owner, attack, health, maxHealth: health, summonedTurn: 0, hasAttacked: false });
+    const taunted = createRun(21, "warrior", "normal");
+    const tauntedBattle = taunted.battle!;
+    tauntedBattle.turnNumber = 3;
+    tauntedBattle.hand = [];
+    tauntedBattle.playerBoard = [makeMinion("mine", "ash-wolf", "player", 3, 3)];
+    tauntedBattle.enemyBoard = [makeMinion("plain", "ash-wolf", "enemy", 1, 1), makeMinion("guard", "warrior-vanguard", "enemy", 1, 4)];
+    const afterTaunt = playBotTurn(taunted).run.battle!;
+    // The bot's 3-attack minion hit the taunt minion (4 health, left with 1) and not the hero; the enemy turn that follows does not heal.
+    expect(afterTaunt.enemyBoard.find(({ instanceId }) => instanceId === "guard")?.health).toBe(1);
+    expect(afterTaunt.enemyHero.health).toBe(tauntedBattle.enemyHero.health);
+
+    const open = createRun(22, "warrior", "normal");
+    const openBattle = open.battle!;
+    openBattle.turnNumber = 3;
+    openBattle.hand = [];
+    openBattle.playerBoard = [makeMinion("mine", "ash-wolf", "player", 1, 1)];
+    openBattle.enemyBoard = [makeMinion("big", "moon-stag", "enemy", 5, 5)];
+    // A 1/1 into a 5/5 is a bad trade: it hits the hero instead.
+    const afterOpen = playBotTurn(open).run.battle!;
+    expect(afterOpen.enemyHero.health).toBeLessThan(openBattle.enemyHero.health);
+  });
+});
+

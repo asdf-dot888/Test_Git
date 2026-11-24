@@ -8,7 +8,7 @@ import {
   skipReward,
 } from "../engine.js";
 import type { PlayerClass, RunDifficulty, RunState } from "../types.js";
-import { cardValue, playBotTurn } from "./bot.js";
+import { cardValue, playBotTurn, startBattleAsBot } from "./bot.js";
 
 /** Dev-only expedition simulator. Not exported from the package index. */
 
@@ -125,7 +125,7 @@ export interface RunSimulationResult {
 }
 
 export function simulateRun(seed: number, playerClass: PlayerClass, difficulty: RunDifficulty): RunSimulationResult {
-  let run = createRun(seed, playerClass, difficulty);
+  let run = startBattleAsBot(createRun(seed, playerClass, difficulty, { pickTurnOrder: true }));
   const encounterResults: EncounterResult[] = [];
   let stalledBattles = 0;
   let completed = false;
@@ -162,7 +162,7 @@ export function simulateRun(seed: number, playerClass: PlayerClass, difficulty: 
       break;
     }
     run = applyReward(run);
-    run = advanceRun(run, run.seed + run.completedBattles * SEED_STRIDE + 1);
+    run = startBattleAsBot(advanceRun(run, run.seed + run.completedBattles * SEED_STRIDE + 1, { pickTurnOrder: true }));
   }
 
   if (!completed && failedEncounterIndex === null) {
