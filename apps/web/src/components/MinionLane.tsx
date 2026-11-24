@@ -22,6 +22,8 @@ interface MinionLaneProps {
   onSelectTarget(targetId: string): void;
   onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
   intentTargetIds?: string[];
+  /** Enemy minions that cannot be attacked right now because a taunt minion stands (shown dimmed while attacking). */
+  blockedTargetIds?: string[];
   /** When false, a finger tap goes to the minion's own action (used while the assassin hero power asks for a target). */
   tapDetails?: boolean;
   /** Touch drag: valid targets are outlined while a card or minion is being dragged. */
@@ -69,7 +71,7 @@ function LaneMinion({ minion, definition, draggable, tapDetails, getValidTargets
   );
 }
 
-export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget, onDropTarget, intentTargetIds = [], tapDetails = true, dropHighlights, getValidTargets, onDragStateChange }: MinionLaneProps) {
+export function MinionLane({ side, minions, selectedAttackerId, targetMode, targetSide, disabled, turnNumber, onSelectTarget, onDropTarget, intentTargetIds = [], blockedTargetIds = [], tapDetails = true, dropHighlights, getValidTargets, onDragStateChange }: MinionLaneProps) {
   const occupied = new Map(minions.map((minion) => [minion.instanceId, minion]));
   const validKeys = new Set((dropHighlights?.valid ?? []).map(formatDropTarget));
   const hoveredKey = dropHighlights?.hovered ? formatDropTarget(dropHighlights.hovered) : null;
@@ -120,6 +122,7 @@ export function MinionLane({ side, minions, selectedAttackerId, targetMode, targ
                   disabled={disabled || (side === "enemy" && targetMode === "none") || ((targetMode === "spell" || targetMode === "hero-power") && targetSide !== side) || (targetMode === "attack" && side === "enemy" && targetSide !== side)}
                   draggable={side === "player" && !disabled}
                   intentTarget={intentTargetIds.includes(minion.instanceId)}
+                  blocked={blockedTargetIds.includes(minion.instanceId)}
                   exhausted={attackUnavailable && !targetable}
                   onSelect={() => {
                     if (side === "player" && (targetMode === "none" || isSelectingAttacker) && (minion.summonedTurn >= turnNumber || minion.hasAttacked || minion.statusEffects?.some((status) => status.kind === "root"))) return;

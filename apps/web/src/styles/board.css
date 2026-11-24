@@ -209,10 +209,6 @@
 .hero-power-shard-total, .hero-power-status { display: block; margin-top: 6px; color: #d1b4e7; font-size: 9px; }
 .hero-power-popover p { margin: 7px 0 0; color: #c9bfae; font-size: 10px; line-height: 1.4; white-space: normal; }
 .hero-power-status { color: var(--gold-bright); }
-.all-attack-button { min-height: 36px; padding: 0 13px; display: inline-flex; align-items: center; gap: 7px; color: #eee1ca; border: 1px solid #715d42; border-radius: 8px; background: linear-gradient(145deg, #332b24, #211f20); font-size: 11px; font-weight: 800; white-space: nowrap; }
-.all-attack-button > span { font-size: 15px; line-height: 1; }
-.all-attack-button.is-ready { color: #241d12; border-color: #f2d291; background: linear-gradient(135deg, #efce8d, #c08a42); box-shadow: 0 0 14px rgb(212 170 98 / 28%); cursor: pointer; }
-.all-attack-button.is-unavailable { opacity: .5; cursor: not-allowed; }
 .soul-shard-count { color: #d59aff; font-size: 10px; }
 .turn-controls-spacer { justify-self: end; }
 .turn-controls-spacer .turn-controls { gap: 8px; }
@@ -408,8 +404,6 @@
   .hero-power-control { margin-top: 4px; }
   .hero-power-button { width: 34px; height: 34px; }
   .hero-power-glyph { font-size: 18px; }
-  .all-attack-button { min-height: 29px; padding-inline: 7px; gap: 4px; font-size: 9px; }
-  .all-attack-button > span { font-size: 12px; }
   .turn-controls-spacer { grid-column: 3; grid-row: 2; }
   .class-choice-grid { grid-template-columns: 1fr; }
   .class-choice { min-height: 118px; padding: 9px; grid-template-columns: 92px minmax(0, 1fr); grid-template-rows: auto auto auto; justify-items: start; align-content: center; gap: 5px 10px; text-align: left; }

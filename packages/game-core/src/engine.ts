@@ -1634,26 +1634,6 @@ export function attackWithMinion(run: RunState, attackerId: string, targetId: st
   return consumeOpeningHandRedraw(dealDamageToEnemyHero(next, attacker.attack));
 }
 
-export function attackAllReadyMinions(run: RunState): RunState {
-  const initial = cloneRun(run);
-  const battle = assertPlayerTurn(initial);
-  if (!legalAttackTargets(battle, "player").heroAllowed) fail("INVALID_TARGET", "A taunt minion must be attacked first.");
-  const attackerIds = battle.playerBoard
-    .filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root"))
-    .map(({ instanceId }) => instanceId);
-  if (attackerIds.length === 0) fail("INVALID_ACTION", "There are no ready minions to attack.");
-
-  let current = initial;
-  for (const attackerId of attackerIds) {
-    const currentBattle = current.battle;
-    if (!currentBattle || current.status !== "active" || currentBattle.activeSide !== "player" || currentBattle.status !== "active") break;
-    const attacker = currentBattle.playerBoard.find((minion) => minion.instanceId === attackerId);
-    if (!attacker || attacker.summonedTurn >= currentBattle.turnNumber || attacker.hasAttacked || attacker.statusEffects?.some((status) => status.kind === "root")) continue;
-    current = attackWithMinion(current, attackerId, currentBattle.enemyHero.id);
-  }
-  return current;
-}
-
 export function discardBeforeDraw(run: RunState, handInstanceId: string): RunState {
   const next = cloneRun(run);
   const battle = assertActiveRun(next);

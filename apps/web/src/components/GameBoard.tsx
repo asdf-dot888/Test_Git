@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from "react";
-import { ENEMY_BY_ID, gameConstants, type EnemyTurnPlaybackStep, type RunState } from "@board-game/game-core";
+import { ENEMY_BY_ID, gameConstants, getLegalAttackTargets, type EnemyTurnPlaybackStep, type RunState } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
 import type { PlayerSide } from "@board-game/game-core";
 import type { CombatEffectEvent } from "../game/combatEffects.js";
@@ -13,7 +13,6 @@ import { MinionLane } from "./MinionLane.js";
 import { sameDropTarget } from "./touchDrag.js";
 import type { DragState } from "./useTouchDrag.js";
 import { TargetPicker } from "./TargetPicker.js";
-import { AllAttackButton } from "./AllAttackButton.js";
 import { EndTurnButton, TurnControls } from "./TurnControls.js";
 import { HeroPowerControl } from "./HeroPowerControl.js";
 import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
@@ -46,7 +45,6 @@ export interface GameBoardProps {
   onRedrawOpeningHand?(): void;
   onMenu(): void;
   onUseHeroPower?(): void;
-  onAllAttack?(): void;
   onDropInteraction?(payload: DragPayload, target: DropTarget): void;
   enemyIntentStep?: EnemyTurnPlaybackStep | null;
   tutorialStep?: TutorialStepId;
@@ -61,7 +59,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, enemyTurnActive = false, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, enemyTurnActive = false, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
   // Touch drag progress: which targets to outline and which one is under the finger.
   const [dragState, setDragState] = useState<DragState | null>(null);
   const compactBoard = useCompactBoard();
@@ -94,7 +92,11 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const fieldActionsDisabled = actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "attack" && !(tutorialStep === "play-card" && targetMode === "spell"));
   const canEndTurn = tutorialStep === undefined || tutorialStep === "end-first-turn" || tutorialStep === "end-second-turn";
   const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")).length;
-  const allAttackDisabled = actionsDisabled || battle.enemyBoard.length > 0 || readyMinionCount === 0;
+  // Hearthstone attack rules: a taunt minion must be attacked first; without one any minion or the hero can be attacked.
+  const legalAttackTargets = getLegalAttackTargets(battle, "player");
+  const blockedEnemyTargetIds = targetMode === "attack" && selectedAttackerId
+    ? battle.enemyBoard.filter((minion) => !legalAttackTargets.minionIds.includes(minion.instanceId)).map((minion) => minion.instanceId)
+    : [];
   const targetSide = targetMode === "spell"
     ? spellTargetSide(selectedCardInstanceId, run)
     : targetMode === "hero-power"
@@ -106,7 +108,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const selectedDefinition = selectedSpell ? CARD_BY_ID.get(selectedSpell.cardId) : undefined;
   const canTargetEnemyHeroWithSpell = getPlayerSpellSelection(selectedDefinition) === "enemy-character";
   const enemyHeroTargetable = !actionsDisabled && (
-    (targetMode === "attack" && Boolean(selectedAttackerId) && battle.enemyBoard.length === 0)
+    (targetMode === "attack" && Boolean(selectedAttackerId) && legalAttackTargets.heroAllowed)
     || (targetMode === "hero-power" && run.playerClass === "assassin")
     || (targetMode === "spell" && Boolean(canTargetEnemyHeroWithSpell))
   );
@@ -140,7 +142,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} temporary={battle.enemyMana.temporary} />
           </div>
           <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} dropHighlight={dropHighlights.valid.some((target) => sameDropTarget(target, { kind: "hero", side: "enemy" })) ? (sameDropTarget(dropHighlights.hovered, { kind: "hero", side: "enemy" }) ? "hover" : "valid") : null} />
-          <MinionLane side="enemy" minions={battle.enemyBoard} tapDetails={targetMode !== "hero-power"} dropHighlights={dropHighlights} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
+          <MinionLane side="enemy" minions={battle.enemyBoard} blockedTargetIds={blockedEnemyTargetIds} tapDetails={targetMode !== "hero-power"} dropHighlights={dropHighlights} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>
         <div className="battle-player">
@@ -184,7 +186,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             {run.openingHandRedrawAvailable === true && <OpeningHandRedrawControl disabled={actionsDisabled} onRedraw={onRedrawOpeningHand} />}
           </div>
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
-          <div className="turn-controls-spacer"><TurnControls leading={<AllAttackButton disabled={allAttackDisabled} readyMinionCount={readyMinionCount} enemyHasMinions={battle.enemyBoard.length > 0} onAllAttack={onAllAttack} />} showEndTurn={!compactBoard} onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled || !canEndTurn} /></div>
+          <div className="turn-controls-spacer"><TurnControls showEndTurn={!compactBoard} onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled || !canEndTurn} /></div>
         </div>
         <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "play-card" && !(tutorialStep === "attack" && readyMinionCount === 0))} canSelectCard={canSelectCard} onSelectCard={onSelectCard} getValidTargets={getValidTargets} onDragStateChange={setDragState} {...(onDropInteraction ? { onDropInteraction } : {})} />
       </footer>

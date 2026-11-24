@@ -505,16 +505,6 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
           damageInfo(defender?.attack ?? 0, retaliationTarget, previous, next, true));
       }
     }
-  } else if (action.type === "all-attack") {
-    let remainingHealth = previous.enemyHero.health - (nextRun.battle?.enemyHero.health ?? 0);
-    for (const attacker of previous.playerBoard) {
-      if (attacker.summonedTurn >= previous.turnNumber || attacker.hasAttacked || remainingHealth <= 0) continue;
-      const slot = slotOf(previous.playerBoard, attacker.instanceId);
-      const lethal = attacker.attack >= remainingHealth;
-      pushEvent(events, firstEventId + events.length, attacker.cardId, "attack", { kind: "minion", side: "player", slot }, { kind: "hero", side: "enemy" }, lethal ? ["minion-attack", "damage", "death"] : ["minion-attack", "damage"], false, undefined, false, "hero",
-        damageInfo(attacker.attack, { kind: "hero", side: "enemy" }, previous, nextRun.battle ?? undefined));
-      remainingHealth -= attacker.attack;
-    }
   } else if (action.type === "fuse-minions") {
     const fused = next.playerBoard.find((minion) => !previous.playerBoard.some((old) => old.instanceId === minion.instanceId));
     const sourceSlot = slotOf(previous.playerBoard, action.firstMinionId);
@@ -547,7 +537,7 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
         { amount, armorBlocked, outcome: amount > 0 ? "hit" : armorBlocked > 0 ? "armor-block" : "miss", retaliation: false });
     }
   }
-  if ((action.type === "attack" || action.type === "all-attack")
+  if (action.type === "attack"
     && previousRun.battle?.enemyHero.health && nextRun.battle?.enemyHero.health === 0) {
     const lethalAttack = [...events].reverse().find((event) => event.effectKind === "attack" && event.target.kind === "hero" && event.target.side === "enemy");
     if (lethalAttack) lethalAttack.slowMotion = true;

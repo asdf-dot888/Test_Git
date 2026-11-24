@@ -1,4 +1,4 @@
-import { CARD_BY_ID, FUSION_RECIPES, gameConstants, type BattleState, type MinionState, type RunState } from "@board-game/game-core";
+import { CARD_BY_ID, FUSION_RECIPES, gameConstants, getLegalAttackTargets, type BattleState, type MinionState, type RunState } from "@board-game/game-core";
 import type { DragPayload, DropTarget } from "../components/dragInteractions.js";
 import { getPlayerSpellSelection } from "./spellTargeting.js";
 
@@ -66,12 +66,13 @@ function resolveCardDrop(run: RunState, battle: BattleState, instanceId: string,
 function resolveMinionDrop(run: RunState, battle: BattleState, attackerId: string, target: DropTarget): DropAction | null {
   const attacker = battle.playerBoard.find((minion) => minion.instanceId === attackerId);
   if (!attacker) return null;
+  const legal = getLegalAttackTargets(battle, "player");
   if (target.kind === "minion" && target.side === "enemy") {
-    if (!canMinionAttack(battle, attacker) || !battle.enemyBoard.some((minion) => minion.instanceId === target.instanceId)) return null;
+    if (!canMinionAttack(battle, attacker) || !legal.minionIds.includes(target.instanceId)) return null;
     return { type: "attack", attackerId, targetId: target.instanceId };
   }
   if (target.kind === "hero" && target.side === "enemy") {
-    if (!canMinionAttack(battle, attacker) || battle.enemyBoard.length > 0) return null;
+    if (!canMinionAttack(battle, attacker) || !legal.heroAllowed) return null;
     return { type: "attack", attackerId, targetId: battle.enemyHero.id };
   }
   if (target.kind === "minion" && target.side === "player") {

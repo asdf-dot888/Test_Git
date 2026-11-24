@@ -276,21 +276,33 @@ describe("GameBoard", () => {
     expect(markup).toContain("타락한 엘프 정찰자을(를) 대상으로 선택");
   });
 
-  it("lights All Attack only when the enemy board is empty and a friendly minion is ready", () => {
+  it("has no All Attack button and keeps the end-turn button in the toolbar", () => {
     const run = createRun(419);
     run.battle!.turnNumber = 2;
     run.battle!.playerBoard = [{ instanceId: "ready", cardId: "ash-wolf", owner: "player", attack: 2, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
-    const ready = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
-    expect(ready).toContain('class="all-attack-button is-ready"');
-    expect(ready).toContain("⚔</span> 전체 공격");
-    expect(ready).not.toContain("field-action-bar");
-    // PC layout: the all-attack button sits in the player toolbar, directly before the end-turn button.
-    expect(ready.indexOf('class="player-toolbar"')).toBeLessThan(ready.indexOf('class="all-attack-button is-ready"'));
-    expect(ready.indexOf('class="all-attack-button is-ready"')).toBeLessThan(ready.indexOf('class="end-turn-button"'));
+    const markup = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    expect(markup).not.toContain("all-attack-button");
+    expect(markup).not.toContain("전체 공격");
+    expect(markup).not.toContain("field-action-bar");
+    expect(markup.indexOf('class="player-toolbar"')).toBeLessThan(markup.indexOf('class="end-turn-button"'));
+  });
 
-    run.battle!.enemyBoard = [{ instanceId: "blocker", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
-    const blocked = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
-    expect(blocked).toContain('class="all-attack-button is-unavailable"');
+  it("dims enemy minions that a taunt minion shields from the selected attacker and opens the hero only without taunt", () => {
+    const run = createRun(420);
+    run.battle!.turnNumber = 3;
+    run.battle!.playerBoard = [{ instanceId: "hitter", cardId: "ash-wolf", owner: "player", attack: 2, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
+    run.battle!.enemyBoard = [
+      { instanceId: "plain", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false },
+      { instanceId: "guard", cardId: "warrior-vanguard", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
+    ];
+    const render = () => renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId="hitter" targetMode="attack" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    const shielded = render();
+    expect(shielded.match(/is-blocked-target/g)).toHaveLength(1);
+    expect(shielded).not.toContain("hero-target-button");
+    run.battle!.enemyBoard = run.battle!.enemyBoard.filter((minion) => minion.instanceId === "plain");
+    const open = render();
+    expect(open).not.toContain("is-blocked-target");
+    expect(open).toContain("hero-target-button");
   });
 
   describe("turn indicator", () => {
@@ -341,11 +353,10 @@ describe("GameBoard", () => {
       }
     };
 
-    it("keeps the end-turn button in the toolbar next to all-attack on wide screens", () => {
+    it("keeps the end-turn button in the toolbar on wide screens", () => {
       const markup = render(false);
       expect(markup.match(/class="end-turn-button"/g)).toHaveLength(1);
       expect(markup).not.toContain("hero-end-turn-button");
-      expect(markup.indexOf('class="all-attack-button is-ready"')).toBeLessThan(markup.indexOf('class="end-turn-button"'));
     });
 
     it("moves the end-turn button above the player portrait on phone-width screens", () => {
@@ -355,7 +366,6 @@ describe("GameBoard", () => {
       expect(heroPanel).toContain("hero-end-turn-button");
       expect(heroPanel.indexOf("hero-end-turn-button")).toBeLessThan(heroPanel.indexOf("hero-portrait-wrap"));
       const toolbar = markup.slice(markup.indexOf('class="player-toolbar"'));
-      expect(toolbar.slice(0, toolbar.indexOf("</footer>"))).toContain('class="all-attack-button is-ready"');
       expect(toolbar.slice(0, toolbar.indexOf("</footer>"))).not.toContain("end-turn-button");
     });
   });

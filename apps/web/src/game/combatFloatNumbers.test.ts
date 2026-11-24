@@ -28,7 +28,7 @@ describe("combatFloatNumbers", () => {
     ]);
   });
 
-  it("shows damage on the enemy hero for an attack and one number per attacker for an all-attack", () => {
+  it("shows damage on the enemy hero for an attack", () => {
     const before = withBattle(createRun(501), (state) => {
       state.battle!.turnNumber = 3;
       state.battle!.playerBoard = [minion("a", "player", { attack: 2 }), minion("b", "player", { attack: 3 })];
@@ -37,8 +37,6 @@ describe("combatFloatNumbers", () => {
     const after = withBattle(before, (state) => { state.battle!.enemyHero.health -= 5; });
     const attack = collectCombatEffectEvents(before, after, { type: "attack", attackerId: "a", targetId: "enemy-hero" }, 1);
     expect(combatFloatNumbers(attack[0]!)).toMatchObject([{ text: "-2", tone: "damage", anchor: { kind: "hero", side: "enemy" } }]);
-    const all = collectCombatEffectEvents(before, after, { type: "all-attack" }, 1);
-    expect(texts(all)).toEqual(["damage:-2", "damage:-3"]);
   });
 
   it("shows spell damage: direct, cleave per target, and area damage per minion", () => {

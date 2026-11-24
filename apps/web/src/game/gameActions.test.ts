@@ -55,42 +55,27 @@ describe("reduceGameAction timer snapshots", () => {
     expect(afterTurn.run?.openingHandRedrawAvailable).toBe(false);
   });
 
-  it("waits for every all-attack effect before starting enemy playback", () => {
+  it("tells the player to attack a taunt minion first and lets the hero be attacked past plain minions", () => {
     const run = createRun(545);
-    run.battle!.playerBoard = [{ instanceId: "all-attacker", cardId: "ash-wolf", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
-    run.battle!.enemyHand = [{ instanceId: "enemy-follow-up", cardId: "bone-rat" }];
-    let session = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run }), { type: "all-attack" });
+    const battle = run.battle!;
+    battle.turnNumber = 3;
+    battle.playerBoard = [{ instanceId: "hitter", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    battle.enemyBoard = [
+      { instanceId: "plain", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false },
+      { instanceId: "guard", cardId: "warrior-vanguard", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
+    ];
+    const restored = reduceGameAction(initialGameSession, { type: "restore-run", run });
+    expect(reduceGameAction(restored, { type: "attack", attackerId: "hitter", targetId: "plain" }).error).toBe("도발 하수인을 먼저 공격해야 합니다.");
+    expect(reduceGameAction(restored, { type: "attack", attackerId: "hitter", targetId: "enemy" }).error).toBe("도발 하수인을 먼저 공격해야 합니다.");
+    expect(reduceGameAction(restored, { type: "attack", attackerId: "hitter", targetId: "guard" }).error).toBeNull();
 
-    expect(session.autoEndTurnAfterAllAttack).toBe(true);
-    expect(session.run?.battle?.activeSide).toBe("player");
-    expect(session.combatEffects.length).toBeGreaterThan(0);
-    expect(session.enemyTurnPlayback).toBeNull();
-
-    for (const event of [...session.combatEffects]) {
-      session = reduceGameAction(session, { type: "clear-combat-effect", eventId: event.id });
-    }
-    expect(session.autoEndTurnAfterAllAttack).toBe(true);
-    expect(session.enemyTurnPlayback).toBeNull();
-
-    session = reduceGameAction(session, { type: "finish-all-attack" });
-    expect(session.autoEndTurnAfterAllAttack).toBe(false);
-    expect(session.run?.battle?.activeSide).toBe("player");
-    expect(session.enemyTurnPlayback?.steps.length).toBeGreaterThan(0);
-  });
-
-  it("does not schedule auto-end for lethal or invalid all-attacks", () => {
-    const lethal = createRun(546);
-    lethal.battle!.enemyHero.health = 2;
-    lethal.battle!.playerBoard = [{ instanceId: "lethal-attacker", cardId: "ash-wolf", owner: "player", attack: 3, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
-    const lethalSession = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run: lethal }), { type: "all-attack" });
-    expect(lethalSession.autoEndTurnAfterAllAttack).toBe(false);
-    expect(lethalSession.run?.battle?.status).toBe("playerWon");
-    expect(reduceGameAction(lethalSession, { type: "finish-all-attack" }).enemyTurnPlayback).toBeNull();
-
-    const invalid = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run: createRun(547) }), { type: "all-attack" });
-    expect(invalid.autoEndTurnAfterAllAttack).toBe(false);
-    expect(invalid.run?.battle?.activeSide).toBe("player");
-    expect(invalid.error).toBeTruthy();
+    const open = createRun(546);
+    open.battle!.turnNumber = 3;
+    open.battle!.playerBoard = [{ instanceId: "hitter", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
+    open.battle!.enemyBoard = [{ instanceId: "plain", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
+    const hit = reduceGameAction(reduceGameAction(initialGameSession, { type: "restore-run", run: open }), { type: "attack", attackerId: "hitter", targetId: "enemy" });
+    expect(hit.error).toBeNull();
+    expect(hit.run?.battle?.enemyHero.health).toBe(open.battle!.enemyHero.health - 2);
   });
 
   it("sequences a lethal attack through enemy defeat and victory reveal", () => {

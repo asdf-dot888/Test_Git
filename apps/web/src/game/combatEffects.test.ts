@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { CARD_BY_ID, CARD_CATALOG, attackAllReadyMinions, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
+import { CARD_BY_ID, CARD_CATALOG, attackWithMinion, createRun, type RunState } from "@board-game/game-core";
 import { __setSpellVisualSpecsForTest, type SpellVisualSpec } from "./spellEffectCatalog.js";
 import { CARD_COMBAT_VISUAL_PROFILES, combatEventSounds, combatImpactSounds, spellCueFor, combatImpactTier, collectCombatEffectEvents, collectEnemyActionEffects, type CombatEffectEvent } from "./combatEffects.js";
 
@@ -64,22 +64,6 @@ describe("collectCombatEffectEvents", () => {
     const ordinary = withBattle(before, (state) => { state.battle!.enemyHero.health = 3; });
     const ordinaryEvents = collectCombatEffectEvents(ordinary, ordinary, { type: "attack", attackerId: "lethal-attacker", targetId: "enemy" }, 5);
     expect(ordinaryEvents[0]?.slowMotion).toBeUndefined();
-  });
-
-  it("slows only the final lethal attacker in an all-attack sequence", () => {
-    const run = createRun(37);
-    const before = withBattle(run, (state) => {
-      state.battle!.enemyHero.health = 4;
-      state.battle!.playerBoard = [
-        { instanceId: "first-strike", cardId: "ash-wolf", owner: "player", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
-        { instanceId: "last-strike", cardId: "crypt-guard", owner: "player", attack: 3, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false },
-      ];
-    });
-    const after = attackAllReadyMinions(before);
-    const events = collectCombatEffectEvents(before, after, { type: "all-attack" }, 10);
-    expect(events).toHaveLength(2);
-    expect(events[0]?.slowMotion).toBeUndefined();
-    expect(events[1]?.slowMotion).toBe(true);
   });
 
   it("assigns a stable distinct visual profile to every catalog card", () => {

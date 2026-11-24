@@ -11,9 +11,11 @@ interface MinionCardProps {
   draggable?: boolean;
   intentTarget?: boolean;
   exhausted?: boolean;
+  /** A taunt minion elsewhere on the board shields this one from the selected attacker. */
+  blocked?: boolean;
 }
 
-export function MinionCard({ minion, selected, targetable, disabled, onSelect, draggable = false, intentTarget = false, exhausted = false }: MinionCardProps) {
+export function MinionCard({ minion, selected, targetable, disabled, onSelect, draggable = false, intentTarget = false, exhausted = false, blocked = false }: MinionCardProps) {
   const card = CARD_BY_ID.get(minion.cardId);
   const name = card?.name ?? "알 수 없는 하수인";
   const faction = minion.owner === "enemy" ? "적" : "아군";
@@ -29,7 +31,7 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
       : `Cursed: attack reduced by ${status.attackReduction} for ${status.turnsRemaining} turns`);
   return (
     <button
-      className={`minion-card ${minion.owner === "enemy" ? "minion-enemy" : "minion-friendly"}${selected ? " is-selected" : ""}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}${exhausted ? " is-exhausted" : ""}`}
+      className={`minion-card ${minion.owner === "enemy" ? "minion-enemy" : "minion-friendly"}${selected ? " is-selected" : ""}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}${exhausted ? " is-exhausted" : ""}${blocked ? " is-blocked-target" : ""}`}
       type="button"
       disabled={disabled}
       aria-pressed={selected}

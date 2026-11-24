@@ -266,21 +266,24 @@ describe("game pointer and keyboard interactions", () => {
     expect(sync.saveRun).toHaveBeenCalled();
   });
 
-  it("uses All Attack for every ready minion in order until the enemy hero is defeated", async () => {
+  it("has no All Attack button and attacks the hero with each ready minion past a plain enemy minion", async () => {
     const run = createRun(16);
     run.battle!.turnNumber = 2;
     run.battle!.playerBoard = [
       { instanceId: "ready-a", cardId: "ash-wolf", owner: "player", attack: 2, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false },
       { instanceId: "ready-b", cardId: "crypt-guard", owner: "player", attack: 3, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false },
     ];
+    run.battle!.enemyBoard = [{ instanceId: "plain-enemy", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
     const sync = makeReadySync(run);
     renderWithTestAuth(<GameSessionView sync={sync} />);
     enterActiveEncounter();
-    const allAttack = await screen.findByRole("button", { name: /전체 공격/ });
-    expect((allAttack as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(allAttack);
-    await waitFor(() => expect(document.querySelector(".hero-enemy .health-value")?.textContent).toContain("16"));
-    expect(screen.getAllByRole("button", { name: /이번 턴 공격함/ })).toHaveLength(2);
+    await screen.findByRole("button", { name: /아군 하수인 잿빛 늑대/ });
+    expect(screen.queryByRole("button", { name: /전체 공격/ })).toBeNull();
+    const heroHealth = Number(document.querySelector(".hero-enemy .health-value")?.textContent?.match(/\d+/)?.[0]);
+    fireEvent.click(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대/ }));
+    fireEvent.click(document.querySelector(".hero-enemy .hero-portrait-wrap, .hero-enemy button") as Element);
+    await waitFor(() => expect(Number(document.querySelector(".hero-enemy .health-value")?.textContent?.match(/\d+/)?.[0])).toBe(heroHealth - 2));
+    expect(screen.getAllByRole("button", { name: /이번 턴 공격함/ })).toHaveLength(1);
   });
 
   it("does not let a newly summoned friendly minion attack by dragging", async () => {

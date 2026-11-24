@@ -129,7 +129,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     ? `${run.battle.battleId}:${run.battle.turnNumber}`
     : null;
   const dispatch = useCallback((action: GameAction) => {
-    if (action.type === "end-turn" || action.type === "finish-all-attack") audioController?.playEffect("turn-end");
+    if (action.type === "end-turn") audioController?.playEffect("turn-end");
     dispatchGameAction(action);
   }, [audioController, dispatchGameAction]);
   const finishTutorial = () => {
@@ -161,14 +161,6 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     onTimerChange: (timer) => dispatch({ type: "set-turn-timer", timer }),
     onTimeout: () => dispatch({ type: "end-turn" }),
   });
-
-  useEffect(() => {
-    const currentBattle = run?.battle;
-    if (!session.autoEndTurnAfterAllAttack || session.combatEffects.length > 0 || session.resolving || playback
-      || screen !== "game" || menuView !== "closed" || !currentBattle || currentBattle.status !== "active"
-      || currentBattle.activeSide !== "player" || currentBattle.enemyHero.health <= 0) return;
-    dispatch({ type: "finish-all-attack" });
-  }, [dispatch, menuView, playback, run, screen, session.autoEndTurnAfterAllAttack, session.combatEffects.length, session.resolving]);
 
   useEnemyTurnPlayback({
     active: Boolean(playback),
@@ -781,7 +773,6 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onRedrawOpeningHand={() => { if (tutorialMode === "inactive") dispatch({ type: "redraw-opening-hand" }); }}
           onMenu={() => { if (tutorialMode === "inactive") setMenuView("choices"); }}
           onUseHeroPower={() => { if (tutorialMode === "inactive") activateHeroPower(); }}
-          onAllAttack={() => { if (tutorialMode === "inactive") dispatch({ type: "all-attack" }); }}
           onDropInteraction={handleDropInteraction}
           enemyIntentStep={playback?.stage === "intent" ? playbackStep ?? null : null}
         />

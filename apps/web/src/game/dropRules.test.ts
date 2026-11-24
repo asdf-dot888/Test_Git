@@ -98,9 +98,13 @@ describe("resolveDrop for minions", () => {
     expect(resolveDrop(run, attacker("unknown"), target)).toBeNull();
   });
 
-  it("attacks the enemy hero only when no enemy minions remain", () => {
-    const blocked = setup({ player: [minion("ready", "ash-wolf", "player")], enemy: [minion("e", "ash-wolf", "enemy")] });
+  it("attacks the enemy hero unless a taunt minion stands, and only taunt minions while one does", () => {
+    const blocked = setup({ player: [minion("ready", "ash-wolf", "player")], enemy: [minion("e", "ash-wolf", "enemy"), minion("t", "warrior-vanguard", "enemy")] });
     expect(resolveDrop(blocked, attacker("ready"), { kind: "hero", side: "enemy" })).toBeNull();
+    expect(resolveDrop(blocked, attacker("ready"), { kind: "minion", side: "enemy", instanceId: "e" })).toBeNull();
+    expect(resolveDrop(blocked, attacker("ready"), { kind: "minion", side: "enemy", instanceId: "t" })).toEqual({ type: "attack", attackerId: "ready", targetId: "t" });
+    const pastPlain = setup({ player: [minion("ready", "ash-wolf", "player")], enemy: [minion("e", "ash-wolf", "enemy")] });
+    expect(resolveDrop(pastPlain, attacker("ready"), { kind: "hero", side: "enemy" })).toEqual({ type: "attack", attackerId: "ready", targetId: pastPlain.battle!.enemyHero.id });
     const open = setup({ player: [minion("ready", "ash-wolf", "player")] });
     expect(resolveDrop(open, attacker("ready"), { kind: "hero", side: "enemy" })).toEqual({ type: "attack", attackerId: "ready", targetId: open.battle!.enemyHero.id });
   });
@@ -195,9 +199,11 @@ describe("getValidDropTargets", () => {
     expect(getValidDropTargets(run, card("bolt"))).toEqual([{ kind: "hero", side: "enemy" }]);
   });
 
-  it("lists enemy minions, the hero when the enemy board is empty, and fusion partners for a ready minion", () => {
+  it("lists enemy minions, the hero unless a taunt minion stands, and fusion partners for a ready minion", () => {
     const withEnemies = setup({ player: [minion("a", "warrior-vanguard", "player"), minion("b", "warrior-stonewall", "player")], enemy: [minion("e", "ash-wolf", "enemy")] });
-    expect(getValidDropTargets(withEnemies, attacker("a"))).toEqual([{ kind: "minion", side: "enemy", instanceId: "e" }, { kind: "minion", side: "player", instanceId: "b" }]);
+    expect(getValidDropTargets(withEnemies, attacker("a"))).toEqual([{ kind: "minion", side: "enemy", instanceId: "e" }, { kind: "minion", side: "player", instanceId: "b" }, { kind: "hero", side: "enemy" }]);
+    const withTaunt = setup({ player: [minion("a", "warrior-vanguard", "player"), minion("b", "warrior-stonewall", "player")], enemy: [minion("e", "ash-wolf", "enemy"), minion("t", "warrior-stonewall", "enemy")] });
+    expect(getValidDropTargets(withTaunt, attacker("a"))).toEqual([{ kind: "minion", side: "enemy", instanceId: "t" }, { kind: "minion", side: "player", instanceId: "b" }]);
     const noEnemies = setup({ player: [minion("a", "ash-wolf", "player")] });
     expect(getValidDropTargets(noEnemies, attacker("a"))).toEqual([{ kind: "hero", side: "enemy" }]);
   });

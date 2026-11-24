@@ -59,7 +59,7 @@ describe("game action adapter", () => {
     battle.enemyBoard = [makeMinion("blocker", "warrior-vanguard", "enemy")];
 
     const blockedHeroAttack = reduceGameAction(session, { type: "attack", attackerId: "attacker", targetId: "enemy" });
-    expect(blockedHeroAttack.error).toBe("현재 선택할 수 없는 대상입니다.");
+    expect(blockedHeroAttack.error).toBe("도발 하수인을 먼저 공격해야 합니다.");
 
     const firstAttack = reduceGameAction(session, { type: "attack", attackerId: "attacker", targetId: "blocker" });
     expect(firstAttack.run?.battle?.enemyBoard[0]?.health).toBe(battle.enemyBoard[0]!.health - 2); // an Ash Wolf hits for 2

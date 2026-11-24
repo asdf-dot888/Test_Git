@@ -1,6 +1,6 @@
 # Task: T01 Attack Legality in the UI and Removal of the All-Attack Button
 
-## Status: todo
+## Status: done
 
 ## Goal
 The web UI lets the player attack exactly what the engine allows (taunt first; otherwise any minion or the hero) and the player's all-attack button is gone, including `attackAllReadyMinions` in the engine.
@@ -44,4 +44,5 @@ Task: T01-attack-targets-and-remove-all-attack
 ```
 
 ## Progress
-- [ ] done
+- [x] done. Engine: `attackAllReadyMinions` removed; `getLegalAttackTargets` (shared by engine and UI). Web: `AllAttackButton`, the all-attack/finish-all-attack actions, autoEnd effect and CSS removed; `TurnControls` lost its `leading` slot; `dropRules` and `GameBoard` use the legal targets (hero attackable past plain minions, blocked enemy minions get `is-blocked-target` via the new `blockedTargetIds`/`blocked` props); the attack action answers a blocked target with 도발 하수인을 먼저 공격해야 합니다. The enemy all-attack record and its text stay. Tests updated/added (gameActions, dropRules, GameBoard, App.interactions, combat tests). 1246 tests (101 files), lint and build pass.
+- commit: see Git history

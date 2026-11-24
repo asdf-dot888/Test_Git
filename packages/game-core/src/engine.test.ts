@@ -16,7 +16,6 @@ import {
 import {
   advanceRun,
   acknowledgeVictory,
-  attackAllReadyMinions,
   attackWithMinion,
   castSpell,
   castSpellWithResolution,
@@ -891,7 +890,7 @@ describe("player actions and battle rules", () => {
     expect(() => playMinion(run, "slot-card", 4)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
   });
 
-  it("attacks with ready minions in board order and stops at lethal", () => {
+  it("attacks the hero with ready minions one by one until the hero is dead", () => {
     const run = copyRun(createRun(61));
     const battle = activeBattle(run);
     battle.turnNumber = 2;
@@ -902,23 +901,12 @@ describe("player actions and battle rules", () => {
       minion({ instanceId: "second", attack: 3 }),
       minion({ instanceId: "third", attack: 8 }),
     ];
-    const result = attackAllReadyMinions(run);
-    expect(result.battle?.enemyHero.health).toBe(0);
-    expect(result.battle?.playerBoard.map(({ hasAttacked }) => hasAttacked)).toEqual([true, true, false]);
+    const afterFirst = attackWithMinion(run, "first", battle.enemyHero.id);
+    expect(afterFirst.battle?.enemyHero.health).toBe(2);
+    const afterSecond = attackWithMinion(afterFirst, "second", battle.enemyHero.id);
+    expect(afterSecond.battle?.enemyHero.health).toBe(0);
+    expect(afterSecond.battle?.playerBoard.map(({ hasAttacked }: { hasAttacked: boolean }) => hasAttacked)).toEqual([true, true, false]);
     expect(run.battle?.enemyHero.health).toBe(4);
-  });
-
-  it("rejects All Attack when a taunt minion blocks the hero or no minion is ready", () => {
-    const blocked = copyRun(createRun(62));
-    const blockedBattle = activeBattle(blocked);
-    blockedBattle.turnNumber = 2;
-    blockedBattle.playerBoard = [minion({ instanceId: "ready" })];
-    blockedBattle.enemyBoard = [{ ...minion({ instanceId: "enemy", owner: "enemy", cardId: "warrior-vanguard" }), attack: 1 }];
-    expect(() => attackAllReadyMinions(blocked)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
-
-    const noneReady = copyRun(createRun(63));
-    activeBattle(noneReady).playerBoard = [minion({ instanceId: "new", summonedTurn: 1 })];
-    expect(() => attackAllReadyMinions(noneReady)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
   });
 
   it("uses mana to play minions, keeps the input state unchanged, and prevents same-turn attacks", () => {
@@ -2639,8 +2627,6 @@ describe("taunt", () => {
     const hit = attackWithMinion(run, "mine", activeBattle(run).enemyHero.id);
     expect(hit.battle?.enemyHero.health).toBe(heroHealth - 3);
     expect(hit.battle?.enemyBoard).toHaveLength(2);
-    const allAttack = attackAllReadyMinions(run);
-    expect(allAttack.battle?.enemyHero.health).toBe(heroHealth - 3);
   });
 
   it("ignores taunt for spells", () => {

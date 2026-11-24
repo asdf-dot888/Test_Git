@@ -2,7 +2,6 @@ import {
   GameRuleError,
   acknowledgeVictory,
   advanceRun,
-  attackAllReadyMinions,
   attackWithMinion,
   castSpellWithResolution,
   chooseReward,
@@ -12,6 +11,7 @@ import {
   endPlayerTurnWithPlayback,
   fuseMinions,
   gameConstants,
+  getLegalAttackTargets,
   hydrateRunForCurrentBattle,
   playMinion,
   redrawOpeningHand,
@@ -40,8 +40,6 @@ export type GameAction =
   | { type: "play-minion"; instanceId: string; slotIndex?: number }
   | { type: "cast-spell"; instanceId: string; targetId?: string }
   | { type: "attack"; attackerId: string; targetId: string }
-  | { type: "all-attack" }
-  | { type: "finish-all-attack" }
   | { type: "enemy-defeat-effect-complete" }
   | { type: "fuse-minions"; firstMinionId: string; secondMinionId: string }
   | { type: "end-turn" }
@@ -68,7 +66,6 @@ export interface GameSession {
   combatEffects: CombatEffectEvent[];
   nextCombatEffectId: number;
   enemyTurnPlayback: { steps: EnemyTurnPlaybackStep[]; currentIndex: number; stage: "intent" | "effect" } | null;
-  autoEndTurnAfterAllAttack: boolean;
   victoryPresentation: "enemy-defeat" | "victory-reveal" | null;
 }
 
@@ -84,7 +81,6 @@ export const initialGameSession: GameSession = {
   combatEffects: [],
   nextCombatEffectId: 1,
   enemyTurnPlayback: null,
-  autoEndTurnAfterAllAttack: false,
   victoryPresentation: null,
 };
 
@@ -104,8 +100,7 @@ function sessionForRun(run: RunState, previous: GameSession): GameSession {
     combatEffects: [],
     nextCombatEffectId: previous.nextCombatEffectId,
     enemyTurnPlayback: null,
-    autoEndTurnAfterAllAttack: false,
-    victoryPresentation: null,
+      victoryPresentation: null,
   };
 }
 
@@ -201,14 +196,6 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
       combatEffects: [],
     };
   }
-  if (action.type === "finish-all-attack") {
-    const battle = session.run?.battle;
-    if (!session.autoEndTurnAfterAllAttack || session.combatEffects.length > 0 || session.resolving || session.enemyTurnPlayback
-      || !battle || battle.status !== "active" || battle.activeSide !== "player" || battle.enemyHero.health <= 0) {
-      return session.autoEndTurnAfterAllAttack ? { ...session, autoEndTurnAfterAllAttack: false } : session;
-    }
-    return sessionForEnemyTurn(endPlayerTurnWithPlayback(session.run!), { ...session, autoEndTurnAfterAllAttack: false });
-  }
   if (session.enemyTurnPlayback) return session;
   if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass, action.difficulty), session);
   if (action.type === "restore-run") {
@@ -248,11 +235,14 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
       const resolution = castSpellWithResolution(session.run, action.instanceId, action.targetId);
       return sessionForAction(resolution.run, session, action, resolution.effects);
     }
-    if (action.type === "attack") return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
-    if (action.type === "all-attack") {
-      const next = sessionForAction(attackAllReadyMinions(session.run), session, action);
-      const battle = next.run?.battle;
-      return { ...next, autoEndTurnAfterAllAttack: Boolean(battle && battle.status === "active" && battle.enemyHero.health > 0) };
+    if (action.type === "attack") {
+      const battle = session.run.battle;
+      if (battle && battle.activeSide === "player" && battle.firstSide !== null) {
+        const legal = getLegalAttackTargets(battle, "player");
+        const blocked = action.targetId === battle.enemyHero.id ? !legal.heroAllowed : battle.enemyBoard.some((minion) => minion.instanceId === action.targetId) && !legal.minionIds.includes(action.targetId);
+        if (blocked) return { ...session, error: "도발 하수인을 먼저 공격해야 합니다.", resolving: false };
+      }
+      return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
     }
     if (action.type === "fuse-minions") return sessionForAction(fuseMinions(session.run, action.firstMinionId, action.secondMinionId), session, action);
     if (action.type === "use-hero-power") return sessionForAction(applyHeroPower(session.run, action.targetId), session, action);

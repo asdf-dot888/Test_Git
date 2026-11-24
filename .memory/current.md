@@ -1,13 +1,13 @@
 # Current Context
 
 ## Active Plan
-[Hearthstone Rules, Taunt, Turn-Order Pick](./plans/2026-11-24-hearthstone-rules-and-taunt.md) — in progress (P01-T01 done). Decisions: [2026-11-24-hearthstone-rules-and-taunt](./decisions/2026-11-24-hearthstone-rules-and-taunt.md).
+[Hearthstone Rules, Taunt, Turn-Order Pick](./plans/2026-11-24-hearthstone-rules-and-taunt.md) — in progress (P01 done). Decisions: [2026-11-24-hearthstone-rules-and-taunt](./decisions/2026-11-24-hearthstone-rules-and-taunt.md).
 
 ## Active Phase
 [P02 Web UI](./phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/phase.md)
 
 ## Active Task
-[P02-T01 Attack Legality in the UI and Removal of the All-Attack Button](./phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/T01-attack-targets-and-remove-all-attack.md) — status `todo`.
+[P02-T02 Taunt Visuals and Sound](./phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/T02-taunt-visuals-and-sound.md) — status `todo`.
 
 ## Plan Overview (10 tasks)
 - P01 engine: T01 fatigue and 1 draw (+API fields), T02 taunt and attack rules (10 cards), T03 turn-order pick and the Coin (+API fields), T04 enemy AI and simulation bot.
@@ -27,4 +27,4 @@
 - Browser note: sound problems were Safari-only (`.ogg`); the user decided to use Chrome and dropped the `.m4a` conversion.
 
 ## Next Step (IMPORTANT)
-Continue with P02-T01 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.
+Continue with P02-T02 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.
