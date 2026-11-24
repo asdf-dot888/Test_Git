@@ -144,4 +144,17 @@ describe("combatFloatNumbers", () => {
     const miss = collectEnemyActionEffects(createRun(513), createRun(513), { type: "cast-spell", cardId: "fate-shard", instanceId: "shard", handSlot: 0, effects: [{ kind: "randomDamage", targetId: "player-hero", amount: 0 }] }, 1);
     expect(texts(miss)).toEqual([]);
   });
+
+  it("shows one number per attacker for an enemy all-attack, sharing the hero's armor in order", () => {
+    const before = withBattle(createRun(514), (state) => {
+      state.battle!.playerArmor = 3;
+      state.battle!.enemyBoard = [minion("a", "enemy", { attack: 2 }), minion("b", "enemy", { attack: 4 }), minion("c", "enemy", { attack: 1 })];
+    });
+    const events = collectEnemyActionEffects(before, before, { type: "all-attack", attackers: [{ attackerId: "a", cardId: "bone-rat" }, { attackerId: "b", cardId: "bone-rat" }, { attackerId: "c", cardId: "bone-rat" }], targetId: "player" }, 1);
+    expect(events).toHaveLength(3);
+    expect(events.every((event) => event.target.kind === "hero" && event.target.side === "player")).toBe(true);
+    expect(events.map((event) => event.source)).toEqual([{ kind: "minion", side: "enemy", slot: 0 }, { kind: "minion", side: "enemy", slot: 1 }, { kind: "minion", side: "enemy", slot: 2 }]);
+    // 3 armor: attacker a (2) is fully absorbed, b (4) loses 1 to armor and deals 3, c (1) deals 1.
+    expect(texts(events)).toEqual(["armor:⬟ -2", "damage:-3", "armor:⬟ -1", "damage:-1"]);
+  });
 });

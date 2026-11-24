@@ -41,6 +41,7 @@ describe("game action adapter", () => {
     const session = startSession();
     const battle = session.run!.battle!;
     battle.hand = [{ instanceId: "lance", cardId: "soul-lance" }];
+    battle.playerMana = { current: 10, max: 10, temporary: 0 };
     battle.enemyBoard = [makeMinion("enemy-unit", "crypt-guard", "enemy")];
 
     const missingTarget = reduceGameAction(session, { type: "cast-spell", instanceId: "lance" });

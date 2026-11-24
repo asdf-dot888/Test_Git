@@ -272,7 +272,7 @@ describe("authenticated Run API", () => {
 
     expect(response.status).toBe(200);
     const saved = repository.save.mock.calls[0]?.[3];
-    expect(saved?.battle?.enemyMana).toEqual({ current: 5, max: 10, temporary: 0 });
+    expect(saved?.battle?.enemyMana).toEqual({ current: 1, max: 1, temporary: 0 });
     expect(saved?.battle?.enemyStarterDeck).toHaveLength(30);
     expect(saved?.battle?.enemyHand).toHaveLength(3);
     expect(saved?.battle?.enemyDrawPile).toHaveLength(27);

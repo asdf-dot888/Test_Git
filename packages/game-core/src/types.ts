@@ -128,6 +128,8 @@ export type EnemyCombatRecord =
   | { type: "play-minion"; cardId: string; instanceId: string; handSlot: number; summonedIds: string[] }
   | { type: "cast-spell"; cardId: string; instanceId: string; handSlot: number; effects: Array<{ kind: SpellEffect["kind"]; targetId: string | null; amount?: number; transferredCardInstanceId?: string }> }
   | { type: "attack"; cardId: string; attackerId: string; targetId: string }
+  /** Every ready enemy minion hits the player hero together (the player board is empty): one playback action, like the player's all-attack. */
+  | { type: "all-attack"; attackers: Array<{ attackerId: string; cardId: string }>; targetId: string }
   | { type: "boss-area"; damage: 1; targetMinionIds: string[]; targetHeroId: "player" };
 
 export interface EnemyTurnPlaybackStep {

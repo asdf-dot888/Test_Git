@@ -77,7 +77,9 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
     : intentAction?.type === "cast-spell"
       ? intentAction.effects.map((effect) => effect.targetId).filter((id): id is string => battle.playerBoard.some((minion) => minion.instanceId === id))
       : intentAction?.type === "boss-area" ? intentAction.targetMinionIds : [];
-  const intentHeroTarget = intentAction?.type === "attack"
+  const intentHeroTarget = intentAction?.type === "all-attack"
+    ? true
+    : intentAction?.type === "attack"
     ? intentAction.targetId === battle.playerHero.id
     : intentAction?.type === "cast-spell"
       ? intentAction.effects.some((effect) => effect.targetId === battle.playerHero.id || effect.targetId === "player-hero"

@@ -21,14 +21,16 @@ import type {
 const MAX_HAND = 10;
 const MAX_BOARD = 6;
 const HERO_HEALTH = 30;
-const INITIAL_MANA = 5;
 const MAX_MANA = 10;
-/** Mana the enemy recovers every turn after the first (the player recovers 2-4). */
-export const ENEMY_MANA_RECOVERY = 2;
-/** Mana the player recovers at the start of a turn: 2 on turns 2-3, 3 on turns 4-6, 4 from turn 7. Unspent mana carries over up to the maximum. */
-export function playerManaRecovery(turnNumber: number): number {
-  return turnNumber <= 3 ? 2 : turnNumber <= 6 ? 3 : 4;
+/** Hearthstone rule: the maximum mana of turn n is min(10, n) and it is refilled completely every turn; unspent mana does not carry over. */
+function manaCapForTurn(turnNumber: number): number {
+  return Math.min(MAX_MANA, Math.max(1, turnNumber));
 }
+const INITIAL_MANA = manaCapForTurn(1);
+/** Cards each side draws at the start of every turn after the first; cards beyond the hand limit go to the discard pile. */
+const TURN_DRAW_COUNT = 5;
+/** The cost up to which hard enemy decks favor cards when they are built (the old starting mana). */
+const CHEAP_CARD_COST = 5;
 /** The boss area attack comes every Nth turn: every 3rd on normal, every 2nd on hard. */
 export const BOSS_AREA_ATTACK_EVERY_N_TURNS: Record<RunDifficulty, number> = { normal: 3, hard: 2 };
 const SOUL_SHARD_HERO_POWER_COST = 3;
@@ -124,7 +126,7 @@ function enemyCardWeight(card: CardDefinition, enemy: EnemyDefinition, difficult
     if (effects.some((effect) => effect.kind === "damage")) weight += 2;
   }
   if (difficulty === "hard") {
-    if (card.cost <= INITIAL_MANA) weight += 2;
+    if (card.cost <= CHEAP_CARD_COST) weight += 2;
     if (effects.some((effect) => effect.kind === "damage" || effect.kind === "damageAllEnemyMinions")) weight += 3;
     if (minion?.attack && minion.attack >= 3) weight += 2;
   }
@@ -179,7 +181,7 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
     const enemy = ENEMY_BY_ID.get(current.enemyId);
     if (!enemy) fail("INVALID_ACTION", `Unknown enemy: ${current.enemyId}`);
     const generated = createEnemyDeck(enemy, current.rngState, `${current.battleId}-enemy-card`, next.difficulty);
-    current.enemyMana = { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 };
+    current.enemyMana = { current: INITIAL_MANA, max: INITIAL_MANA, temporary: 0 };
     current.enemyStarterDeck = generated.starterDeck;
     current.enemyHand = generated.shuffledDeck.slice(0, 3);
     current.enemyDrawPile = generated.shuffledDeck.slice(3);
@@ -312,11 +314,6 @@ function spendMana(battle: BattleState, side: PlayerSide, cost: number): void {
   mana.temporary -= Math.min(mana.temporary, cost);
 }
 
-function gainRegularMana(mana: BattleState["playerMana"], amount: number): void {
-  const regular = mana.current - mana.temporary;
-  mana.current = Math.min(mana.max, regular + amount) + mana.temporary;
-}
-
 function expireTemporaryMana(mana: BattleState["playerMana"]): void {
   mana.current -= mana.temporary;
   mana.temporary = 0;
@@ -338,13 +335,32 @@ function takeDraw(run: RunState, battle: BattleState): CardInstance | null {
   return battle.drawPile.shift() ?? null;
 }
 
-function drawForPlayerTurn(run: RunState, battle: BattleState): void {
-  if (battle.hand.length >= MAX_HAND) {
-    battle.pendingDiscardBeforeDraw = true;
-    return;
+/**
+ * The opening hand is the first three cards of the shuffled deck, except that it always holds a card the player can pay for on turn 1
+ * (cost 1 or less, as turn 1 has 1 mana): if there is none, the first such card of the deck replaces the third card.
+ */
+function openingHandAndDrawPile(shuffled: CardInstance[]): { hand: CardInstance[]; drawPile: CardInstance[] } {
+  const hand = shuffled.slice(0, 3);
+  const rest = shuffled.slice(3);
+  const isCheap = (card: CardInstance) => getCard(card.cardId).cost <= INITIAL_MANA;
+  if (!hand.some(isCheap)) {
+    const cheapIndex = rest.findIndex(isCheap);
+    if (cheapIndex >= 0 && hand.length === 3) {
+      const [cheap] = rest.splice(cheapIndex, 1);
+      rest.splice(cheapIndex, 0, hand[2]!);
+      hand[2] = cheap!;
+    }
   }
-  const card = takeDraw(run, battle);
-  if (card) battle.hand.push(card);
+  return { hand, drawPile: rest };
+}
+
+function drawForPlayerTurn(run: RunState, battle: BattleState): void {
+  for (let drawn = 0; drawn < TURN_DRAW_COUNT; drawn += 1) {
+    const card = takeDraw(run, battle);
+    if (!card) return;
+    if (battle.hand.length < MAX_HAND) battle.hand.push(card);
+    else battle.discardPile.push(card);
+  }
 }
 
 function refillEnemyDrawPile(run: RunState, battle: BattleState): void {
@@ -553,8 +569,11 @@ function applySpellEffect(
       drawForSpell(run, battle, effect.count, caster);
       return run;
     case "gainMana": {
+      // Like Hearthstone's Coin: extra mana for this turn only, up to 10 in total.
       const mana = caster === "player" ? battle.playerMana : battle.enemyMana;
-      gainRegularMana(mana, effect.amount);
+      const gained = Math.max(0, Math.min(effect.amount, MAX_MANA - mana.current));
+      mana.current += gained;
+      mana.temporary += gained;
       return run;
     }
     case "discardRandom": {
@@ -630,10 +649,9 @@ function startPlayerTurn(run: RunState): RunState {
   if (battle.playerHero.health === 0) return finishDefeat(run);
   battle.turnNumber += 1;
   battle.activeSide = "player";
-  // Normalize saved runs created under the previous, growing-cap rule.
-  battle.playerMana.max = MAX_MANA;
-  const manaRecovery = playerManaRecovery(battle.turnNumber);
-  gainRegularMana(battle.playerMana, manaRecovery);
+  // A fresh full mana every turn; temporary mana and carried-over mana from earlier rules are dropped.
+  const playerCap = manaCapForTurn(battle.turnNumber);
+  battle.playerMana = { current: playerCap, max: playerCap, temporary: 0 };
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
   battle.heroPowerUsed = false;
   drawForPlayerTurn(run, battle);
@@ -678,7 +696,7 @@ function isEnemySpellEffectWasted(effect: SpellEffect, battle: BattleState): boo
       ? battle.enemyHero.health >= battle.enemyHero.maxHealth
       : !battle.enemyBoard.some((minion) => minion.health < minion.maxHealth);
   }
-  if (effect.kind === "gainMana") return battle.enemyMana.current - battle.enemyMana.temporary >= battle.enemyMana.max;
+  if (effect.kind === "gainMana") return battle.enemyMana.current >= MAX_MANA;
   if (effect.kind === "draw") return battle.enemyHand.length >= MAX_HAND;
   return false;
 }
@@ -1105,7 +1123,8 @@ function planEnemyAttacks(run: RunState): EnemyAttackStep[] {
     if (children.length === 0) break;
     children.sort((left, right) => right.score - left.score || (left.state.key < right.state.key ? -1 : left.state.key > right.state.key ? 1 : 0));
     beam = children.slice(0, width).map((entry) => entry.state);
-    for (const entry of children.slice(0, width)) if (entry.score > best.score) best = entry;
+    // Every ready minion attacks: only complete plans (one step per ready attacker) are candidates, so nothing is held back.
+    if (depth === initial.ready.length - 1) best = { state: beam[0]!, score: children[0]!.score };
   }
   return best.state.steps;
 }
@@ -1202,12 +1221,23 @@ function resolveEnemyMinionAttacks(
       run = removeDeadMinions(run, "enemy");
       onAttack?.(action, beforeRun, run);
     } else {
-      const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
-      battle.enemyTurnEvents?.push(action);
-      attacker.hasAttacked = true;
-      run = dealDamageToPlayerHero(run, attacker.attack, deferDefeat);
+      // The player board is empty: every other ready minion hits the hero too, shown as one all-attack action.
+      const group = [attacker, ...attackerIds.slice(stepIndex + 1)
+        .map((id) => battle.enemyBoard.find((minion) => minion.instanceId === id))
+        .filter((minion): minion is MinionState => minion !== undefined && minion.instanceId !== attacker.instanceId && isEnemyAttackReady(minion, battle))];
+      const attackers: Array<{ attackerId: string; cardId: string }> = [];
+      for (const member of group) {
+        attackers.push({ attackerId: member.instanceId, cardId: member.cardId });
+        member.hasAttacked = true;
+        run = dealDamageToPlayerHero(run, member.attack, deferDefeat);
+        if (run.status !== "active" || run.battle?.playerHero.health === 0) break;
+      }
+      const action: EnemyCombatRecord = attackers.length > 1
+        ? { type: "all-attack", attackers, targetId: battle.playerHero.id }
+        : { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
+      run.battle?.enemyTurnEvents?.push(action);
       onAttack?.(action, beforeRun, run);
-      if (run.status !== "active" || (deferDefeat && run.battle?.playerHero.health === 0)) return run;
+      return run;
     }
   }
   return run;
@@ -1253,13 +1283,12 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     activeSide: "player",
     playerHero: { id: "player", health: HERO_HEALTH, maxHealth: HERO_HEALTH },
     enemyHero: { id: "enemy", health: enemyMaxHealth, maxHealth: enemyMaxHealth },
-    playerMana: { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 },
-    enemyMana: { current: INITIAL_MANA, max: MAX_MANA, temporary: 0 },
+    playerMana: { current: INITIAL_MANA, max: INITIAL_MANA, temporary: 0 },
+    enemyMana: { current: INITIAL_MANA, max: INITIAL_MANA, temporary: 0 },
     playerArmor: 0,
     soulShards: 0,
     heroPowerUsed: false,
-    hand: shuffled.items.slice(0, 3),
-    drawPile: shuffled.items.slice(3),
+    ...openingHandAndDrawPile(shuffled.items),
     discardPile: [],
     enemyStarterDeck: enemyDeck.starterDeck,
     enemyHand: enemyDeck.shuffledDeck.slice(0, 3),
@@ -1324,8 +1353,7 @@ export function redrawOpeningHand(run: RunState): RunState {
   const next = cloneRun(run);
   const currentBattle = next.battle!;
   const shuffled = shuffle([...currentBattle.hand, ...currentBattle.drawPile], currentBattle.rngState);
-  currentBattle.hand = shuffled.items.slice(0, 3);
-  currentBattle.drawPile = shuffled.items.slice(3);
+  Object.assign(currentBattle, openingHandAndDrawPile(shuffled.items));
   currentBattle.rngState = shuffled.state;
   next.openingHandRedrawAvailable = false;
   return next;
@@ -1561,21 +1589,16 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   if (!enemy) fail("INVALID_ACTION", `Unknown enemy: ${battle.enemyId}`);
   battle.enemyTurnEvents = [];
   delete (battle as BattleState & { pendingEnemyCharge?: unknown }).pendingEnemyCharge;
-  battle.enemyMana.max = MAX_MANA;
-  if (battle.turnNumber > 1) gainRegularMana(battle.enemyMana, ENEMY_MANA_RECOVERY);
+  const enemyCap = manaCapForTurn(battle.turnNumber);
+  battle.enemyMana = { current: enemyCap, max: enemyCap, temporary: 0 };
 
-  if (battle.enemyHand.length >= MAX_HAND) {
-    const scored = battle.enemyHand.map((instance) => ({ instance, score: scoreEnemyCard(getCard(instance.cardId), battle, enemy, next.difficulty, next.completedBattles) }));
-    const lowest = Math.min(...scored.map((entry) => entry.score));
-    const candidates = scored.filter((entry) => entry.score === lowest);
-    const picked = candidates.length > 1 ? pickIndex(candidates.length, battle.rngState) : { value: 0, state: battle.rngState };
-    battle.rngState = picked.state;
-    const discarded = candidates[picked.value]!.instance;
-    battle.enemyHand = battle.enemyHand.filter((card) => card.instanceId !== discarded.instanceId);
-    battle.enemyDiscardPile.push(discarded);
+  // The enemy acts second, so it already draws on its first turn (the player draws from its second turn on).
+  for (let drawn = 0; drawn < TURN_DRAW_COUNT; drawn += 1) {
+    const card = takeEnemyDraw(next, battle);
+    if (!card) break;
+    if (battle.enemyHand.length < MAX_HAND) battle.enemyHand.push(card);
+    else battle.enemyDiscardPile.push(card);
   }
-  const drawn = takeEnemyDraw(next, battle);
-  if (drawn) battle.enemyHand.push(drawn);
 
   const turnPlan = next.completedBattles > 0 ? planEnemyTurn(next, enemy) : null;
   let plays = 0;
@@ -1599,7 +1622,6 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   }
 
   if (next.battle?.playerHero.health === 0) return { run: finishDefeat(next), steps };
-  battle = next.battle!;
   next = resolveEnemyMinionAttacks(next, (action, beforeRun, afterRun) => {
     addEnemyTurnStep(steps, action, beforeRun, afterRun);
   }, true);
@@ -1715,6 +1737,5 @@ export const gameConstants = {
   normalAiBeamWidth,
   enemyPhaseBonus: ENEMY_PHASE_BONUS,
   bossAreaCadence: BOSS_AREA_ATTACK_EVERY_N_TURNS,
-  playerManaRecovery,
-  enemyManaRecovery: ENEMY_MANA_RECOVERY,
+  turnDrawCount: TURN_DRAW_COUNT,
 } as const;

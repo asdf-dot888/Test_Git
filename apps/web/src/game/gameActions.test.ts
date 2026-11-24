@@ -23,6 +23,7 @@ describe("reduceGameAction timer snapshots", () => {
 
   it("passes the exact random spell roll into transient combat damage metadata", () => {
     const run = createRun(549);
+    run.battle!.playerMana = { current: 10, max: 10, temporary: 0 };
     run.battle!.enemyHero.health = 30;
     run.battle!.hand = [{ instanceId: "random-spell", cardId: "fate-shard" }];
     const beforeHealth = run.battle!.enemyHero.health;
@@ -129,7 +130,8 @@ describe("reduceGameAction timer snapshots", () => {
   it("starts with a one-second enemy intent before applying its visual event", () => {
     const run = createRun(541);
     run.battle!.enemyHand = [{ instanceId: "enemy-minion", cardId: "ash-wolf" }];
-    run.battle!.enemyDrawPile = [{ instanceId: "enemy-draw", cardId: "eclipse" }];
+    run.battle!.enemyDrawPile = [{ instanceId: "enemy-draw", cardId: "healing-mist" }];
+    run.battle!.enemyStarterDeck = [];
     const session = reduceGameAction(initialGameSession, { type: "restore-run", run });
     const afterTurn = reduceGameAction(session, { type: "end-turn" });
 
@@ -147,7 +149,8 @@ describe("reduceGameAction timer snapshots", () => {
   it("advances one action group at a time and clears playback after the final group", () => {
     const run = createRun(542);
     run.battle!.enemyHand = [{ instanceId: "enemy-minion", cardId: "ash-wolf" }];
-    run.battle!.enemyDrawPile = [{ instanceId: "enemy-draw", cardId: "eclipse" }];
+    run.battle!.enemyDrawPile = [{ instanceId: "enemy-draw", cardId: "healing-mist" }];
+    run.battle!.enemyStarterDeck = [];
     run.battle!.enemyBoard = [{ instanceId: "enemy-ready", cardId: "bone-rat", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
     run.battle!.playerBoard = [{ instanceId: "player-target", cardId: "ash-wolf", owner: "player", attack: 1, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false }];
     let session = reduceGameAction(initialGameSession, { type: "restore-run", run });

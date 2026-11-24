@@ -352,6 +352,20 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
       tagSpellVisual(events, castStart, record.cardId);
       continue;
     }
+    if (record.type === "all-attack") {
+      // One event per attacker against the hero, each with its own share of the hero's armor.
+      let armorLeft = previous.playerArmor;
+      for (const { attackerId, cardId } of record.attackers) {
+        const slot = slotOf(previous.enemyBoard, attackerId);
+        const attack = previous.enemyBoard[slot]?.attack ?? 0;
+        const absorbed = Math.min(armorLeft, attack);
+        armorLeft -= absorbed;
+        const target: CombatAnchor = { kind: "hero", side: "player" };
+        pushEvent(events, firstEventId, cardId, "attack", { kind: "minion", side: "enemy", slot: Math.max(0, slot) }, target, ["minion-attack", "damage"], false, undefined, false, "hero",
+          { amount: attack - absorbed, armorBlocked: absorbed, outcome: attack - absorbed > 0 ? "hit" : absorbed > 0 ? "armor-block" : "miss", retaliation: false });
+      }
+      continue;
+    }
     if (record.type === "attack") {
       const attackerSlot = slotOf(previous.enemyBoard, record.attackerId);
       const targetSlot = slotOf(previous.playerBoard, record.targetId);

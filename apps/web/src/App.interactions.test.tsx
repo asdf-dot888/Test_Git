@@ -251,6 +251,7 @@ describe("game pointer and keyboard interactions", () => {
 
   it("plays a hand minion when it is dragged to an empty board slot", async () => {
     const run = createRun(15);
+    run.battle!.playerMana = { current: 10, max: 10, temporary: 0 };
     run.battle!.hand = [{ instanceId: "drag-iron-hound", cardId: "iron-hound" }];
     const sync = makeReadySync(run);
     renderWithTestAuth(<GameSessionView sync={sync} />);

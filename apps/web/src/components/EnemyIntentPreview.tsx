@@ -10,6 +10,15 @@ function intentDetails(step: EnemyTurnPlaybackStep): { title: string; descriptio
       target: "",
     };
   }
+  if (action.type === "all-attack") {
+    const first = battle?.enemyBoard.find((minion) => minion.instanceId === action.attackers[0]?.attackerId);
+    return {
+      title: "적의 전체 공격",
+      description: `하수인 ${action.attackers.length}마리가 한꺼번에 공격합니다.`,
+      target: "내 영웅",
+      ...(first ? { artKey: CARD_BY_ID.get(first.cardId)?.artKey ?? first.cardId } : {}),
+    };
+  }
   const card = CARD_BY_ID.get(action.cardId);
   if (action.type === "attack") {
     const attacker = battle?.enemyBoard.find((minion) => minion.instanceId === action.attackerId);

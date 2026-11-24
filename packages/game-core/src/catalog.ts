@@ -243,11 +243,11 @@ export const STARTER_DECK_CARD_IDS: readonly string[] = [
   "healing-mist", "mana-spring", "raise-bones", "raise-bones", "rune-surge", "rune-surge",
 ];
 
-// Every run starts with these 20 cards plus 10 class cards. Two Mana Springs help the faster player mana curve reach expensive cards;
-// one Bone Rat (the weakest duplicate: 1 cost, 1/1, no effect) made room for the second.
+// Every run starts with these 20 cards plus 10 class cards. With Hearthstone-style mana (1 on turn 1, +1 per turn up to 10) the starter curve
+// has to reach the top: average cost about 2.95 with four 5-cost cards (enemy decks average 3.5-5.2). Boss-tier cards stay boss rewards.
 export const SHARED_STARTER_CARD_IDS: readonly string[] = [
-  "ash-wolf", "ash-wolf", "crypt-guard", "crypt-guard", "cinder-imp", "cinder-imp",
-  "bone-rat", "mana-spring", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
+  "moon-stag", "moon-stag", "crypt-guard", "shade-stalker", "cinder-imp", "thorn-brute",
+  "thorn-brute", "plague-bearer", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
   "iron-hound", "iron-hound", "ember-priest", "ember-priest", "shadow-bolt", "shadow-bolt",
   "mana-spring", "healing-mist",
 ];

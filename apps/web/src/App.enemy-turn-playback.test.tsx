@@ -71,6 +71,7 @@ describe("enemy turn playback in the game screen", () => {
     battle.enemyMana = { current: 1, max: 10, temporary: 0 };
     battle.enemyHand = [];
     battle.enemyDrawPile = [{ instanceId: "bolt", cardId: "shadow-bolt" }];
+    battle.enemyStarterDeck = [];
     battle.enemyDiscardPile = [];
     const result = resolveEnemyTurnWithPlayback(run);
     const step = result.steps[0]!;
@@ -108,7 +109,8 @@ describe("enemy turn playback in the game screen", () => {
     const run = createRun(801);
     run.battle!.enemyMana.current = 1;
     run.battle!.enemyHand = [{ instanceId: "enemy-summon", cardId: "ash-wolf" }];
-    run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "eclipse" }];
+    run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "healing-mist" }];
+    run.battle!.enemyStarterDeck = [];
     run.battle!.enemyBoard = [{ instanceId: "enemy-attacker", cardId: "bone-rat", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false }];
     run.battle!.playerBoard = [{ instanceId: "player-target", cardId: "ash-wolf", owner: "player", attack: 1, health: 5, maxHealth: 5, summonedTurn: 0, hasAttacked: false }];
     markTutorialComplete();
@@ -172,7 +174,8 @@ describe("enemy turn playback in the game screen", () => {
     const run = createRun(802);
     run.battle!.enemyMana.current = 0;
     run.battle!.enemyHand = [];
-    run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "eclipse" }];
+    run.battle!.enemyDrawPile = [{ instanceId: "enemy-expensive", cardId: "healing-mist" }];
+    run.battle!.enemyStarterDeck = [];
     run.battle!.enemyBoard = [{ instanceId: "enemy-attacker", cardId: "bone-rat", owner: "enemy", attack: 3, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false }];
     run.battle!.playerHero.health = 1;
     markTutorialComplete();
