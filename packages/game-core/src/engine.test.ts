@@ -2206,3 +2206,9 @@ describe("per-difficulty enemy phase bonus tables", () => {
     }
   });
 });
+
+describe("boss area attack cadence constant", () => {
+  it("is every 3rd turn on normal and every 2nd turn on hard", () => {
+    expect(gameConstants.bossAreaCadence).toEqual({ normal: 3, hard: 2 });
+  });
+});

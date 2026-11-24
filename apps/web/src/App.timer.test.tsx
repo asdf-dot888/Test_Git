@@ -48,14 +48,14 @@ describe("turn timer application wiring", () => {
     markTutorialCompleted(window.localStorage, "test-employee");
     const { container } = renderWithTestAuth(<GameSessionView sync={sync} />);
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
-    expect(savedRuns.some((saved) => saved.turnTimer?.pausedRemainingMs === 20_000)).toBe(true);
-    expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 20_000 });
+    expect(savedRuns.some((saved) => saved.turnTimer?.pausedRemainingMs === 30_000)).toBe(true);
+    expect(savedRuns.at(-1)?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 30_000 });
 
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" })); await Promise.resolve(); });
     fireEvent.click(screen.getByRole("button", { name: /진행 중/ }));
-    expect(savedRuns.at(-1)?.turnTimer?.deadlineAt).toBe(120_000);
+    expect(savedRuns.at(-1)?.turnTimer?.deadlineAt).toBe(130_000);
     expect(savedRuns.at(-1)?.turnTimer?.pausedRemainingMs).toBeNull();
-    expect(screen.getByText("00:20")).toBeTruthy();
+    expect(screen.getByText("00:30")).toBeTruthy();
     expect(container.querySelector(".turn-timer")?.className).not.toContain("is-hidden");
     fireEvent.click(container.querySelector(".menu-button")!);
     expect(container.querySelector(".turn-timer")?.className).toContain("is-hidden");
@@ -63,7 +63,7 @@ describe("turn timer application wiring", () => {
     expect(container.querySelector(".turn-timer")?.className).not.toContain("is-hidden");
     const warningsBeforeCountdown = players.filter((player) => player.src === "/audio/sfx/timer-warning.ogg").length;
 
-    for (let second = 0; second < 15; second += 1) {
+    for (let second = 0; second < 25; second += 1) {
       await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
     }
     expect(screen.getByText("00:05").className).toContain("is-critical");

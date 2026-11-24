@@ -32,16 +32,16 @@ afterEach(() => {
 });
 
 describe("useTurnTimer", () => {
-  it("starts the player's turn at twenty seconds without saving each display tick", () => {
+  it("starts the player's turn at thirty seconds without saving each display tick", () => {
     vi.useFakeTimers();
     vi.setSystemTime(BASE_TIME);
     const { result } = setup();
     const firstDeadline = result.current.run?.turnTimer?.deadlineAt;
-    expect(firstDeadline).toBe(BASE_TIME + 20_000);
-    expect(result.current.timer.remainingSeconds).toBe(20);
+    expect(firstDeadline).toBe(BASE_TIME + 30_000);
+    expect(result.current.timer.remainingSeconds).toBe(30);
 
     act(() => { vi.advanceTimersByTime(1_200); });
-    expect(result.current.timer.remainingSeconds).toBe(19);
+    expect(result.current.timer.remainingSeconds).toBe(29);
     expect(result.current.run?.turnTimer?.deadlineAt).toBe(firstDeadline);
   });
 
@@ -53,12 +53,12 @@ describe("useTurnTimer", () => {
     rerender({ paused: true });
 
     expect(result.current.timer.isPaused).toBe(true);
-    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 15_750 });
+    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 25_750 });
     act(() => { vi.advanceTimersByTime(2_000); });
-    expect(result.current.timer.remainingMs).toBe(15_750);
+    expect(result.current.timer.remainingMs).toBe(25_750);
 
     rerender({ paused: false });
-    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: Date.now() + 15_750, pausedRemainingMs: null });
+    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: Date.now() + 25_750, pausedRemainingMs: null });
   });
 
   it("restores a matching snapshot and resets a snapshot from another turn", () => {
@@ -72,14 +72,14 @@ describe("useTurnTimer", () => {
 
     const otherTurn = { ...matching, turnTimer: { ...matching.turnTimer, turnNumber: matching.turnTimer.turnNumber + 1 } };
     act(() => { result.current.setRun(otherTurn); });
-    expect(result.current.run?.turnTimer).toEqual({ battleId: matching.battle!.battleId, turnNumber: matching.battle!.turnNumber, deadlineAt: BASE_TIME + 20_000, pausedRemainingMs: null });
+    expect(result.current.run?.turnTimer).toEqual({ battleId: matching.battle!.battleId, turnNumber: matching.battle!.turnNumber, deadlineAt: BASE_TIME + 30_000, pausedRemainingMs: null });
   });
 
   it("ends an expired player turn once and ignores enemy or completed battles", () => {
     vi.useFakeTimers();
     vi.setSystemTime(BASE_TIME);
     const { onTimeout } = setup();
-    act(() => { vi.advanceTimersByTime(20_000); });
+    act(() => { vi.advanceTimersByTime(30_000); });
     expect(onTimeout).toHaveBeenCalledOnce();
     act(() => { vi.advanceTimersByTime(1_000); });
     expect(onTimeout).toHaveBeenCalledOnce();
@@ -104,12 +104,12 @@ describe("useTurnTimer", () => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
     expect(result.current.timer.isPaused).toBe(true);
-    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 20_000 });
+    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: null, pausedRemainingMs: 30_000 });
 
     act(() => { vi.advanceTimersByTime(2_000); });
-    expect(result.current.timer.remainingMs).toBe(20_000);
+    expect(result.current.timer.remainingMs).toBe(30_000);
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
-    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: Date.now() + 20_000, pausedRemainingMs: null });
+    expect(result.current.run?.turnTimer).toMatchObject({ deadlineAt: Date.now() + 30_000, pausedRemainingMs: null });
   });
 });

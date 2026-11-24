@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { RunState, TurnTimerState } from "@board-game/game-core";
 
-const TURN_DURATION_MS = 20_000;
+const TURN_DURATION_MS = 30_000;
 const CLOCK_REFRESH_MS = 200;
 
 export interface TurnTimerViewState {
@@ -89,7 +89,7 @@ export function useTurnTimer(options: {
 
   return {
     remainingMs,
-    remainingSeconds: Math.max(0, Math.min(20, Math.ceil(remainingMs / 1000))),
+    remainingSeconds: Math.max(0, Math.min(TURN_DURATION_MS / 1000, Math.ceil(remainingMs / 1000))),
     isPaused: Boolean(turnId && shouldPause),
   };
 }

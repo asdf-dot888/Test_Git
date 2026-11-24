@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from "react";
-import { ENEMY_BY_ID, type EnemyTurnPlaybackStep, type RunState } from "@board-game/game-core";
+import { ENEMY_BY_ID, gameConstants, type EnemyTurnPlaybackStep, type RunState } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
 import type { PlayerSide } from "@board-game/game-core";
 import type { CombatEffectEvent } from "../game/combatEffects.js";
@@ -83,6 +83,8 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
       ? intentAction.effects.some((effect) => effect.targetId === battle.playerHero.id || effect.targetId === "player-hero"
         || (effect.targetId === null && (effect.kind === "damage" || effect.kind === "randomDamage")))
       : intentAction?.type === "boss-area";
+  const bossAreaCadence = gameConstants.bossAreaCadence[run.difficulty === "hard" ? "hard" : "normal"];
+  const bossAreaTurns = [1, 2, 3].map((multiple) => multiple * bossAreaCadence).join("·");
   const turnLive = battle.status === "active";
   const turnSide: "player" | "enemy" = enemyTurnActive || battle.activeSide === "enemy" ? "enemy" : "player";
   const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
@@ -122,7 +124,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span>{turnLive && <span className={`turn-badge is-${turnSide}`} role="status" aria-live="polite">{turnSide === "player" ? "내 턴" : "상대 턴"}</span>}<span className={`turn-timer${turnTimer.remainingSeconds <= 5 ? " is-critical" : ""}${turnTimer.visible ? "" : " is-hidden"}`} aria-label={`남은 시간 ${turnTimer.remainingSeconds}초`} aria-live="off" aria-hidden={!turnTimer.visible}>{turnTimer.text}</span></div>
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>
-      {enemy?.kind === "boss" && <aside className="boss-pattern-panel" data-testid="boss-pattern-panel"><strong>보스 고유 패턴</strong><span>보스의 3·6·9번째 턴 행동은 카드 행동 후 이어집니다.</span><span>광역 강타: 내 하수인과 영웅 모두에게 피해 1</span></aside>}
+      {enemy?.kind === "boss" && <aside className="boss-pattern-panel" data-testid="boss-pattern-panel"><strong>보스 고유 패턴</strong><span>보스의 {bossAreaTurns}번째 턴 행동은 카드 행동 후 이어집니다.</span><span>광역 강타: 내 하수인과 영웅 모두에게 피해 1</span></aside>}
 
       <section className={`battle-board${turnLive ? ` is-${turnSide}-turn` : ""}${showTimerWarning ? " is-timer-critical" : ""}`} id="battle" aria-label="카드 전투 보드">
         {enemyIntentStep && <EnemyIntentPreview step={enemyIntentStep} />}

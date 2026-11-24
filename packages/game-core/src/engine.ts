@@ -23,6 +23,8 @@ const MAX_BOARD = 6;
 const HERO_HEALTH = 30;
 const INITIAL_MANA = 5;
 const MAX_MANA = 10;
+/** The boss area attack comes every Nth turn: every 3rd on normal, every 2nd on hard. */
+export const BOSS_AREA_ATTACK_EVERY_N_TURNS: Record<RunDifficulty, number> = { normal: 3, hard: 2 };
 const SOUL_SHARD_HERO_POWER_COST = 3;
 type PhaseTable = Record<RunState["phase"], number>;
 interface EnemyPhaseBonus {
@@ -1438,9 +1440,8 @@ export function resolveEnemyTurnWithPlayback(run: RunState): EnemyTurnResolution
   }, true);
   if (next.battle?.playerHero.health === 0) return { run: finishDefeat(next), steps };
   battle = next.battle!;
-  const hardCadence = next.difficulty === "hard" && battle.turnNumber % 2 === 0;
-  const normalCadence = next.difficulty !== "hard" && battle.turnNumber % 3 === 0;
-  if (enemy.kind === "boss" && (hardCadence || normalCadence)) {
+  const bossAreaTurn = battle.turnNumber % BOSS_AREA_ATTACK_EVERY_N_TURNS[next.difficulty === "hard" ? "hard" : "normal"] === 0;
+  if (enemy.kind === "boss" && bossAreaTurn) {
     const beforeRun = cloneRun(next);
     const priorEventCount = battle.enemyTurnEvents?.length ?? 0;
     next = resolveBossAreaAttack(next, true);
@@ -1548,4 +1549,5 @@ export const gameConstants = {
   hardAiBeamWidth,
   normalAiBeamWidth,
   enemyPhaseBonus: ENEMY_PHASE_BONUS,
+  bossAreaCadence: BOSS_AREA_ATTACK_EVERY_N_TURNS,
 } as const;

@@ -1,6 +1,6 @@
 # Task: T03 30-Second Turn Timer and Boss Panel Text
 
-## Status: todo
+## Status: done
 
 ## Goal
 The turn lasts 30 seconds on both difficulties, and the boss pattern panel names the correct turns for the difficulty (3·6·9 on normal, 2·4·6 on hard).
@@ -38,6 +38,6 @@ Task: T03-turn-time-and-boss-panel
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `TURN_DURATION_MS = 30_000`; found a second hard-coded cap `Math.min(20, ...)` in `useTurnTimer.ts` (remainingSeconds) and tied it to the constant. `BOSS_AREA_ATTACK_EVERY_N_TURNS` exported from `engine.ts` (also `gameConstants.bossAreaCadence`); any non-hard difficulty counts as normal, like before. Boss panel text is computed from it.
+- [x] validation passed: build clean, lint clean, 1154 tests (100 files).
+- commit: see Git history

@@ -370,4 +370,14 @@ describe("GameBoard", () => {
     expect(markup).toContain("3·6·9번째 턴");
     expect(markup).toContain("내 하수인과 영웅 모두에게 피해 1");
   });
+
+  it("names the boss area-attack turns that match the difficulty", () => {
+    const hard = createRun(414, "warrior", "hard");
+    hard.battle!.enemyId = "boss-blood-matron";
+    const markup = renderToStaticMarkup(
+      <GameBoard run={hard} turnTimer={{ text: "00:30", remainingSeconds: 30, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />,
+    );
+    expect(markup).toContain("2·4·6번째 턴");
+    expect(markup).not.toContain("3·6·9번째 턴");
+  });
 });
