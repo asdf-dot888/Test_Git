@@ -588,6 +588,13 @@
 .combat-effect-miss-fragments i:nth-child(2) { animation-delay: 18ms; }
 .combat-effect-miss-fragments i:nth-child(3) { animation-delay: 34ms; }
 .combat-effect-miss-fragments i:nth-child(4) { animation-delay: 50ms; }
+.combat-float-number { position: fixed; z-index: 88; transform: translate(-50%, -50%); font-size: clamp(18px, 2.4vw, 30px); font-weight: 900; line-height: 1; white-space: nowrap; pointer-events: none; opacity: 0; text-shadow: 0 0 3px #000, 0 2px 6px #000, 0 0 12px rgb(0 0 0 / 80%); animation: combat-float-rise 800ms ease-out both; }
+.combat-float-number.is-damage { color: #ff5c67; }
+.combat-float-number.is-heal { color: #5fe08a; }
+.combat-float-number.is-armor { color: #9fb4d6; font-size: clamp(14px, 1.8vw, 22px); }
+@keyframes combat-float-rise { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.7); } 15% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -160%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { @keyframes combat-float-rise { 0% { opacity: 0; } 15%, 70% { opacity: 1; } 100% { opacity: 0; } } }
+@media (max-width: 760px) { .combat-float-number { font-size: 16px; } .combat-float-number.is-armor { font-size: 12px; } }
 .combat-effect-armor-spark { width: 32px; height: 32px; animation: armor-block-spark 380ms ease-out both; }
 .combat-effect-armor-spark i { position: absolute; left: 50%; top: 50%; width: 2px; height: 21px; background: linear-gradient(#fff, #e4d9b8 50%, transparent); box-shadow: 0 0 7px #fff2c7; transform-origin: 50% 100%; }
 .combat-effect-armor-spark i:nth-child(1) { transform: translate(-50%, -100%) rotate(0); }

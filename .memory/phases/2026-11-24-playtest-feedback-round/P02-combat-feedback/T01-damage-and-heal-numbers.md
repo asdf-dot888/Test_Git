@@ -1,6 +1,6 @@
 # Task: T01 Floating Damage and Heal Numbers
 
-## Status: todo
+## Status: done
 
 ## Goal
 Every time a hero or minion takes damage a red `-N` floats up from it; every heal shows a green `+N`. Boss area damage shows one number per affected target. Damage absorbed by hero armor shows a shield mark. Hit effects (impact, shake, blood splatter) already exist and do not change.
@@ -46,6 +46,7 @@ Task: T01-damage-and-heal-numbers
 ```
 
 ## Progress
-- [ ] implementation complete (include the audit table of damage and heal sources)
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `combatEffects.ts`: `CombatFloatNumber`, `combatFloatNumbers(event)`, `healAmount` / `affectedHeals` on `CombatEffectEvent`, helpers `appliedHeal` and `allMinionTargets`. `CombatEffectLayer.tsx` renders `.combat-float-number` (tones damage / heal / armor) at each anchor when the hit lands; `FLOAT_NUMBER_MS = 800`; an event with numbers lives at least `hitDelay + 800 + 60 ms` (spell events with a short visual now live a little longer, up to about +280 ms; three timing tests were updated for that). The effects preview already feeds `damage`, so its numbers need no change.
+- Audit of sources (all covered by `combatFloatNumbers.test.ts`): player minion attack and its retaliation; all-attack (one per attacker); player spells `damage`, `randomDamage` (a 0 roll shows nothing), `cleave` (per target), `damageAllEnemyMinions` (now one number per minion, via `affectedTargets` without changing its visuals), `heal` (applied amount); assassin hero power; enemy minion attacks and retaliation; enemy spells `damage`, `randomDamage`, `cleave`, `damageAllEnemyMinions`, `soulHarvest` (damage on the target, heal on the enemy hero), `heal`; boss area damage (one per player minion and the hero); armor absorbed by the player hero (`⬟ -N`); hero damage at the end of the player's turn when the enemy did nothing (existing `end-turn` impact event, which is how burn ticks show). Not covered: burn damage on the player hero when the enemy also acted that turn (no event exists for it today) and the burn status on the enemy hero; both would need a new engine event and were left out.
+- [x] validation passed: build clean, lint clean, 1165 tests (101 files; +11).
+- commit: see Git history

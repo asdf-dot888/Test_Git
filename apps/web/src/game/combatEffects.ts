@@ -66,6 +66,39 @@ export interface CombatTargetDamage {
   damage: CombatDamageInfo;
 }
 
+export interface CombatTargetHeal {
+  target: CombatAnchor;
+  amount: number;
+}
+
+/** A floating number drawn over a hero or minion: red damage, green heal or a hero armor absorption mark. */
+export interface CombatFloatNumber {
+  key: string;
+  anchor: CombatAnchor;
+  text: string;
+  tone: "damage" | "heal" | "armor";
+}
+
+/** Floating numbers an event shows when its hit lands: `-N` per damaged target, `+N` per healed target, and the armor absorbed by the player hero. */
+export function combatFloatNumbers(event: CombatEffectEvent): CombatFloatNumber[] {
+  const numbers: CombatFloatNumber[] = [];
+  const addDamage = (anchor: CombatAnchor, damage: CombatDamageInfo) => {
+    if (damage.amount > 0) numbers.push({ key: `${event.id}-${numbers.length}`, anchor, text: `-${damage.amount}`, tone: "damage" });
+    if (damage.armorBlocked > 0) numbers.push({ key: `${event.id}-${numbers.length}`, anchor, text: `⬟ -${damage.armorBlocked}`, tone: "armor" });
+  };
+  if (event.affectedTargets?.length) {
+    for (const { target, damage } of event.affectedTargets) addDamage(target, damage);
+  } else if (event.damage) {
+    addDamage(event.target, event.damage);
+  }
+  if (event.affectedHeals?.length) {
+    for (const { target, amount } of event.affectedHeals) if (amount > 0) numbers.push({ key: `${event.id}-${numbers.length}`, anchor: target, text: `+${amount}`, tone: "heal" });
+  } else if (event.healAmount && event.healAmount > 0) {
+    numbers.push({ key: `${event.id}-${numbers.length}`, anchor: event.target, text: `+${event.healAmount}`, tone: "heal" });
+  }
+  return numbers;
+}
+
 function stableHash(value: string): number {
   let hash = 2166136261;
   for (const character of value) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
@@ -111,6 +144,10 @@ export interface CombatEffectEvent {
   damage?: CombatDamageInfo;
   /** Independent victim results for multi-target and boss-area damage. */
   affectedTargets?: CombatTargetDamage[];
+  /** Health restored to `target` (heal effects). */
+  healAmount?: number;
+  /** Independent heal results when one effect heals more than one hero or minion. */
+  affectedHeals?: CombatTargetHeal[];
   areaImpact?: boolean;
   bossArea?: boolean;
   bossPhase?: 1 | 2 | 3;
@@ -141,7 +178,7 @@ export function combatKindForSpellEffect(effect: SpellEffect): CombatEffectKind 
   return effect.kind;
 }
 
-function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false, deathAnchors?: CombatAnchor[], bossArea = false, damageTarget?: CombatDamageTarget, damage?: CombatDamageInfo, affectedTargets?: CombatTargetDamage[], bossPhase?: 1 | 2 | 3, options?: { spellEffectKind?: SpellEffect["kind"] }): void {
+function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false, deathAnchors?: CombatAnchor[], bossArea = false, damageTarget?: CombatDamageTarget, damage?: CombatDamageInfo, affectedTargets?: CombatTargetDamage[], bossPhase?: 1 | 2 | 3, options?: { spellEffectKind?: SpellEffect["kind"]; healAmount?: number; affectedHeals?: CombatTargetHeal[] }): void {
   events.push({
     id: firstEventId + events.length,
     assetCardId,
@@ -157,6 +194,8 @@ function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardI
     ...(bossPhase ? { bossPhase } : {}),
     ...(deathAnchors?.length ? { deathAnchors } : {}),
     ...(options?.spellEffectKind ? { spellEffectKind: options.spellEffectKind } : {}),
+    ...(options?.healAmount ? { healAmount: options.healAmount } : {}),
+    ...(options?.affectedHeals?.length ? { affectedHeals: options.affectedHeals } : {}),
   });
 }
 
@@ -187,6 +226,20 @@ function damageInfo(attemptedAmount: number, target: CombatAnchor, before: NonNu
     outcome: amount > 0 ? "hit" : armorBlocked > 0 ? "armor-block" : "miss",
     retaliation,
   };
+}
+
+/** Health actually restored by a heal of `amount` for a hero or minion that had `before` health (clamped to its missing health). */
+function appliedHeal(amount: number, before: { health: number; maxHealth: number } | undefined): number {
+  if (!before) return 0;
+  return Math.max(0, Math.min(amount, before.maxHealth - before.health));
+}
+
+/** One damage result per minion for effects that hit a whole board. */
+function allMinionTargets(board: NonNullable<RunState["battle"]>["playerBoard"], side: PlayerSide, amount: number, before: NonNullable<RunState["battle"]>, after: NonNullable<RunState["battle"]> | undefined): CombatTargetDamage[] {
+  return board.map((_minion, slot) => {
+    const target: CombatAnchor = { kind: "minion", side, slot };
+    return { target, damage: damageInfo(amount, target, before, after) };
+  });
 }
 
 function cleaveTargets(board: NonNullable<RunState["battle"]>["playerBoard"], targetId: string | null, side: PlayerSide, amount: number): CombatTargetDamage[] {
@@ -285,12 +338,16 @@ function collectEnemyTurnEvents(events: CombatEffectEvent[], firstEventId: numbe
         const damageAmount = effect.kind === "randomDamage" || effect.kind === "soulHarvest" ? logged.amount : effect.kind === "damage" || effect.kind === "cleave" || effect.kind === "damageAllEnemyMinions" ? effect.amount : undefined;
         const targets = effect.kind === "cleave" && damageAmount !== undefined
           ? cleaveTargets(previous.playerBoard, logged.targetId, "player", damageAmount)
-          : undefined;
+          : effect.kind === "damageAllEnemyMinions"
+            ? allMinionTargets(previous.playerBoard, "player", effect.amount, previous, next)
+            : undefined;
+        const healAmount = effect.kind === "heal" ? appliedHeal(effect.amount, effect.target === "playerHero" ? previous.enemyHero : previous.enemyBoard.find((minion) => minion.instanceId === logged.targetId)) : 0;
+        const affectedHeals: CombatTargetHeal[] = effect.kind === "soulHarvest" ? [{ target: { kind: "hero", side: "enemy" }, amount: appliedHeal(effect.heal, previous.enemyHero) }] : [];
         pushEvent(events, firstEventId, record.cardId, kind,
           { kind: "hand", side: "enemy", slot: record.handSlot, instanceId: record.instanceId },
           target, cues, effect.kind === "cleave", deathAnchors, false,
           causesDamage ? damageTargetFor(target) : undefined,
-          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets, undefined, { spellEffectKind: effect.kind });
+          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets, undefined, { spellEffectKind: effect.kind, ...(healAmount > 0 ? { healAmount } : {}), ...(affectedHeals.length ? { affectedHeals } : {}) });
       }
       tagSpellVisual(events, castStart, record.cardId);
       continue;
@@ -393,14 +450,17 @@ export function collectCombatEffectEvents(previousRun: RunState, nextRun: RunSta
         const damageAmount = effect.kind === "randomDamage" ? resolved?.amount : effect.kind === "damage" || effect.kind === "cleave" ? effect.amount : undefined;
         const targets = effect.kind === "cleave" && damageAmount !== undefined
           ? cleaveTargets(previous.enemyBoard, action.targetId ?? null, "enemy", damageAmount)
-          : undefined;
+          : effect.kind === "damageAllEnemyMinions"
+            ? allMinionTargets(previous.enemyBoard, "enemy", effect.amount, previous, next)
+            : undefined;
+        const healAmount = effect.kind === "heal" ? appliedHeal(effect.amount, effect.target === "playerHero" ? previous.playerHero : previous.playerBoard.find((minion) => minion.instanceId === action.targetId)) : 0;
         const deathAnchors = previous.enemyBoard
           .filter((minion) => !next.enemyBoard.some((current) => current.instanceId === minion.instanceId))
           .map((minion) => ({ kind: "minion", side: "enemy", slot: slotOf(previous.enemyBoard, minion.instanceId) }) as CombatAnchor);
         if (deathAnchors.length && !cues.includes("death")) cues.push("death");
         pushEvent(events, firstEventId, card.cardId, kind, { kind: "hand", side: "player", slot: handSlot, instanceId: card.instanceId }, target, cues, effect.kind === "cleave", deathAnchors, false,
           effect.kind === "damage" || effect.kind === "randomDamage" || effect.kind === "cleave" ? damageTargetFor(target) : undefined,
-          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets, undefined, { spellEffectKind: effect.kind });
+          damageAmount === undefined ? undefined : damageInfo(damageAmount, target, previous, next), targets, undefined, { spellEffectKind: effect.kind, ...(healAmount > 0 ? { healAmount } : {}) });
       }
       tagSpellVisual(events, castStart, card.cardId);
     }

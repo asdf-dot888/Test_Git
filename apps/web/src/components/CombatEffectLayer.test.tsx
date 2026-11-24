@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CombatEffectLayer } from "./CombatEffectLayer.js";
+import { CombatEffectLayer, FLOAT_NUMBER_MS } from "./CombatEffectLayer.js";
 import { CARD_COMBAT_VISUAL_PROFILES } from "../game/combatEffects.js";
 import type { SpellVisualSpec } from "../game/spellEffectCatalog.js";
 
@@ -27,6 +27,32 @@ describe("CombatEffectLayer", () => {
     expect(onComplete).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(onComplete).toHaveBeenCalledWith(6);
+  });
+
+  it("floats damage, armor and heal numbers at their anchors when the hit lands and keeps the event until they fade", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
+    const onComplete = vi.fn();
+    render(<CombatEffectLayer events={[
+      { id: 31, assetCardId: null, effectKind: "impact", damageTarget: "hero", soundCues: [], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" }, damage: { amount: 3, armorBlocked: 2, outcome: "hit", retaliation: false } },
+      { id: 32, assetCardId: null, effectKind: "heal", soundCues: [], source: { kind: "hero", side: "player" }, target: { kind: "hero", side: "player" }, healAmount: 4 },
+    ]} onComplete={onComplete} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const numbers = [...document.body.querySelectorAll<HTMLElement>(".combat-float-number")];
+    expect(numbers.map((number) => [number.textContent, number.className.replace("combat-float-number ", "")])).toEqual([
+      ["-3", "is-damage"],
+      ["⬟ -2", "is-armor"],
+      ["+4", "is-heal"],
+    ]);
+    expect(numbers[0]!.style.animationDelay).toBe("930ms");
+    expect(numbers.every((number) => number.getAttribute("aria-hidden") === "true")).toBe(true);
+    // The first event lives until its number has faded (hit delay 930 + 800 + margin), later than the usual 1 400 ms.
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_700); });
+    expect(onComplete).not.toHaveBeenCalledWith(31);
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(onComplete).toHaveBeenCalledWith(31);
   });
 
   it("renders a single attacking portrait, themed trail, and impact for a minion attack", async () => {
@@ -61,7 +87,8 @@ describe("CombatEffectLayer", () => {
     vi.stubGlobal("cancelAnimationFrame", (id: number) => window.clearTimeout(id));
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
     const onComplete = vi.fn();
-    const duration = Math.max(1_400, 1_010 + 390);
+    // The event stays until its damage number has faded: hit delay 930 + 800 ms + 60 ms margin.
+    const duration = Math.max(1_400, 1_010 + 390, 930 + FLOAT_NUMBER_MS + 60);
     render(<div className="battle-board"><CombatEffectLayer events={[{ id: 9, assetCardId: null, effectKind: "impact", damageTarget: "hero", damage: { amount: 1, armorBlocked: 0, outcome: "hit", retaliation: false }, soundCues: [], source: { kind: "hero", side: "enemy" }, target: { kind: "hero", side: "player" } }]} onComplete={onComplete} /></div>);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
@@ -348,7 +375,8 @@ describe("CombatEffectLayer with registered spell visuals", () => {
 
     fireEvent.animationEnd(document.body.querySelector(".combat-effect-impact")!);
     expect(onComplete).not.toHaveBeenCalled();
-    await act(async () => { await vi.advanceTimersByTimeAsync(1_099); });
+    // The spell lasts 1 100 ms but its damage number (impact 520 + 800 + 60 ms) needs until 1 380 ms.
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_379); });
     expect(onComplete).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(onComplete).toHaveBeenCalledExactlyOnceWith(11);
@@ -420,7 +448,7 @@ describe("CombatEffectLayer with registered spell visuals", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(document.body.querySelector(".spell-fx")?.classList.contains("is-slow-motion")).toBe(true);
     expect(document.body.querySelector<HTMLElement>(".combat-effect-hero-hit-flash")?.style.animationDelay).toBe("1040ms");
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_199); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_759); });
     expect(onComplete).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(onComplete).toHaveBeenCalledWith(16);

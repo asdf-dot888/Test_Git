@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { gameConstants } from "@board-game/game-core";
-import { CARD_COMBAT_VISUAL_PROFILES, combatImpactTier, type CombatAnchor, type CombatEffectEvent } from "../game/combatEffects.js";
+import { CARD_COMBAT_VISUAL_PROFILES, combatFloatNumbers, combatImpactTier, type CombatAnchor, type CombatEffectEvent } from "../game/combatEffects.js";
 import { getSpellVisualSpec, type SpellVisualSpec } from "../game/spellEffectCatalog.js";
 import { SpellEffectVisual } from "./SpellEffectVisual.js";
 
@@ -26,6 +26,9 @@ interface EffectGeometry {
 type BossAreaStage = "warning" | "cast" | "impact";
 
 const BOSS_STAGE_DURATION_MS: Record<BossAreaStage, number> = { warning: 1_250, cast: 1_200, impact: 900 };
+
+/** How long a floating damage / heal number rises and fades. */
+export const FLOAT_NUMBER_MS = 800;
 
 const boardShakeOwners = new WeakMap<HTMLElement, Map<string, Set<number>>>();
 
@@ -99,6 +102,9 @@ function EffectSprite({ event, index, paused, onComplete, resolveSpec }: { event
   const spec = event.visualId && event.visualRole ? resolveSpec(event.visualId) : undefined;
   const isPrimaryVisual = spec !== undefined && event.visualRole === "primary";
   const hitDelayMs = spec ? spec.impactAtMs : 930;
+  const floatNumbers = combatFloatNumbers(event);
+  // The event stays alive until its numbers have faded.
+  const floatEndMs = floatNumbers.length > 0 ? hitDelayMs + FLOAT_NUMBER_MS + 60 : 0;
   const [geometry, setGeometry] = useState<EffectGeometry | null>(null);
   const completeRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
@@ -134,7 +140,7 @@ function EffectSprite({ event, index, paused, onComplete, resolveSpec }: { event
     if (completeRef.current) return;
     if (event.bossArea) return;
     const motionScale = event.slowMotion ? 2 : 1;
-    const baseDuration = spec ? spec.totalMs : Math.max(1_400, 1_010 + (profile?.durationMs ?? 390));
+    const baseDuration = Math.max(spec ? spec.totalMs : Math.max(1_400, 1_010 + (profile?.durationMs ?? 390)), floatEndMs);
     if (remainingMs.current === null) remainingMs.current = (baseDuration + Math.min(index, 8) * 120) * motionScale;
     if (paused) {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
@@ -162,7 +168,7 @@ function EffectSprite({ event, index, paused, onComplete, resolveSpec }: { event
         deadline.current = null;
       }
     };
-  }, [event.bossArea, event.id, event.slowMotion, index, paused, profile?.durationMs, spec]);
+  }, [event.bossArea, event.id, event.slowMotion, floatEndMs, index, paused, profile?.durationMs, spec]);
 
   useEffect(() => {
     if (!event.bossArea || !bossStage || completeRef.current) return;
@@ -406,6 +412,17 @@ function EffectSprite({ event, index, paused, onComplete, resolveSpec }: { event
       style={{ ...targetStyle, animationPlayState: paused ? "paused" : "running" }}
       aria-hidden="true"
     />}
+    {floatNumbers.map((number, numberIndex) => {
+      const point = anchorPoint(number.anchor, event, false);
+      const sameAnchorBefore = floatNumbers.slice(0, numberIndex).filter((other) => anchorName(other.anchor) === anchorName(number.anchor)).length;
+      const offsetX = sameAnchorBefore === 0 ? 0 : (sameAnchorBefore % 2 === 1 ? 1 : -1) * 22 * Math.ceil(sameAnchorBefore / 2);
+      return <span
+        key={number.key}
+        className={`combat-float-number is-${number.tone}`}
+        style={{ left: point.x + offsetX, top: point.y, animationDelay: `${impactDelay}ms`, animationDuration: `${FLOAT_NUMBER_MS * motionScale}ms`, animationPlayState: paused ? "paused" : "running" }}
+        aria-hidden="true"
+      >{number.text}</span>;
+    })}
     {event.deathAnchors?.map((anchor, deathIndex) => {
       const point = anchorPoint(anchor, event, false);
       return <span
