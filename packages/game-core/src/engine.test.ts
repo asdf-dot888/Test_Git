@@ -2286,3 +2286,96 @@ describe("enemy bonuses after the playtest feedback round", () => {
     expect(resolveEnemyTurn(firstTurn).battle?.enemyMana.current).toBe(5);
   });
 });
+
+describe("enemy attack planning (second battle onward)", () => {
+  type Stats = { attack: number; health: number };
+  const enemyMinion = (id: string, { attack, health }: Stats) => minion({ instanceId: id, owner: "enemy", attack, health, maxHealth: health, summonedTurn: 0 });
+  const playerMinion = (id: string, { attack, health }: Stats) => minion({ instanceId: id, owner: "player", attack, health, maxHealth: health, summonedTurn: 0 });
+
+  function attackRun(options: { enemy: Array<[string, Stats]>; player: Array<[string, Stats]>; completedBattles: number; heroHealth?: number; difficulty?: "normal" | "hard"; armor?: number }): RunState {
+    const run = asEnemyTurn(createRun(970, "warrior", options.difficulty ?? "normal"));
+    run.completedBattles = options.completedBattles;
+    const battle = activeBattle(run);
+    battle.enemyBoard = options.enemy.map(([id, stats]) => enemyMinion(id, stats));
+    battle.playerBoard = options.player.map(([id, stats]) => playerMinion(id, stats));
+    battle.enemyHand = [];
+    battle.enemyStarterDeck = [];
+    battle.enemyDrawPile = [];
+    battle.enemyMana.current = 0;
+    if (options.heroHealth !== undefined) battle.playerHero.health = options.heroHealth;
+    if (options.armor !== undefined) battle.playerArmor = options.armor;
+    return run;
+  }
+
+  it("skips an attack that only loses the attacker while the first battle keeps the old greedy attack", () => {
+    const setup = (completedBattles: number) => attackRun({ enemy: [["scout", { attack: 2, health: 1 }]], player: [["wall", { attack: 1, health: 5 }]], completedBattles });
+    const first = resolveEnemyTurn(setup(0));
+    expect(first.battle?.enemyBoard).toHaveLength(0);
+    const planned = resolveEnemyTurn(setup(1));
+    expect(planned.battle?.enemyBoard.map(({ instanceId }) => instanceId)).toEqual(["scout"]);
+    expect(planned.battle?.playerBoard[0]?.health).toBe(5);
+  });
+
+  it("still takes a good trade", () => {
+    const planned = resolveEnemyTurn(attackRun({ enemy: [["brute", { attack: 3, health: 3 }]], player: [["target", { attack: 2, health: 3 }]], completedBattles: 1 }));
+    expect(planned.battle?.playerBoard).toHaveLength(0);
+    expect(planned.battle?.enemyBoard[0]).toMatchObject({ instanceId: "brute", health: 1 });
+  });
+
+  it("orders its attackers to clear the blocker first and reach the hero for lethal", () => {
+    const setup = (completedBattles: number) => attackRun({
+      enemy: [["heavy", { attack: 3, health: 3 }], ["light", { attack: 1, health: 1 }]],
+      player: [["blocker", { attack: 1, health: 1 }]],
+      heroHealth: 3,
+      completedBattles,
+    });
+    const greedy = resolveEnemyTurn(setup(0));
+    expect(greedy.status).toBe("active");
+    expect(greedy.battle?.playerHero.health).toBe(2);
+    const planned = resolveEnemyTurn(setup(1));
+    expect(planned.status).toBe("defeat");
+  });
+
+  it("attacks the hero with every ready minion when the player board is empty and accounts for armor", () => {
+    const planned = resolveEnemyTurn(attackRun({ enemy: [["a", { attack: 2, health: 2 }], ["b", { attack: 3, health: 3 }]], player: [], armor: 2, completedBattles: 1 }));
+    expect(planned.battle?.playerArmor).toBe(0);
+    expect(planned.battle?.playerHero.health).toBe(30 - 3);
+  });
+
+  it("is deterministic and does not read the player's hand or draw pile", () => {
+    const setup = () => attackRun({ enemy: [["a", { attack: 2, health: 2 }], ["b", { attack: 3, health: 1 }]], player: [["x", { attack: 2, health: 2 }], ["y", { attack: 1, health: 4 }]], completedBattles: 2 });
+    const first = resolveEnemyTurn(setup());
+    expect(resolveEnemyTurn(setup())).toEqual(first);
+    const withHand = setup();
+    activeBattle(withHand).hand = [instance("hidden", "eclipse")];
+    activeBattle(withHand).drawPile = [instance("hidden-draw", "eclipse")];
+    const other = resolveEnemyTurn(withHand);
+    expect(other.battle?.enemyBoard).toEqual(first.battle?.enemyBoard);
+    expect(other.battle?.playerBoard).toEqual(first.battle?.playerBoard);
+  });
+
+  it("never does worse than the greedy attack on generated boards and stays fast", () => {
+    const value = (run: RunState): number => {
+      const battle = run.battle;
+      if (!battle) return 100_000;
+      const worth = (entry: MinionState) => 3 * entry.attack + 2 * Math.max(0, entry.health);
+      return battle.enemyBoard.reduce((total, entry) => total + worth(entry), 0)
+        - 1.2 * battle.playerBoard.reduce((total, entry) => total + worth(entry), 0)
+        + 4 * (30 - battle.playerHero.health);
+    };
+    let state = 12345;
+    const next = (max: number) => { state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0; return state % max; };
+    let worseCount = 0;
+    const startedAt = Date.now();
+    for (let sample = 0; sample < 200; sample += 1) {
+      const makeSide = (count: number): Array<[string, Stats]> => Array.from({ length: count }, (_, index) => [`m${index}`, { attack: 1 + next(4), health: 1 + next(5) }]);
+      const enemy = makeSide(1 + next(4)).map(([id, stats]) => [`e-${id}`, stats] as [string, Stats]);
+      const player = makeSide(next(5)).map(([id, stats]) => [`p-${id}`, stats] as [string, Stats]);
+      const greedy = value(resolveEnemyTurn(attackRun({ enemy, player, completedBattles: 0, difficulty: "hard" })));
+      const planned = value(resolveEnemyTurn(attackRun({ enemy, player, completedBattles: 1, difficulty: "hard" })));
+      if (planned < greedy - 1e-9) worseCount += 1;
+    }
+    expect(worseCount).toBe(0);
+    expect(Date.now() - startedAt).toBeLessThan(5_000);
+  });
+});

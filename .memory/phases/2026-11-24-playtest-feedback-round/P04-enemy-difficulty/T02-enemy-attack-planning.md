@@ -1,6 +1,6 @@
 # Task: T02 Enemy Attack Planning
 
-## Status: todo
+## Status: done
 
 ## Goal
 Replace the greedy enemy attack code with a small search that chooses the order of attackers, their targets, and when to hold an attack back, so the enemy takes good trades, avoids bad ones and opens the way to the player hero when it can.
@@ -52,6 +52,8 @@ Task: T02-enemy-attack-planning
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `engine.ts`: `planEnemyAttacks` (beam search on a small simulated copy of both boards, not on the whole run, so it is cheap; `ENEMY_ATTACK_BEAM_WIDTH` normal 3 / hard 8; `ENEMY_ATTACK_WEIGHTS` playerMinion 1.2, heroDamage 4, lethal 100 000; minion value `3*attack + 2*health`; armor absorbed hero damage is simulated; "stop" is implicit because the best-scoring prefix wins and the empty plan is the baseline), `greedyEnemyAttackTarget` (the old target choice moved unchanged, used in the first battle), and `resolveEnemyMinionAttacks` executing the plan step by step with the real combat code and re-validating each step (a missing attacker or target skips the step; attackers not in the plan are held back). Hero attacks stay legal only while the player board is empty. The first battle (`completedBattles === 0`) keeps the greedy behavior exactly. No hidden information is read. The helpers are not exported; tests go through `resolveEnemyTurn` and compare `completedBattles: 0` (old greedy) with `1` (planned).
+- Tests (`engine.test.ts`, describe "enemy attack planning"): bad trade skipped vs first-battle greedy; good trade still taken; attacker order clears the blocker and reaches lethal; armor and empty-board hero attacks; determinism and independence from the player's hand and draw pile; 200 generated boards (Hard width) where the plan is never worse than greedy in the simulated value, in under 5 s. All existing characterization hashes still pass (the four unchanged first-battle ones and the Hard second-battle ones).
+- Smoke simulation (100 runs per cell, with P03 and P04-T01 and this task): normal avg completion 30.3% (19 / 43 / 29), hard 6.7% (4 / 11 / 5); about 7 s per 100 runs per cell, same order as before. Normal is now too hard; P04-T04 tunes it.
+- [x] validation passed: build clean, lint clean, 1186 tests (101 files).
+- commit: see Git history

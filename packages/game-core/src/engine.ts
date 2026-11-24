@@ -991,6 +991,146 @@ function addEnemyTurnStep(
   steps.push({ action: structuredClone(action), beforeRun: before, presentationRun: presentation });
 }
 
+// ---- Enemy attack planning (second battle onward) -------------------------------------------------------------------
+// A side can only attack the opposing hero while the opposing board is empty, so attack planning is about the order of
+// attackers, which minion each one hits, and holding an attack back when it would only lose value. The search runs on a
+// small copy of both boards (not on the whole run) and the real combat code then executes the chosen steps.
+
+interface EnemyAttackStep {
+  attackerId: string;
+  /** A player minion's instance id, or the player hero's id once the player board is empty. */
+  targetId: string;
+}
+
+/** How many partial attack plans the search keeps per depth. Normal sees fewer options than Hard. */
+const ENEMY_ATTACK_BEAM_WIDTH: Record<RunDifficulty, number> = { normal: 3, hard: 8 };
+const ENEMY_ATTACK_WEIGHTS = { playerMinion: 1.2, heroDamage: 4, lethal: 100_000 } as const;
+
+interface AttackSimMinion {
+  id: string;
+  attack: number;
+  health: number;
+}
+
+interface AttackSimState {
+  enemy: AttackSimMinion[];
+  player: AttackSimMinion[];
+  ready: string[];
+  heroHealth: number;
+  armor: number;
+  heroDamage: number;
+  steps: EnemyAttackStep[];
+  key: string;
+}
+
+function attackSimMinionValue(minion: AttackSimMinion): number {
+  return 3 * minion.attack + 2 * Math.max(0, minion.health);
+}
+
+function attackSimScore(state: AttackSimState): number {
+  const own = state.enemy.reduce((total, minion) => total + attackSimMinionValue(minion), 0);
+  const opposing = state.player.reduce((total, minion) => total + attackSimMinionValue(minion), 0);
+  return own - ENEMY_ATTACK_WEIGHTS.playerMinion * opposing + ENEMY_ATTACK_WEIGHTS.heroDamage * state.heroDamage + (state.heroHealth <= 0 ? ENEMY_ATTACK_WEIGHTS.lethal : 0);
+}
+
+function isEnemyAttackReady(minion: MinionState, battle: BattleState): boolean {
+  return minion.attack > 0 && minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root");
+}
+
+function planEnemyAttacks(run: RunState): EnemyAttackStep[] {
+  const battle = run.battle;
+  if (!battle) return [];
+  const toSim = (minion: MinionState): AttackSimMinion => ({ id: minion.instanceId, attack: minion.attack, health: minion.health });
+  const initial: AttackSimState = {
+    enemy: battle.enemyBoard.map(toSim),
+    player: battle.playerBoard.map(toSim),
+    ready: battle.enemyBoard.filter((minion) => isEnemyAttackReady(minion, battle)).map((minion) => minion.instanceId),
+    heroHealth: battle.playerHero.health,
+    armor: battle.playerArmor,
+    heroDamage: 0,
+    steps: [],
+    key: "",
+  };
+  if (initial.ready.length === 0) return [];
+  const heroId = battle.playerHero.id;
+  const width = ENEMY_ATTACK_BEAM_WIDTH[run.difficulty === "hard" ? "hard" : "normal"];
+  let best = { state: initial, score: attackSimScore(initial) };
+  let beam: AttackSimState[] = [initial];
+
+  for (let depth = 0; depth < initial.ready.length && beam.length > 0; depth += 1) {
+    const children: Array<{ state: AttackSimState; score: number }> = [];
+    for (const node of beam) {
+      for (const attackerId of node.ready) {
+        const targets = node.player.length > 0 ? node.player.map((minion) => minion.id) : [heroId];
+        for (const targetId of targets) {
+          const child = applySimAttack(node, attackerId, targetId, heroId);
+          children.push({ state: child, score: attackSimScore(child) });
+        }
+      }
+    }
+    if (children.length === 0) break;
+    children.sort((left, right) => right.score - left.score || (left.state.key < right.state.key ? -1 : left.state.key > right.state.key ? 1 : 0));
+    beam = children.slice(0, width).map((entry) => entry.state);
+    for (const entry of children.slice(0, width)) if (entry.score > best.score) best = entry;
+  }
+  return best.state.steps;
+}
+
+function applySimAttack(node: AttackSimState, attackerId: string, targetId: string, heroId: string): AttackSimState {
+  const enemy = node.enemy.map((minion) => ({ ...minion }));
+  const player = node.player.map((minion) => ({ ...minion }));
+  const attacker = enemy.find((minion) => minion.id === attackerId)!;
+  let heroHealth = node.heroHealth;
+  let armor = node.armor;
+  let heroDamage = node.heroDamage;
+  if (targetId === heroId) {
+    const absorbed = Math.min(armor, attacker.attack);
+    armor -= absorbed;
+    const dealt = Math.min(heroHealth, attacker.attack - absorbed);
+    heroHealth -= dealt;
+    heroDamage += dealt;
+  } else {
+    const target = player.find((minion) => minion.id === targetId)!;
+    target.health -= attacker.attack;
+    attacker.health -= target.attack;
+  }
+  return {
+    enemy: enemy.filter((minion) => minion.health > 0),
+    player: player.filter((minion) => minion.health > 0),
+    ready: node.ready.filter((id) => id !== attackerId),
+    heroHealth,
+    armor,
+    heroDamage,
+    steps: [...node.steps, { attackerId, targetId }],
+    key: `${node.key}|${attackerId}>${targetId}`,
+  };
+}
+
+/** The attack choice of the first battle and of earlier versions: kill what can be killed, then the strongest minion. */
+function greedyEnemyAttackTarget(battle: BattleState, attacker: MinionState, difficulty: RunDifficulty): MinionState | undefined {
+  return [...battle.playerBoard]
+    .map((minion, index) => ({ minion, index }))
+    .sort((left, right) => {
+      if (difficulty === "hard") {
+        const leftKillable = left.minion.health <= attacker.attack;
+        const rightKillable = right.minion.health <= attacker.attack;
+        const leftReady = left.minion.summonedTurn < battle.turnNumber && left.minion.attack > 0 && !left.minion.hasAttacked && !left.minion.statusEffects?.some((status) => status.kind === "root");
+        const rightReady = right.minion.summonedTurn < battle.turnNumber && right.minion.attack > 0 && !right.minion.hasAttacked && !right.minion.statusEffects?.some((status) => status.kind === "root");
+        return Number(rightKillable) - Number(leftKillable)
+          || Number(rightReady) - Number(leftReady)
+          || right.minion.attack - left.minion.attack
+          || left.minion.health - right.minion.health
+          || left.index - right.index;
+      }
+      const leftKillable = left.minion.health <= attacker.attack;
+      const rightKillable = right.minion.health <= attacker.attack;
+      return Number(rightKillable) - Number(leftKillable)
+        || right.minion.attack - left.minion.attack
+        || left.minion.health - right.minion.health
+        || left.index - right.index;
+    })[0]?.minion;
+}
+
 function resolveEnemyMinionAttacks(
   run: RunState,
   onAttack?: (action: EnemyCombatRecord, beforeRun: RunState, afterRun: RunState) => void,
@@ -998,43 +1138,27 @@ function resolveEnemyMinionAttacks(
 ): RunState {
   const initialBattle = run.battle;
   if (!initialBattle) return run;
-  const attackerIds = initialBattle.enemyBoard.map((minion) => minion.instanceId);
-  for (const attackerId of attackerIds) {
+  // From the second battle on the attacks are planned; the first battle keeps the base rules.
+  const plan = run.completedBattles > 0 ? planEnemyAttacks(run) : null;
+  const attackerIds = plan ? plan.map((step) => step.attackerId) : initialBattle.enemyBoard.map((minion) => minion.instanceId);
+  for (const [stepIndex, attackerId] of attackerIds.entries()) {
     const battle = run.battle;
     if (!battle) break;
     const attacker = battle.enemyBoard.find((minion) => minion.instanceId === attackerId);
-    if (!attacker || attacker.attack <= 0 || attacker.summonedTurn >= battle.turnNumber || attacker.hasAttacked || attacker.statusEffects?.some((status) => status.kind === "root")) continue;
+    if (!attacker || !isEnemyAttackReady(attacker, battle)) continue;
     const beforeRun = onAttack ? cloneRun(run) : run;
-    if (run.difficulty === "hard" && battle.playerBoard.length === 0) {
-      const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
-      battle.enemyTurnEvents?.push(action);
-      attacker.hasAttacked = true;
-      run = dealDamageToPlayerHero(run, attacker.attack, deferDefeat);
-      onAttack?.(action, beforeRun, run);
-      if (run.status !== "active" || (deferDefeat && run.battle?.playerHero.health === 0)) return run;
-      continue;
+    const plannedTargetId = plan?.[stepIndex]?.targetId;
+    let target: MinionState | undefined;
+    if (plan) {
+      if (plannedTargetId !== battle.playerHero.id) {
+        target = battle.playerBoard.find((minion) => minion.instanceId === plannedTargetId);
+        if (!target) continue;
+      } else if (battle.playerBoard.length > 0) {
+        continue;
+      }
+    } else {
+      target = greedyEnemyAttackTarget(battle, attacker, run.difficulty);
     }
-    const target = [...battle.playerBoard]
-      .map((minion, index) => ({ minion, index }))
-      .sort((left, right) => {
-        if (run.difficulty === "hard") {
-          const leftKillable = left.minion.health <= attacker.attack;
-          const rightKillable = right.minion.health <= attacker.attack;
-          const leftReady = left.minion.summonedTurn < battle.turnNumber && left.minion.attack > 0 && !left.minion.hasAttacked && !left.minion.statusEffects?.some((status) => status.kind === "root");
-          const rightReady = right.minion.summonedTurn < battle.turnNumber && right.minion.attack > 0 && !right.minion.hasAttacked && !right.minion.statusEffects?.some((status) => status.kind === "root");
-          return Number(rightKillable) - Number(leftKillable)
-            || Number(rightReady) - Number(leftReady)
-            || right.minion.attack - left.minion.attack
-            || left.minion.health - right.minion.health
-            || left.index - right.index;
-        }
-        const leftKillable = left.minion.health <= attacker.attack;
-        const rightKillable = right.minion.health <= attacker.attack;
-        return Number(rightKillable) - Number(leftKillable)
-          || right.minion.attack - left.minion.attack
-          || left.minion.health - right.minion.health
-          || left.index - right.index;
-      })[0]?.minion;
     if (target) {
       const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: target.instanceId };
       battle.enemyTurnEvents?.push(action);
