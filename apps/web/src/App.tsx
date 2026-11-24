@@ -14,6 +14,7 @@ import { DeckLimitDialog } from "./components/DeckLimitDialog.js";
 import { DiscardPicker } from "./components/DiscardPicker.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { AudioSettingsModal } from "./components/AudioSettingsModal.js";
+import { TurnBanner } from "./components/TurnBanner.js";
 import { TurnStartGlow } from "./components/TurnStartGlow.js";
 import { LeaderboardModal, type LeaderboardLoadState } from "./components/LeaderboardModal.js";
 import { useGameSession } from "./game/useGameSession.js";
@@ -121,6 +122,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const musicKind: MusicKind = hasBattlePresentation ? (enemyKind === "boss" ? "boss" : "normal") : "menu";
   const tutorialAttackUnavailable = Boolean(tutorialMode !== "inactive" && battle
     && !battle.playerBoard.some((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")));
+  // The enemy turn is replayed step by step; its banner shows once for the playback of each enemy turn.
+  const enemyTurnBattle = playback?.steps[0]?.beforeRun.battle;
+  const enemyTurnKey = enemyTurnBattle ? `enemy-${enemyTurnBattle.battleId}:${enemyTurnBattle.turnNumber}` : null;
   const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active"
     ? `${run.battle.battleId}:${run.battle.turnNumber}`
     : null;
@@ -765,6 +769,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           selectedAttackerId={session.selectedAttackerId}
           targetMode={session.targetMode}
           isResolving={session.resolving || Boolean(playback)}
+          enemyTurnActive={Boolean(playback)}
           actionsDisabled={(sync.status !== "ready" && sync.status !== "saving") || Boolean(run.pendingVictoryAcknowledgement)}
           {...(tutorialMode !== "inactive" ? { tutorialStep } : {})}
           error={session.error}
@@ -791,6 +796,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       {session.victoryPresentation === "victory-reveal" && <VictoryScreen overlay disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={acknowledgeVictory} />}
       {leaderboardSubmitNotice}
       <TurnStartGlow key={turnStartGlowId} turnId={turnStartGlowId} />
+      <TurnBanner turnKey={tutorialMode === "inactive" ? turnStartGlowId : null} side="player" />
+      <TurnBanner turnKey={tutorialMode === "inactive" ? enemyTurnKey : null} side="enemy" />
       {sync.status === "saving" && <aside className="run-sync-banner" role="status">원정 진행 상황을 저장하고 있습니다…</aside>}
       <AbandonRunDialog open={abandonOpen} busy={sync.status === "saving"} onCancel={() => setAbandonOpen(false)} onConfirm={abandonIntoClassSelection} />
       <AbandonRunDialog intent="main-menu" open={abandonToMenuOpen} busy={abandonToMenuBusy} onCancel={() => setAbandonToMenuOpen(false)} onConfirm={() => { void confirmReturnToMenu(); }} />

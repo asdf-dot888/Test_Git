@@ -34,6 +34,8 @@ export interface GameBoardProps {
   selectedAttackerId: string | null;
   targetMode: "none" | "spell" | "attack" | "hero-power";
   isResolving: boolean;
+  /** True while the enemy turn is replayed step by step (the board still shows the player as active). */
+  enemyTurnActive?: boolean;
   actionsDisabled?: boolean;
   error: string | null;
   onSelectCard(instanceId: string): void;
@@ -59,7 +61,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, enemyTurnActive = false, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
   // Touch drag progress: which targets to outline and which one is under the finger.
   const [dragState, setDragState] = useState<DragState | null>(null);
   const compactBoard = useCompactBoard();
@@ -81,6 +83,8 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
       ? intentAction.effects.some((effect) => effect.targetId === battle.playerHero.id || effect.targetId === "player-hero"
         || (effect.targetId === null && (effect.kind === "damage" || effect.kind === "randomDamage")))
       : intentAction?.type === "boss-area";
+  const turnLive = battle.status === "active";
+  const turnSide: "player" | "enemy" = enemyTurnActive || battle.activeSide === "enemy" ? "enemy" : "player";
   const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
   const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
   const fieldActionsDisabled = actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "attack" && !(tutorialStep === "play-card" && targetMode === "spell"));
@@ -115,12 +119,12 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
     <main className={`game-shell${enemy?.kind === "boss" ? " has-boss-pattern" : ""}`}>
       <header className="game-topbar">
         <a className="brand-mark" href="#battle" aria-label="망고스톤 홈"><span aria-hidden="true">✦</span> 망고스톤</a>
-        <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span><span className={`turn-timer${turnTimer.remainingSeconds <= 5 ? " is-critical" : ""}${turnTimer.visible ? "" : " is-hidden"}`} aria-label={`남은 시간 ${turnTimer.remainingSeconds}초`} aria-live="off" aria-hidden={!turnTimer.visible}>{turnTimer.text}</span></div>
+        <div className="run-meta"><span>PHASE {run.phase} <b>·</b> 전투 {run.encounterInPhase + 1} / 4</span><span className="turn-number">TURN {battle.turnNumber}</span>{turnLive && <span className={`turn-badge is-${turnSide}`} role="status" aria-live="polite">{turnSide === "player" ? "내 턴" : "상대 턴"}</span>}<span className={`turn-timer${turnTimer.remainingSeconds <= 5 ? " is-critical" : ""}${turnTimer.visible ? "" : " is-hidden"}`} aria-label={`남은 시간 ${turnTimer.remainingSeconds}초`} aria-live="off" aria-hidden={!turnTimer.visible}>{turnTimer.text}</span></div>
         <button className="menu-button" type="button" onClick={onMenu}>메뉴</button>
       </header>
       {enemy?.kind === "boss" && <aside className="boss-pattern-panel" data-testid="boss-pattern-panel"><strong>보스 고유 패턴</strong><span>보스의 3·6·9번째 턴 행동은 카드 행동 후 이어집니다.</span><span>광역 강타: 내 하수인과 영웅 모두에게 피해 1</span></aside>}
 
-      <section className={`battle-board${showTimerWarning ? " is-timer-critical" : ""}`} id="battle" aria-label="카드 전투 보드">
+      <section className={`battle-board${turnLive ? ` is-${turnSide}-turn` : ""}${showTimerWarning ? " is-timer-critical" : ""}`} id="battle" aria-label="카드 전투 보드">
         {enemyIntentStep && <EnemyIntentPreview step={enemyIntentStep} />}
         <div className="battle-opponent">
           <div className="enemy-resource-bar">

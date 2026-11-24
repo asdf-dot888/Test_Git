@@ -1,6 +1,6 @@
 # Task: T02 Turn Badge, Board Border and Turn Banner
 
-## Status: todo
+## Status: done
 
 ## Goal
 Make it obvious whose turn it is: an always-visible `내 턴` / `상대 턴` badge in the top bar, a board border colour that follows the turn, and a centre banner for about 1 second at every turn change.
@@ -48,6 +48,7 @@ Task: T02-turn-badge-and-banner
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. `GameBoard` got `enemyTurnActive`, the `turn-badge` (role status) and `is-player-turn` / `is-enemy-turn` classes; new `TurnBanner.tsx`; `App.tsx` passes `enemyTurnActive={Boolean(playback)}` and renders two banners without new state (the player banner reuses `turnStartGlowId`, the enemy banner uses `enemyTurnKey` derived from the first playback step; both off during the tutorial). Deviation from the blueprint: no `turnBanner` state in `App`, because the lint rule `react-hooks/set-state-in-effect` rejects it; `TurnBanner` tracks its own dismissal. The banner shows at each player turn start that the existing glow detects (also the first turn of a later battle in the same run, not on load/resume and not at the very start of a new run) and when an enemy playback begins; an enemy turn with no actions has no playback and therefore no banner.
+- **Bug found and fixed while doing this** (belongs to T01): removing `.field-action-bar` left `.battle-board` with 4 grid rows for 3 children; `grid-template-rows` is now `minmax(0, 1fr) auto minmax(0, 1fr)`.
+- [x] validation passed: build clean, lint clean, 1151 tests (100 files).
+- commit: see Git history

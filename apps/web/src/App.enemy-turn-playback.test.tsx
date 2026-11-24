@@ -124,6 +124,11 @@ describe("enemy turn playback in the game screen", () => {
     expect((screen.getByRole("button", { name: /아군 하수인 잿빛 늑대/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId("enemy-intent-preview").textContent).toContain("적의 행동 예고");
     expect(screen.getByTestId("enemy-intent-preview").textContent).toContain("잿빛 늑대 소환");
+    // The turn indicators follow the replayed enemy turn: badge, board border and banner.
+    expect(document.querySelector(".turn-badge")?.textContent).toBe("상대 턴");
+    expect(document.querySelector(".turn-badge")?.classList.contains("is-enemy")).toBe(true);
+    expect(document.querySelector(".battle-board")?.classList.contains("is-enemy-turn")).toBe(true);
+    expect(document.body.querySelector(".turn-banner.is-enemy")?.textContent).toBe("상대 턴");
     expect(screen.getByRole("button", { name: /아군 하수인 잿빛 늑대.*체력 5\/5/ })).toBeTruthy();
 
     await advance(400);
@@ -150,6 +155,12 @@ describe("enemy turn playback in the game screen", () => {
 
     await advanceUntil(() => !screen.queryByTestId("enemy-intent-preview"));
     expect(screen.queryByTestId("enemy-intent-preview")).toBeNull();
+    await advanceUntil(() => document.querySelector(".turn-badge")?.textContent === "내 턴");
+    expect(document.querySelector(".turn-badge")?.textContent).toBe("내 턴");
+    expect(document.querySelector(".battle-board")?.classList.contains("is-player-turn")).toBe(true);
+    expect(document.body.querySelector(".turn-banner.is-player")?.textContent).toBe("내 턴");
+    await advance(1_000);
+    expect(document.body.querySelector(".turn-banner")).toBeNull();
   });
 
   it("shows the lethal action before routing to the defeat screen", async () => {

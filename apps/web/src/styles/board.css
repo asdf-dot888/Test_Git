@@ -25,6 +25,9 @@
 .run-meta { min-width: 0; display: flex; align-items: center; gap: 22px; color: var(--muted); font-size: 11px; letter-spacing: .12em; white-space: nowrap; }
 .run-meta b { color: var(--gold); margin: 0 5px; }
 .turn-number { color: #e6dcc8; }
+.turn-badge { padding: 3px 10px; border: 1px solid currentcolor; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .06em; white-space: nowrap; }
+.turn-badge.is-player { color: #efce8d; background: rgb(60 44 20 / 72%); }
+.turn-badge.is-enemy { color: #ff9a9a; background: rgb(70 22 24 / 76%); }
 .turn-timer { flex: 0 0 auto; min-width: 4.4em; color: #e6dcc8; font-variant-numeric: tabular-nums; letter-spacing: .08em; text-align: left; white-space: nowrap; }
 .turn-timer.is-hidden { visibility: hidden; }
 .turn-timer.is-critical { color: #ff5c67; animation: turn-timer-warning-blink .9s steps(2, end) infinite; }
@@ -35,7 +38,7 @@
 .end-turn-button { min-height: 40px; padding: 0 18px; color: #241d12; background: linear-gradient(135deg, #efce8d, #c08a42); border: 1px solid #f3d89f; border-radius: 7px; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 18px rgb(0 0 0 / 25%); }
 .end-turn-button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
 .end-turn-button:disabled { opacity: .55; cursor: not-allowed; }
-.battle-board { position: relative; isolation: isolate; width: min(calc(100% - 32px), 1800px); min-width: 0; min-height: 0; margin: 8px auto; padding: 8px clamp(20px, 6vw, 86px) 12px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr); border: 1px solid rgb(233 196 133 / 35%); border-radius: 26px; background: #75624a url("/art/board-surface.png") center / cover no-repeat; box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); overflow: hidden; }
+.battle-board { position: relative; isolation: isolate; width: min(calc(100% - 32px), 1800px); min-width: 0; min-height: 0; margin: 8px auto; padding: 8px clamp(20px, 6vw, 86px) 12px; display: grid; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); border: 1px solid rgb(233 196 133 / 35%); border-radius: 26px; background: #75624a url("/art/board-surface.png") center / cover no-repeat; box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%); overflow: hidden; }
 .battle-board::before { position: absolute; z-index: -1; content: ""; inset: 0; background: linear-gradient(180deg, rgb(28 23 19 / 27%), transparent 30%, transparent 65%, rgb(25 22 19 / 32%)); }
 .battle-board.is-shaking { animation: boss-board-shake 500ms ease-in-out; border-color: rgb(235 122 86 / 78%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 60px rgb(180 48 31 / 38%); }
 .battle-board.is-hit-shaking { animation: direct-hit-board-shake 500ms ease-in-out var(--hit-delay, 930ms) both; border-color: rgb(201 66 61 / 68%); }
@@ -68,6 +71,8 @@
 @keyframes dragon-fire-wave { 0% { opacity: 0; transform: translateX(65%) skewX(-14deg); } 32% { opacity: .9; } 100% { opacity: 1; transform: translateX(-18%) skewX(-14deg); } }
 @keyframes dragon-fire-glow { 0% { opacity: 0; } 45% { opacity: .8; } 100% { opacity: 1; } }
 @keyframes boss-field-flash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+.battle-board.is-player-turn { border-color: rgb(235 196 120 / 72%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%), 0 0 22px rgb(212 170 98 / 16%); }
+.battle-board.is-enemy-turn { border-color: rgb(226 96 96 / 72%); box-shadow: 0 20px 65px rgb(0 0 0 / 42%), inset 0 0 40px rgb(35 23 10 / 26%), 0 0 22px rgb(220 90 90 / 20%); }
 .battle-board.is-timer-critical { animation: battle-board-timer-breath 1.35s ease-in-out infinite; }
 .enemy-intent-preview { position: absolute; z-index: 8; top: 62px; left: 50%; width: min(520px, calc(100% - 28px)); min-height: 76px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; transform: translateX(-50%); border: 1px solid rgb(244 207 142 / 72%); border-radius: 12px; color: #fff1d7; background: linear-gradient(120deg, rgb(45 31 27 / 97%), rgb(25 23 23 / 96%)); box-shadow: 0 8px 28px #000b, 0 0 24px rgb(222 153 75 / 22%); pointer-events: none; }
 .enemy-intent-preview.is-boss-warning { min-height: 110px; border: 2px solid #ff5a38; background: linear-gradient(110deg, rgb(93 20 14 / 98%), rgb(30 13 14 / 98%)); box-shadow: 0 0 0 3px rgb(255 73 44 / 20%), 0 0 38px rgb(255 45 25 / 64%), 0 12px 40px #000d; animation: boss-warning-pulse .7s ease-in-out infinite alternate; }
@@ -530,6 +535,12 @@
 .combat-effect-weapon-trail[data-particles="rune"] { --trail-color: #a99aff; }
 .combat-effect-impact-art { width: clamp(42px, 6vw, 72px); height: clamp(42px, 6vw, 72px); object-fit: contain; }
 .combat-effect-impact { position: fixed; z-index: 32; width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 2px solid var(--card-accent, #ffe2a0); border-radius: 50%; opacity: 0; box-shadow: 0 0 20px 8px color-mix(in srgb, var(--card-accent, #ffce74) 65%, transparent), inset 0 0 12px rgb(255 255 220 / 65%); animation: combat-effect-impact var(--profile-duration, 520ms) ease-out both; }
+.turn-banner { position: fixed; z-index: 35; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.turn-banner > span { padding: .1em .55em; font-size: clamp(30px, 7vw, 58px); font-weight: 900; letter-spacing: .12em; text-shadow: 0 0 22px currentcolor, 0 4px 14px #000c; background: rgb(12 10 9 / 55%); border-radius: 14px; animation: turn-banner-pop 1000ms ease-out both; }
+.turn-banner.is-player > span { color: #f3d89f; }
+.turn-banner.is-enemy > span { color: #ff8f8f; }
+@keyframes turn-banner-pop { 0% { opacity: 0; transform: scale(.9); } 18% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .turn-banner > span { animation: none; opacity: .92; } }
 .turn-start-glow { position: fixed; z-index: 34; inset: 0; border: 2px solid rgb(255 213 133 / 68%); box-shadow: inset 0 0 34px 8px rgb(255 190 82 / 34%), inset 0 0 110px rgb(255 190 82 / 12%); pointer-events: none; animation: turn-start-edge-glow 1000ms ease-out both; }
 @keyframes turn-start-edge-glow { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .turn-start-glow { animation: none; opacity: .3; } }

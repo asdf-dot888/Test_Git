@@ -7,7 +7,7 @@
 [P01 Battle Layout and Turn Clarity](./phases/2026-11-24-playtest-feedback-round/P01-battle-layout-and-turn-clarity/phase.md)
 
 ## Active Task
-[P01-T02 Turn Badge, Board Border and Turn Banner](./phases/2026-11-24-playtest-feedback-round/P01-battle-layout-and-turn-clarity/T02-turn-badge-and-banner.md)
+[P01-T03 30-Second Turn Timer and Boss Panel Text](./phases/2026-11-24-playtest-feedback-round/P01-battle-layout-and-turn-clarity/T03-turn-time-and-boss-panel.md)
 
 ## Status
 - Plan order: P01 layout and turn clarity (T01 buttons, T02 badge/banner, T03 30 s timer and boss panel text), P02 combat feedback (T01 damage/heal numbers, T02 card rustle hover sound), P03 mana (T01 player recovery 2/3/4, T02 two Mana Springs), P04 enemy difficulty (T01 enemy mana +2 and no minion health bonus, T02 attack planning, T03 card plan fix and mana efficiency, T04 balance tuning to normal 55-65% / hard 6-10% / class gap <= 5 points), P05 close-out (docs, checklist, audit). No release is part of the plan.
@@ -25,7 +25,7 @@
 - An unexplained flaky test failure happened once (P01-T01 of the previous plan; reruns passed); mention it if it recurs.
 
 ## Next Step (IMPORTANT)
-Start the active task: `/memory-execute` (or "current 보고 이어서 해줘"), continuing the Playtest Feedback Round at P01-T02 (P01-T01 is done). Validation setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`. Commit by explicit file path (unrelated untracked files exist).
+Start the active task: `/memory-execute` (or "current 보고 이어서 해줘"), continuing the Playtest Feedback Round at P01-T03 (P01-T01 and T02 are done). Validation setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`. Commit by explicit file path (unrelated untracked files exist).
 
 Still pending from before: delete the old private ChatGPT Sites copy `mango-stone-project-story-2026` through the Sites UI when accessible; the current connector has no delete/unpublish operation.
 

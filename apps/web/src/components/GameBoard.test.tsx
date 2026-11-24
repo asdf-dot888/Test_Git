@@ -215,10 +215,10 @@ describe("GameBoard", () => {
       />,
     );
 
-    expect(renderBoard(5, true)).toContain('class="battle-board is-timer-critical"');
-    expect(renderBoard(6, true)).toContain('class="battle-board"');
-    expect(renderBoard(5, false)).toContain('class="battle-board"');
-    expect(renderBoard(1, true)).toContain('class="battle-board is-timer-critical"');
+    expect(renderBoard(5, true)).toContain('class="battle-board is-player-turn is-timer-critical"');
+    expect(renderBoard(6, true)).toContain('class="battle-board is-player-turn"');
+    expect(renderBoard(5, false)).toContain('class="battle-board is-player-turn"');
+    expect(renderBoard(1, true)).toContain('class="battle-board is-player-turn is-timer-critical"');
   });
 
   it("shows the selected class power and Demonist shards while keeping legacy runs compatible", () => {
@@ -291,6 +291,36 @@ describe("GameBoard", () => {
     run.battle!.enemyBoard = [{ instanceId: "blocker", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
     const blocked = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
     expect(blocked).toContain('class="all-attack-button is-unavailable"');
+  });
+
+  describe("turn indicator", () => {
+    const renderBoard = (options: { enemyTurnActive?: boolean; activeSide?: "player" | "enemy"; status?: "active" | "playerWon" | "playerLost" }) => {
+      const run = createRun(421);
+      if (options.activeSide) run.battle!.activeSide = options.activeSide;
+      if (options.status) run.battle!.status = options.status;
+      return renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:30", remainingSeconds: 30, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} {...(options.enemyTurnActive !== undefined ? { enemyTurnActive: options.enemyTurnActive } : {})} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    };
+
+    it("shows the player's turn badge and board border by default", () => {
+      const markup = renderBoard({});
+      expect(markup).toContain('class="turn-badge is-player"');
+      expect(markup).toContain(">내 턴</span>");
+      expect(markup).toContain("battle-board is-player-turn");
+    });
+
+    it("shows the enemy's turn while its turn is replayed or when it is the active side", () => {
+      for (const markup of [renderBoard({ enemyTurnActive: true }), renderBoard({ activeSide: "enemy" })]) {
+        expect(markup).toContain('class="turn-badge is-enemy"');
+        expect(markup).toContain(">상대 턴</span>");
+        expect(markup).toContain("battle-board is-enemy-turn");
+      }
+    });
+
+    it("hides the badge once the battle is over", () => {
+      const markup = renderBoard({ status: "playerWon" });
+      expect(markup).not.toContain("turn-badge");
+      expect(markup).not.toContain("is-player-turn");
+    });
   });
 
   describe("button layout", () => {
