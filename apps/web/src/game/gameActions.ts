@@ -55,6 +55,8 @@ export type GameAction =
   | { type: "clear-error" };
 
 export interface GameSession {
+  /** Counts attacks refused because of a taunt minion (the screen plays a short sound for each). */
+  tauntBlocks: number;
   run: RunState | null;
   error: string | null;
   selectedCardInstanceId: string | null;
@@ -70,6 +72,7 @@ export interface GameSession {
 }
 
 export const initialGameSession: GameSession = {
+  tauntBlocks: 0,
   run: null,
   error: null,
   selectedCardInstanceId: null,
@@ -240,7 +243,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
       if (battle && battle.activeSide === "player" && battle.firstSide !== null) {
         const legal = getLegalAttackTargets(battle, "player");
         const blocked = action.targetId === battle.enemyHero.id ? !legal.heroAllowed : battle.enemyBoard.some((minion) => minion.instanceId === action.targetId) && !legal.minionIds.includes(action.targetId);
-        if (blocked) return { ...session, error: "도발 하수인을 먼저 공격해야 합니다.", resolving: false };
+        if (blocked) return { ...session, error: "도발 하수인을 먼저 공격해야 합니다.", resolving: false, tauntBlocks: session.tauntBlocks + 1 };
       }
       return sessionForAction(attackWithMinion(session.run, action.attackerId, action.targetId), session, action);
     }

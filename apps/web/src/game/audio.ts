@@ -2,7 +2,8 @@ import { DEFAULT_ATTACK_MS, getSoundRecipe, type SynthLayer } from "./soundRecip
 
 export type MusicKind = "menu" | "normal" | "boss";
 export type SoundEffectKind = "hero-attack" | "minion-attack" | "spell" | "heal" | "damage" | "death" | "ui-click" | "ui-hover" | "turn-start" | "turn-end" | "summon" | "timer-warning"
-  | "impact-light" | "impact-medium" | "impact-heavy" | "impact-armor-block" | "impact-hero-melee" | "impact-boss-area";
+  | "impact-light" | "impact-medium" | "impact-heavy" | "impact-armor-block" | "impact-hero-melee" | "impact-boss-area"
+  | "taunt-summon" | "taunt-blocked";
 
 export interface AudioSettings {
   musicVolume: number;
@@ -26,7 +27,7 @@ const MUSIC_SOURCES: Record<MusicKind, string> = {
   boss: "/audio/bgm/boss.ogg",
 };
 
-const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start" | "ui-hover">, string> = {
+const EFFECT_SOURCES: Record<Exclude<SoundEffectKind, "turn-start" | "ui-hover" | "taunt-summon" | "taunt-blocked">, string> = {
   "hero-attack": "/audio/sfx/attack.ogg",
   "minion-attack": "/audio/sfx/attack.ogg",
   spell: "/audio/sfx/spell.ogg",
@@ -390,6 +391,10 @@ export function createAudioController(createAudio: (src: string) => HTMLAudioEle
       }
       if (kind === "ui-hover") {
         playHoverCue();
+        return;
+      }
+      if (kind === "taunt-summon" || kind === "taunt-blocked") {
+        playSpellCue(kind, volumeScale);
         return;
       }
       const playerScale = clampVolume(volumeScale);

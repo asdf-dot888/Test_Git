@@ -1,5 +1,5 @@
 import type { MinionState } from "@board-game/game-core";
-import { CARD_BY_ID } from "@board-game/game-core";
+import { CARD_BY_ID, hasTaunt } from "@board-game/game-core";
 import { writeDragPayload } from "./dragInteractions.js";
 
 interface MinionCardProps {
@@ -23,6 +23,7 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
   const baseAttack = card?.minion?.attack ?? minion.attack;
   // Shown when the attack is higher than the card's printed attack (enemy bonuses, battlecry buffs).
   const boostedAttack = minion.attack > baseAttack;
+  const taunt = hasTaunt(minion);
   const statuses = minion.statusEffects ?? [];
   const statusLabels = statuses.map((status) => status.kind === "root"
     ? "Rooted: cannot attack this turn"
@@ -31,17 +32,18 @@ export function MinionCard({ minion, selected, targetable, disabled, onSelect, d
       : `Cursed: attack reduced by ${status.attackReduction} for ${status.turnsRemaining} turns`);
   return (
     <button
-      className={`minion-card ${minion.owner === "enemy" ? "minion-enemy" : "minion-friendly"}${selected ? " is-selected" : ""}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}${exhausted ? " is-exhausted" : ""}${blocked ? " is-blocked-target" : ""}`}
+      className={`minion-card ${minion.owner === "enemy" ? "minion-enemy" : "minion-friendly"}${selected ? " is-selected" : ""}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}${exhausted ? " is-exhausted" : ""}${blocked ? " is-blocked-target" : ""}${taunt ? " is-taunt" : ""}`}
       type="button"
       disabled={disabled}
       aria-pressed={selected}
       aria-describedby={tooltipId}
       aria-description={exhausted ? "이번 턴에는 공격할 수 없습니다" : undefined}
-      aria-label={`${faction} 하수인 ${name}, 공격력 ${minion.attack}, 체력 ${minion.health}/${minion.maxHealth}${minion.hasAttacked ? ", 이번 턴 공격함" : ""}${selected ? ", 공격자로 선택됨" : ""}`}
+      aria-label={`${faction} 하수인 ${name}, 공격력 ${minion.attack}, 체력 ${minion.health}/${minion.maxHealth}${minion.hasAttacked ? ", 이번 턴 공격함" : ""}${taunt ? ", 도발" : ""}${selected ? ", 공격자로 선택됨" : ""}`}
       draggable={draggable}
       onDragStart={(event) => { if (draggable) writeDragPayload(event, { kind: "minion", instanceId: minion.instanceId }); }}
       onClick={onSelect}
     >
+      {taunt && <span className="minion-taunt-badge" aria-hidden="true">⛨</span>}
       <span className="minion-art-frame"><img src={`/art/cards/${card?.artKey ?? minion.cardId}.png`} alt="" draggable={false} /></span>
       <span className="minion-name">{name}</span>
       <span className="minion-stats"><b aria-label={`공격력 ${minion.attack}`} {...(boostedAttack ? { className: "is-boosted", title: `기본 공격력 ${baseAttack} → ${minion.attack}` } : {})}>{minion.attack}</b><b aria-label={`체력 ${minion.health}/${minion.maxHealth}`}>{minion.health}<small>/{minion.maxHealth}</small></b></span>

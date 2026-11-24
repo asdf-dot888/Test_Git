@@ -297,7 +297,8 @@ describe("GameBoard", () => {
     ];
     const render = () => renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId="hitter" targetMode="attack" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
     const shielded = render();
-    expect(shielded.match(/is-blocked-target/g)).toHaveLength(1);
+    // The plain minion and the enemy hero panel are dimmed; the taunt minion itself stays bright.
+    expect(shielded.match(/is-blocked-target/g)).toHaveLength(2);
     expect(shielded).not.toContain("hero-target-button");
     run.battle!.enemyBoard = run.battle!.enemyBoard.filter((minion) => minion.instanceId === "plain");
     const open = render();

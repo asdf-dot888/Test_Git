@@ -41,6 +41,29 @@ export interface SoundRecipe {
   layers: readonly SynthLayer[];
 }
 
+/** Short UI/combat cues for taunt (not spell effects, so they are not part of the spell recipe registry). */
+export const TAUNT_CUE_RECIPES: Readonly<Record<"taunt-summon" | "taunt-blocked", SoundRecipe>> = {
+  // A metallic clank: two detuned hits and a short noise tick.
+  "taunt-summon": {
+    id: "taunt-summon", totalMs: 260,
+    layers: [
+      { wave: "triangle", startMs: 0, durationMs: 220, fromHz: 190, toHz: 95, gain: 0.3, attackMs: 4 },
+      { wave: "square", startMs: 0, durationMs: 140, fromHz: 330, toHz: 220, gain: 0.08, attackMs: 3, detuneCents: 18 },
+      { wave: "sine", startMs: 20, durationMs: 160, fromHz: 760, toHz: 420, gain: 0.14, attackMs: 3 },
+      { wave: "noise", startMs: 0, durationMs: 90, fromHz: 1, gain: 0.12, attackMs: 2, filter: { type: "bandpass", fromHz: 2600 } },
+    ],
+  },
+  // A dull thud and a small tick: "that way is shut".
+  "taunt-blocked": {
+    id: "taunt-blocked", totalMs: 170,
+    layers: [
+      { wave: "sine", startMs: 0, durationMs: 150, fromHz: 150, toHz: 70, gain: 0.34, attackMs: 3 },
+      { wave: "triangle", startMs: 0, durationMs: 50, fromHz: 1800, toHz: 1400, gain: 0.1, attackMs: 2 },
+      { wave: "noise", startMs: 0, durationMs: 100, fromHz: 1, gain: 0.1, attackMs: 2, filter: { type: "lowpass", fromHz: 700 } },
+    ],
+  },
+};
+
 export const SYNTH_LIMITS = { maxLayers: 6, maxGain: 0.6, maxTotalMs: 2000, minHz: 20, maxHz: 16000 } as const;
 export const DEFAULT_ATTACK_MS = 12;
 
@@ -54,7 +77,8 @@ export const SOUND_RECIPES: Readonly<Record<string, SoundRecipe>> = Object.fromE
 let activeRecipes: Readonly<Record<string, SoundRecipe>> = SOUND_RECIPES;
 
 export function getSoundRecipe(id: string | null | undefined): SoundRecipe | undefined {
-  return id ? activeRecipes[id] : undefined;
+  if (!id) return undefined;
+  return activeRecipes[id] ?? (id === "taunt-summon" || id === "taunt-blocked" ? TAUNT_CUE_RECIPES[id] : undefined);
 }
 
 /** Test-only: replaces the registry for the current module instance; pass `null` to restore it. */

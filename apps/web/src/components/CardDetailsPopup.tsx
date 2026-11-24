@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { CardDescription } from "./CardDescription.js";
 import { createPortal } from "react-dom";
 import type { CardDefinition } from "@board-game/game-core";
 
@@ -42,7 +43,7 @@ export function CardDetailsPopup({ card, onClose, action, liveStats }: CardDetai
         {liveStats
           ? <strong className="card-details-stats">현재 공격 {liveStats.attack} · 체력 {liveStats.health}/{liveStats.maxHealth}</strong>
           : card.minion && <strong className="card-details-stats">공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</strong>}
-        <p>{card.description}</p>
+        <p><CardDescription text={card.description} /></p>
         {action && <button className="menu-primary card-details-action" type="button" disabled={action.disabled} onClick={() => { action.onSelect(); onClose(); }}>{action.label}</button>}
       </section>
     </div>,

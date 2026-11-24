@@ -162,6 +162,13 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     onTimeout: () => dispatch({ type: "end-turn" }),
   });
 
+  // A short thud each time an attack is refused because a taunt minion stands in the way.
+  const seenTauntBlocks = useRef(0);
+  useEffect(() => {
+    if (audioController && session.tauntBlocks > seenTauntBlocks.current) audioController.playEffect("taunt-blocked");
+    seenTauntBlocks.current = session.tauntBlocks;
+  }, [audioController, session.tauntBlocks]);
+
   useEnemyTurnPlayback({
     active: Boolean(playback),
     stepKey: playback?.currentIndex ?? null,

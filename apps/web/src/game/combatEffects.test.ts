@@ -105,6 +105,19 @@ describe("collectCombatEffectEvents", () => {
     expect(lethalEvents.map((event) => event.deathAnchors?.length ?? 0)).toEqual([1, 1]);
   });
 
+  it("adds the taunt clank to the summon cue of a taunt minion only", () => {
+    const run = createRun(41);
+    const before = withBattle(run, (state) => { state.battle!.hand = [{ instanceId: "guard", cardId: "warrior-vanguard" }, { instanceId: "wolf", cardId: "ash-wolf" }]; });
+    const board = (cardId: string) => withBattle(before, (state) => {
+      state.battle!.hand = [];
+      state.battle!.playerBoard = [{ instanceId: "played", cardId, owner: "player", attack: 1, health: 1, maxHealth: 1, summonedTurn: 1, hasAttacked: false }];
+    });
+    const guard = collectCombatEffectEvents(before, board("warrior-vanguard"), { type: "play-minion", instanceId: "guard" }, 1);
+    expect(guard[0]?.soundCues).toEqual(["summon", "taunt-summon"]);
+    const wolf = collectCombatEffectEvents(before, board("ash-wolf"), { type: "play-minion", instanceId: "wolf" }, 1);
+    expect(wolf[0]?.soundCues).toEqual(["summon"]);
+  });
+
   it("plays a summon cue for played minions and their battlecry summons", () => {
     const run = createRun(40);
     const before = withBattle(run, (state) => { state.battle!.hand = [{ instanceId: "witch", cardId: "mire-witch" }]; });

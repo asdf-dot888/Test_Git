@@ -889,3 +889,17 @@ body.touch-dragging { overscroll-behavior: contain; }
 .difficulty-choice strong { color: #fff1d5; font-size: 14px; }
 .difficulty-choice small { color: var(--muted); font-size: 11px; line-height: 1.45; }
 .difficulty-choice-hard strong { color: #f2a07e; }
+
+/* Taunt: a heavy metallic frame and a shield badge; blocked targets are dimmed while attacking. */
+.minion-card.is-taunt { border: 3px solid #c9d2dc; box-shadow: 0 0 0 1px #3a4350, inset 0 0 0 2px rgb(255 255 255 / 20%), 0 0 14px rgb(167 190 214 / 38%), 0 6px 13px rgb(0 0 0 / 40%); }
+.minion-card.is-taunt .minion-art-frame { box-shadow: inset 0 0 0 1px rgb(201 210 220 / 55%); }
+.minion-taunt-badge { position: absolute; z-index: 3; top: -9px; left: -7px; width: 22px; height: 22px; display: grid; place-items: center; color: #1c2430; border: 1px solid #e8eef5; border-radius: 6px 6px 11px 11px; background: linear-gradient(160deg, #e1e8f0, #8b99aa); font-size: 13px; font-weight: 900; line-height: 1; box-shadow: 0 2px 6px rgb(0 0 0 / 45%); }
+.taunt-tag { display: inline-block; margin-right: 2px; padding: 0 5px; color: #1c2430; border-radius: 4px; background: linear-gradient(160deg, #e1e8f0, #94a2b3); font-weight: 800; }
+.taunt-tag::before { content: "⛨ "; }
+.minion-card.is-blocked-target { opacity: .42; filter: grayscale(.7) saturate(.5); cursor: not-allowed; }
+.minion-card.is-blocked-target:hover { transform: none; }
+.hero-panel.is-blocked-target { opacity: .55; filter: grayscale(.5); }
+@media (max-width: 760px) {
+  .minion-taunt-badge { top: -7px; left: -5px; width: 17px; height: 17px; font-size: 10px; }
+  .minion-card.is-taunt { border-width: 2px; }
+}

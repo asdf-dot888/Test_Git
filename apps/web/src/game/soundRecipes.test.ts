@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   SOUND_RECIPES,
   SYNTH_LIMITS,
+  TAUNT_CUE_RECIPES,
   __setSoundRecipesForTest,
   getSoundRecipe,
   recipeFingerprint,
@@ -89,5 +90,17 @@ describe("sound recipe registry", () => {
       const visual = SPELL_VISUAL_SPECS[registered.id];
       if (visual) expect(registered.totalMs).toBeLessThanOrEqual(visual.totalMs);
     }
+  });
+});
+
+describe("taunt cues", () => {
+  it("are valid, short, and kept out of the spell recipe registry", () => {
+    for (const id of ["taunt-summon", "taunt-blocked"] as const) {
+      expect(soundRecipeProblems(TAUNT_CUE_RECIPES[id])).toEqual([]);
+      expect(TAUNT_CUE_RECIPES[id].totalMs).toBeLessThanOrEqual(300);
+      expect(getSoundRecipe(id)).toBe(TAUNT_CUE_RECIPES[id]);
+      expect(SOUND_RECIPES[id]).toBeUndefined();
+    }
+    expect(recipeFingerprint(TAUNT_CUE_RECIPES["taunt-summon"])).not.toBe(recipeFingerprint(TAUNT_CUE_RECIPES["taunt-blocked"]));
   });
 });

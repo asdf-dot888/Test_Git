@@ -314,6 +314,22 @@ describe("createAudioController", () => {
     controller.dispose();
   });
 
+  it("plays the two taunt cues as synthesized layers without audio files and honors mute", () => {
+    FakeAudioContext.instances = [];
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const { controller, players } = setup();
+    controller.playEffect("taunt-summon");
+    controller.playEffect("taunt-blocked");
+    const context = FakeAudioContext.instances[0]!;
+    expect(players).toHaveLength(0);
+    expect(context.oscillators.length).toBeGreaterThanOrEqual(4);
+    controller.setSettings({ musicVolume: 0.4, effectsVolume: 1, muted: true });
+    const before = context.oscillators.length;
+    controller.playEffect("taunt-blocked");
+    expect(context.oscillators).toHaveLength(before);
+    controller.dispose();
+  });
+
   it("honors mute and effect volume, rate-limits hover only, and clears active nodes on dispose", async () => {
     vi.useFakeTimers();
     FakeAudioContext.instances = [];

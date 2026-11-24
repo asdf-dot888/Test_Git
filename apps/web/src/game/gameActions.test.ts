@@ -65,7 +65,9 @@ describe("reduceGameAction timer snapshots", () => {
       { instanceId: "guard", cardId: "warrior-vanguard", owner: "enemy", attack: 1, health: 4, maxHealth: 4, summonedTurn: 0, hasAttacked: false },
     ];
     const restored = reduceGameAction(initialGameSession, { type: "restore-run", run });
-    expect(reduceGameAction(restored, { type: "attack", attackerId: "hitter", targetId: "plain" }).error).toBe("도발 하수인을 먼저 공격해야 합니다.");
+    const refused = reduceGameAction(restored, { type: "attack", attackerId: "hitter", targetId: "plain" });
+    expect(refused.error).toBe("도발 하수인을 먼저 공격해야 합니다.");
+    expect(refused.tauntBlocks).toBe(restored.tauntBlocks + 1);
     expect(reduceGameAction(restored, { type: "attack", attackerId: "hitter", targetId: "enemy" }).error).toBe("도발 하수인을 먼저 공격해야 합니다.");
     expect(reduceGameAction(restored, { type: "attack", attackerId: "hitter", targetId: "guard" }).error).toBeNull();
 

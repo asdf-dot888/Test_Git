@@ -94,7 +94,9 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")).length;
   // Hearthstone attack rules: a taunt minion must be attacked first; without one any minion or the hero can be attacked.
   const legalAttackTargets = getLegalAttackTargets(battle, "player");
-  const blockedEnemyTargetIds = targetMode === "attack" && selectedAttackerId
+  // A minion is being aimed: selected for an attack, or dragged by touch.
+  const aimingMinion = (targetMode === "attack" && Boolean(selectedAttackerId)) || dragState?.payload.kind === "minion";
+  const blockedEnemyTargetIds = aimingMinion
     ? battle.enemyBoard.filter((minion) => !legalAttackTargets.minionIds.includes(minion.instanceId)).map((minion) => minion.instanceId)
     : [];
   const targetSide = targetMode === "spell"
@@ -141,7 +143,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             </div>
             <ManaDisplay current={battle.enemyMana.current} max={battle.enemyMana.max} temporary={battle.enemyMana.temporary} />
           </div>
-          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} dropHighlight={dropHighlights.valid.some((target) => sameDropTarget(target, { kind: "hero", side: "enemy" })) ? (sameDropTarget(dropHighlights.hovered, { kind: "hero", side: "enemy" }) ? "hover" : "valid") : null} />
+          <HeroPanel hero={battle.enemyHero} side="enemy" artKey={enemy?.artKey ?? "unknown-enemy"} name={enemy?.name ?? "미지의 적"} targetable={enemyHeroTargetable} blocked={aimingMinion && !legalAttackTargets.heroAllowed} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} dropHighlight={dropHighlights.valid.some((target) => sameDropTarget(target, { kind: "hero", side: "enemy" })) ? (sameDropTarget(dropHighlights.hovered, { kind: "hero", side: "enemy" }) ? "hover" : "valid") : null} />
           <MinionLane side="enemy" minions={battle.enemyBoard} blockedTargetIds={blockedEnemyTargetIds} tapDetails={targetMode !== "hero-power"} dropHighlights={dropHighlights} selectedAttackerId={selectedAttackerId} targetMode={targetMode} targetSide={targetSide} disabled={fieldActionsDisabled} turnNumber={battle.turnNumber} onSelectTarget={onSelectTarget} onDropTarget={(payload, target) => onDropInteraction?.(payload, target)} />
         </div>
         <div className="board-divider" aria-hidden="true"><span>✦</span></div>

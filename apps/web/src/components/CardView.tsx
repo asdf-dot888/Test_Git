@@ -1,5 +1,6 @@
 import type { CardInstance } from "@board-game/game-core";
 import { CARD_BY_ID } from "@board-game/game-core";
+import { CardDescription } from "./CardDescription.js";
 import { CardInspection } from "./CardInspection.js";
 import { writeDragPayload, type DragPayload, type DropTarget } from "./dragInteractions.js";
 import { useTouchDrag, type DragState } from "./useTouchDrag.js";
@@ -44,7 +45,7 @@ export function CardView({ instance, effectSlot, selected, disabled, onSelect, g
         <strong className="card-name">{card.name}</strong>
         <span className="card-kind">{card.kind === "minion" ? "하수인" : "주문"}</span>
         {card.minion && <span className="card-stats">공격 {card.minion.attack} · 체력 {card.minion.maxHealth}</span>}
-        <span className="card-description">{card.description}</span>
+        <span className="card-description"><CardDescription text={card.description} /></span>
         <span className="card-select-hint">{selected ? "선택됨" : "선택"}</span>
       </button>
       {touchDrag.ghostPortal}

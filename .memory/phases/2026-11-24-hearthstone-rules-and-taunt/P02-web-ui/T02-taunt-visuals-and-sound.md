@@ -1,6 +1,6 @@
 # Task: T02 Taunt Visuals and Sound
 
-## Status: todo
+## Status: done
 
 ## Goal
 Taunt minions are recognizable on the board and in card views, blocked targets are dimmed while attacking, and short synthesized sounds play when a taunt minion is played and when an attack is blocked.
@@ -36,4 +36,5 @@ Task: T02-taunt-visuals-and-sound
 ```
 
 ## Progress
-- [ ] done
+- [x] done. Visuals: `MinionCard` `is-taunt` (metal frame, shield badge, spoken '도발'), `CardDescription` shows a leading 도발 as a tag in CardView/CardInspection/CardDetailsPopup, `is-blocked-target` dims shielded enemy minions and the enemy hero (selected attacker or touch drag of a minion). Sounds: synthesized `TAUNT_CUE_RECIPES` (taunt-summon ≤260 ms, taunt-blocked ≤170 ms, not part of the spell registry) played through `playEffect('taunt-summon'|'taunt-blocked')`; the summon cue is added to the summon event of a taunt minion, the blocked cue plays when `session.tauntBlocks` grows; the effects preview page has buttons for both. Tests added for card, description, recipes, audio, events, blocked state. 1252 tests (102 files), lint and build pass. Look and sound still need the user's check (checklist in P03-T02).
+- commit: see Git history

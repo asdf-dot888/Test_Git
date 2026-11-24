@@ -1,4 +1,4 @@
-import { CARD_BY_ID, CARD_CATALOG, gameConstants, type CardDefinition, type EnemyCombatRecord, type PlayerSide, type ResolvedSpellEffect, type RunState, type SpellEffect } from "@board-game/game-core";
+import { CARD_BY_ID, CARD_CATALOG, gameConstants, hasTaunt, type CardDefinition, type EnemyCombatRecord, type PlayerSide, type ResolvedSpellEffect, type RunState, type SpellEffect } from "@board-game/game-core";
 import type { GameAction } from "./gameActions.js";
 import type { SoundEffectKind } from "./audio.js";
 import { getSpellVisualSpec, heroPowerVisualId } from "./spellEffectCatalog.js";
@@ -179,11 +179,13 @@ export function combatKindForSpellEffect(effect: SpellEffect): CombatEffectKind 
 }
 
 function pushEvent(events: CombatEffectEvent[], firstEventId: number, assetCardId: string | null, effectKind: CombatEffectKind, source: CombatAnchor, target: CombatAnchor, soundCues: SoundEffectKind[] = [], areaImpact = false, deathAnchors?: CombatAnchor[], bossArea = false, damageTarget?: CombatDamageTarget, damage?: CombatDamageInfo, affectedTargets?: CombatTargetDamage[], bossPhase?: 1 | 2 | 3, options?: { spellEffectKind?: SpellEffect["kind"]; healAmount?: number; affectedHeals?: CombatTargetHeal[] }): void {
+  // Playing a taunt minion adds its own clank on top of the summon cue.
+  const tauntCue: SoundEffectKind[] = effectKind === "summon" && assetCardId !== null && hasTaunt({ cardId: assetCardId }) ? ["taunt-summon"] : [];
   events.push({
     id: firstEventId + events.length,
     assetCardId,
     effectKind,
-    soundCues: [...new Set(soundCues)],
+    soundCues: [...new Set([...soundCues, ...tauntCue])],
     source,
     target,
     ...(damageTarget ? { damageTarget } : {}),

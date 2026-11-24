@@ -9,6 +9,8 @@ interface HeroPanelProps {
   artKey: string;
   name: string;
   targetable: boolean;
+  /** A taunt minion shields this hero from the minion being aimed (shown dimmed). */
+  blocked?: boolean;
   armor?: number;
   intentTarget?: boolean;
   heroPowerControl?: ReactNode;
@@ -20,11 +22,11 @@ interface HeroPanelProps {
   dropHighlight?: "valid" | "hover" | null;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, heroPowerControl, topControl, onSelectTarget, onDropTarget, dropHighlight = null }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, blocked = false, armor = 0, intentTarget = false, heroPowerControl, topControl, onSelectTarget, onDropTarget, dropHighlight = null }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
     <section
-      className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}${intentTarget ? " is-intent-target" : ""}${dropHighlight ? " is-drop-valid" : ""}${dropHighlight === "hover" ? " is-drop-hover" : ""}`}
+      className={`hero-panel hero-${side}${targetable ? " is-targetable" : ""}${blocked ? " is-blocked-target" : ""}${intentTarget ? " is-intent-target" : ""}${dropHighlight ? " is-drop-valid" : ""}${dropHighlight === "hover" ? " is-drop-hover" : ""}`}
       data-effect-anchor={`hero:${side}`}
       {...(side === "enemy" ? { "data-drop-target": formatDropTarget({ kind: "hero", side: "enemy" }) } : {})}
       aria-label={`${name} 영웅`}
