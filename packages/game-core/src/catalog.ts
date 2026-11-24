@@ -210,11 +210,11 @@ const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
 
   forClass(minion("demonist-imp-caller", "임프 소환사", 3, 1, 3, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 1 }), "demonist"),
   forClass(minion("demonist-hellbound-adept", "지옥에 묶인 수련자", 2, 2, 2), "demonist", "demon"),
-  forClass(minion("demonist-pit-ritualist", "구덩이 의식술사", 4, 2, 3, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
-  forClass(minion("demonist-demon-houndmaster", "악마 사냥개 조련사", 5, 4, 3), "demonist"),
-  forClass(minion("demonist-infernal-guardian", "지옥불 수호자", 5, 3, 5), "demonist", "demon"),
-  forClass(minion("demonist-summoner", "심연의 소환사", 6, 4, 4, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
-  forClass(minion("demonist-abyssal-matriarch", "심연의 여군주", 7, 5, 5, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
+  forClass(minion("demonist-pit-ritualist", "구덩이 의식술사", 3, 2, 3, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
+  forClass(minion("demonist-demon-houndmaster", "악마 사냥개 조련사", 4, 4, 3), "demonist"),
+  forClass(minion("demonist-infernal-guardian", "지옥불 수호자", 4, 3, 5), "demonist", "demon"),
+  forClass(minion("demonist-summoner", "심연의 소환사", 5, 4, 4, "normal", { kind: "battlecrySummon", cardId: "demon-ashling", count: 1 }), "demonist"),
+  forClass(minion("demonist-abyssal-matriarch", "심연의 여군주", 6, 5, 5, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
   forClass(spell("demonist-dark-rite", "어둠의 의식", 2, [{ kind: "summon", cardId: "demon-lesser-imp", count: 1 }]), "demonist"),
   forClass(spell("demonist-hellfire", "지옥불 작렬", 4, [{ kind: "damage", amount: 3, target: "enemyMinion" }]), "demonist"),
   forClass(spell("demonist-soul-bond", "영혼 결속", 2, [{ kind: "buff", attack: 1, health: 2, target: "playerMinion" }]), "demonist"),
@@ -260,13 +260,14 @@ export const STARTER_DECK_CARD_IDS: readonly string[] = [
   "healing-mist", "mana-spring", "raise-bones", "raise-bones", "rune-surge", "rune-surge",
 ];
 
-// Every run starts with these 20 cards plus 10 class cards. With Hearthstone-style mana (1 on turn 1, +1 per turn up to 10) the starter curve
-// has to reach the top: average cost about 2.95 with four 5-cost cards (enemy decks average 3.5-5.2). Boss-tier cards stay boss rewards.
+// Every run starts with these 20 cards plus 10 class cards. With Hearthstone-style mana (1 on turn 1, +1 per turn up to 10) and one draw
+// per turn the curve has to start low: five 1-cost cards, six 2-cost, five 3-cost, three 4-cost and one 5-cost card (average cost 2.4),
+// so turns 1-3 are never empty. Boss-tier cards stay boss rewards.
 export const SHARED_STARTER_CARD_IDS: readonly string[] = [
-  "moon-stag", "moon-stag", "crypt-guard", "shade-stalker", "cinder-imp", "thorn-brute",
-  "thorn-brute", "plague-bearer", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
-  "iron-hound", "iron-hound", "ember-priest", "ember-priest", "shadow-bolt", "shadow-bolt",
-  "mana-spring", "healing-mist",
+  "ash-wolf", "ash-wolf", "cinder-imp", "cinder-imp", "shadow-bolt", "shadow-bolt",
+  "crypt-guard", "crypt-guard", "ember-priest", "ember-priest", "dusk-raven", "soul-lance",
+  "grave-knight", "grave-knight", "iron-hound", "iron-hound", "rune-smith", "mire-witch",
+  "plague-bearer", "thorn-brute",
 ];
 
 const STARTER_CLASS_CARD_IDS: Readonly<Record<PlayerClass, readonly string[]>> = {
@@ -306,26 +307,26 @@ export const NORMAL_ENEMIES: readonly EnemyDefinition[] = [
 
 export const NORMAL_ENEMIES_BY_PHASE: Readonly<Record<1 | 2 | 3, readonly [EnemyDefinition, EnemyDefinition, EnemyDefinition]>> = {
   1: [
-    { id: "fallen-elf-scout", name: "타락한 엘프 정찰자", kind: "normal", maxHealth: 19, artKey: "fallen-elf-scout", tactics: { profile: "hunter" } },
-    { id: "thorn-cursed-dryad", name: "가시에 저주받은 드리아드", kind: "normal", maxHealth: 21, artKey: "thorn-cursed-dryad", tactics: { profile: "controller" } },
-    { id: "forest-watcher", name: "저주숲 감시자", kind: "normal", maxHealth: 22, artKey: "forest-watcher", tactics: { profile: "summoner" } },
+    { id: "fallen-elf-scout", name: "타락한 엘프 정찰자", kind: "normal", maxHealth: 15, artKey: "fallen-elf-scout", tactics: { profile: "hunter" } },
+    { id: "thorn-cursed-dryad", name: "가시에 저주받은 드리아드", kind: "normal", maxHealth: 17, artKey: "thorn-cursed-dryad", tactics: { profile: "controller" } },
+    { id: "forest-watcher", name: "저주숲 감시자", kind: "normal", maxHealth: 18, artKey: "forest-watcher", tactics: { profile: "summoner" } },
   ],
   2: [
-    { id: "imp-raider", name: "임프 약탈자", kind: "normal", maxHealth: 20, artKey: "imp-raider", tactics: { profile: "aggressor" } },
-    { id: "abyss-cultist", name: "심연의 숭배자", kind: "normal", maxHealth: 22, artKey: "abyss-cultist", tactics: { profile: "summoner" } },
-    { id: "demon-brute", name: "지옥의 투사", kind: "normal", maxHealth: 25, artKey: "demon-brute", tactics: { profile: "hunter" } },
+    { id: "imp-raider", name: "임프 약탈자", kind: "normal", maxHealth: 16, artKey: "imp-raider", tactics: { profile: "aggressor" } },
+    { id: "abyss-cultist", name: "심연의 숭배자", kind: "normal", maxHealth: 18, artKey: "abyss-cultist", tactics: { profile: "summoner" } },
+    { id: "demon-brute", name: "지옥의 투사", kind: "normal", maxHealth: 21, artKey: "demon-brute", tactics: { profile: "hunter" } },
   ],
   3: [
-    { id: "ember-legionnaire", name: "화염군단 보병", kind: "normal", maxHealth: 23, artKey: "ember-legionnaire", tactics: { profile: "aggressor" } },
-    { id: "drake-soldier", name: "용혈 전사", kind: "normal", maxHealth: 25, artKey: "drake-soldier", tactics: { profile: "hunter" } },
-    { id: "flame-wyrm", name: "불꽃 비룡", kind: "normal", maxHealth: 27, artKey: "flame-wyrm", tactics: { profile: "ravager" } },
+    { id: "ember-legionnaire", name: "화염군단 보병", kind: "normal", maxHealth: 19, artKey: "ember-legionnaire", tactics: { profile: "aggressor" } },
+    { id: "drake-soldier", name: "용혈 전사", kind: "normal", maxHealth: 21, artKey: "drake-soldier", tactics: { profile: "hunter" } },
+    { id: "flame-wyrm", name: "불꽃 비룡", kind: "normal", maxHealth: 23, artKey: "flame-wyrm", tactics: { profile: "ravager" } },
   ],
 };
 
 export const BOSSES: readonly EnemyDefinition[] = [
-  { id: "boss-blood-matron", name: "타락한 숲의 여왕", kind: "boss", maxHealth: 34, artKey: "boss-blood-matron", tactics: { profile: "drain" } },
-  { id: "boss-grave-king", name: "심연의 악마 군주", kind: "boss", maxHealth: 40, artKey: "boss-grave-king", tactics: { profile: "board-clear" } },
-  { id: "boss-void-titan", name: "고대 화염룡", kind: "boss", maxHealth: 48, artKey: "boss-void-titan", tactics: { profile: "ravager" } },
+  { id: "boss-blood-matron", name: "타락한 숲의 여왕", kind: "boss", maxHealth: 18, artKey: "boss-blood-matron", tactics: { profile: "drain" } },
+  { id: "boss-grave-king", name: "심연의 악마 군주", kind: "boss", maxHealth: 22, artKey: "boss-grave-king", tactics: { profile: "board-clear" } },
+  { id: "boss-void-titan", name: "고대 화염룡", kind: "boss", maxHealth: 26, artKey: "boss-void-titan", tactics: { profile: "ravager" } },
 ];
 
 export const CARD_BY_ID: ReadonlyMap<string, CardDefinition> = new Map(CARD_CATALOG.map((card) => [card.id, card]));

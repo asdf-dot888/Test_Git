@@ -42,3 +42,12 @@
 
 ## D09. Texts and docs
 - Update the game guide, tutorial, README, architecture pages and the card texts for: 1 draw, fatigue, taunt, no all-attack button, turn-order pick, the Coin. No release or version bump unless the user asks.
+
+## Addendum (2026-11-24, P03-T01 balance retune): final numbers
+These values were chosen with the simulation so that normal lands at 55-65 % and hard at 6-10 % average completion with a class gap of about 5 points (report `docs/balance/2026-11-24-hs-rules-final.md`, summary `docs/balance/2026-11-24-hs-rules-summary.md`). They go beyond what the interview fixed, because the new rules made the old numbers unwinnable (0 % completion):
+- **Starter deck** (shared 20 cards): ash-wolf x2, cinder-imp x2, shadow-bolt x2, crypt-guard x2, ember-priest x2, dusk-raven, soul-lance, grave-knight x2, iron-hound x2, rune-smith, mire-witch, plague-bearer, thorn-brute (eleven 1-2 cost cards, one 5-cost card). Moon Stag, Shade Stalker and the second Thorn Brute, Mana Spring and Healing Mist left the starter deck (still reward cards).
+- **Enemy health** (catalog): normal enemies 15/17/18, 16/18/21, 19/21/23; bosses 18/22/26 (were 19-27 and 34/40/48). Hard adds +2 (normal enemies) and +3 (bosses) on top.
+- **Enemy bonuses**: normal none; hard minion attack +1 from the second battle on, no hero health bonus table (0/0/0).
+- **Boss area attack**: every 4th turn on normal, every 3rd on hard (was 3 and 2).
+- **Demonist**: the hero power needs 2 soul shards (was 3); costs lowered by 1: Demon Houndmaster 4, Infernal Guardian 4, Summoner 5, Abyssal Matriarch 6, Pit Ritualist 3.
+- The taunt card list is unchanged (10 cards).

@@ -391,10 +391,12 @@ function chooseAttackTarget(battle: BattleState, attacker: MinionState): string 
  * Picks one of the two face-down turn-order cards (alternating by seed and battle so both orders get played equally often)
  * and, when the enemy is first, lets its opening turn play out.
  */
-export function startBattleAsBot(run: RunState): RunState {
+export type BotTurnOrderPreference = "alternate" | "first" | "second";
+
+export function startBattleAsBot(run: RunState, preference: BotTurnOrderPreference = "alternate"): RunState {
   const battle = run.battle;
   if (!battle || battle.firstSide !== null || !battle.turnOrderCards) return run;
-  const wanted = (run.seed + run.completedBattles) % 2 === 0 ? "first" : "second";
+  const wanted = preference !== "alternate" ? preference : (run.seed + run.completedBattles) % 2 === 0 ? "first" : "second";
   let next = chooseTurnOrder(run, battle.turnOrderCards[0] === wanted ? 0 : 1);
   if (next.battle?.activeSide === "enemy") next = resolveEnemyTurn(next);
   return next;

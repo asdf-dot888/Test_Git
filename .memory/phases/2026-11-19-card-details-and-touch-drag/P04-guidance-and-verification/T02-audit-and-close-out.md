@@ -82,3 +82,17 @@ Phone (width <= 760px):
 7. The turn badge and banner are visible; the damage numbers are readable.
 Game feel:
 8. The enemy plays cards regularly (it no longer idles when behind on board and has 2 mana per turn), the same cards have the same health on both sides, and normal and hard feel at their target difficulty.
+
+### Addendum (2026-11-24, plan `2026-11-24-hearthstone-rules-and-taunt`): checklist for the Hearthstone-style rules
+Not verified by Claude (no phone, browser or speakers available). Please try:
+PC:
+1. A new battle shows "선후공을 정하세요" with two face-down cards; picking one flips it to 선공 or 후공 for about a second. First: 4 cards on turn 1 (3 and the draw), the enemy has the Coin. Second: the enemy plays first, then you have 4 cards, the Coin (동전, +1 mana this turn) and mana 1.
+2. Taunt minions (전위병, 돌벽 수호자, 임프 소환사, 구덩이 의식술사, 그림자 결투가, 악마 사냥개 조련사, 지옥불 수호자, 심연의 소환사, 폭풍 까마귀, 심연의 여군주) have a metal frame and a shield badge; their cards start with a "도발" tag. While the enemy has one, other enemy minions and the hero are dimmed when you aim, the red message "도발 하수인을 먼저 공격해야 합니다." appears if you try anyway, and a short thud plays. Playing a taunt minion makes a short clank (say: keep, quieter, shorter; recipes are `TAUNT_CUE_RECIPES` in `game/soundRecipes.ts`; both sounds can be tried on `/?effects-preview`).
+3. Without an enemy taunt you can attack the enemy hero even while plain minions stand; there is no all-attack button and the end-turn button stays where it was.
+4. You draw one card per turn; with an empty deck your hero takes 1, 2, 3... damage (fatigue) at the start of each turn (hard to see in short battles).
+5. The enemy attacks with everything it can, goes for your taunt minions first, and as the second player plays the Coin when it helps.
+6. Boss area attacks come every 4th turn on normal and every 3rd on hard (the boss panel shows the turn numbers); boss and normal enemy health is lower than before (see the balance summary).
+Phone (width <= 760px):
+7. The picker fits the screen and the cards are easy to tap; taunt frames and badges are readable on a six-minion board; the end-turn button is in the hero panel as before.
+Game feel:
+8. Normal and hard feel at their target difficulty (the simulation says about 58 % and 8 % for the bot; people usually do better than the bot); battles end instead of stalling; the Demonist's hero power (2 soul shards) and cheaper cards feel balanced against the other classes.

@@ -1,6 +1,6 @@
 # Task: T01 Balance Retune with the Simulation
 
-## Status: todo
+## Status: done
 
 ## Goal
 After all rule changes, tune the game until the average completion rate is normal 55-65 % and hard 6-10 %; report the class gap (target <= 5 points, reported, not forced).
@@ -45,4 +45,5 @@ Task: T01-balance-retune
 Commit code, README, tests and `docs/balance/2026-11-24-hs-rules-*.md` by explicit path (intermediate round reports may go in the same commit).
 
 ## Progress
-- [ ] done
+- [x] done. Baseline 300 runs (0.4 % / 0 %), then experiments with a scratch harness (documented in docs/balance/2026-11-24-hs-rules-summary.md): AI planning and enemy deck caps barely mattered; the starter curve, boss health/cadence, normal enemy health and the Demonist cost explained the gap. Changes: shared starter deck rebuilt (1-2 cost x11, 5-cost x1), normal enemy health -4, boss health 18/22/26, boss area attack every 4th (normal) / 3rd (hard) turn, no normal attack bonus, hard attack +1 in every phase and no hero health table (+2 / +3 flat), Demonist shard cost 2 and cheaper cards (houndmaster 4, guardian 4, summoner 5, matriarch 6, ritualist 3), the UI reads the shard cost from the constant. New simulation option --turn-order. Final 1000-run result: normal 55.8 % (57.1/54.0/56.4), hard 8.5 % (11.4/8.2/6.0); class gap normal 3.1, hard 5.4 points (target 5, 0.4 over, reported). Reports: baseline, round1, final, summary. 1261 tests (104 files), lint and build pass.
+- commit: see Git history

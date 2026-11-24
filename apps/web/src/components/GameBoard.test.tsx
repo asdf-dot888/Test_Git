@@ -149,7 +149,7 @@ describe("GameBoard", () => {
       />,
     );
     const run = createRun(413);
-    run.battle!.enemyHand = [{ instanceId: "secret-instance-1", cardId: "eclipse" }, { instanceId: "secret-instance-2", cardId: "shadow-bolt" }];
+    run.battle!.enemyHand = [{ instanceId: "secret-instance-1", cardId: "eclipse" }, { instanceId: "secret-instance-2", cardId: "fate-shard" }];
     run.battle!.playerMana = { current: 7, max: 10, temporary: 2 };
     run.battle!.enemyMana = { current: 7, max: 10, temporary: 3 };
     run.battle!.enemyDrawPile = run.battle!.enemyDrawPile.slice(0, 12);
@@ -162,7 +162,7 @@ describe("GameBoard", () => {
     expect(markup.match(/mana-orb is-full is-temporary/g)).toHaveLength(5);
     expect(markup).toContain("적 덱 12장, 적 버린 카드 1장");
     expect(markup).not.toContain("eclipse");
-    expect(markup).not.toContain("shadow-bolt");
+    expect(markup).not.toContain("fate-shard");
   });
 
   it("places the timer after TURN, hides it during effects, and marks five seconds as critical", () => {
@@ -233,7 +233,7 @@ describe("GameBoard", () => {
     const markup = renderToStaticMarkup(<GameBoard run={demonist} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
     expect(markup).toContain("영혼 조각 4/6");
     expect(markup).toContain("hero-power-button");
-    expect(markup).toContain("영혼 조각 3");
+    expect(markup).toContain(`영혼 조각 ${gameConstants.soulShardHeroPowerCost}`);
     expect(markup).toContain("방어도 3");
     const heroPanel = markup.slice(markup.indexOf('class="hero-panel hero-player'), markup.indexOf("</section>", markup.indexOf('class="hero-panel hero-player')));
     expect(heroPanel).toContain("hero-power-button");
@@ -388,7 +388,7 @@ describe("GameBoard", () => {
       <GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />,
     );
     expect(markup).toContain("data-testid=\"boss-pattern-panel\"");
-    expect(markup).toContain("3·6·9번째 턴");
+    expect(markup).toContain(`${[1, 2, 3].map((multiple) => multiple * gameConstants.bossAreaCadence.normal).join("·")}번째 턴`);
     expect(markup).toContain("내 하수인과 영웅 모두에게 피해 1");
   });
 
@@ -398,7 +398,7 @@ describe("GameBoard", () => {
     const markup = renderToStaticMarkup(
       <GameBoard run={hard} turnTimer={{ text: "00:30", remainingSeconds: 30, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />,
     );
-    expect(markup).toContain("2·4·6번째 턴");
-    expect(markup).not.toContain("3·6·9번째 턴");
+    expect(markup).toContain(`${[1, 2, 3].map((multiple) => multiple * gameConstants.bossAreaCadence.hard).join("·")}번째 턴`);
+    expect(markup).not.toContain(`${[1, 2, 3].map((multiple) => multiple * gameConstants.bossAreaCadence.normal).join("·")}번째 턴`);
   });
 });

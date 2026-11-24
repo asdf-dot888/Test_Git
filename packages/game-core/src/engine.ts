@@ -32,9 +32,9 @@ const INITIAL_MANA = manaCapForTurn(1);
 const TURN_DRAW_COUNT = 1;
 /** The cost up to which hard enemy decks favor cards when they are built (the old starting mana). */
 const CHEAP_CARD_COST = 5;
-/** The boss area attack comes every Nth turn: every 3rd on normal, every 2nd on hard. */
-export const BOSS_AREA_ATTACK_EVERY_N_TURNS: Record<RunDifficulty, number> = { normal: 3, hard: 2 };
-const SOUL_SHARD_HERO_POWER_COST = 3;
+/** The boss area attack comes every Nth turn: every 4th on normal, every 3rd on hard. */
+export const BOSS_AREA_ATTACK_EVERY_N_TURNS: Record<RunDifficulty, number> = { normal: 4, hard: 3 };
+const SOUL_SHARD_HERO_POWER_COST = 2;
 type PhaseTable = Record<RunState["phase"], number>;
 interface EnemyPhaseBonus {
   heroHealth: PhaseTable;
@@ -48,12 +48,12 @@ interface EnemyPhaseBonus {
 const ENEMY_PHASE_BONUS: Record<RunDifficulty, EnemyPhaseBonus> = {
   normal: {
     heroHealth: { 1: 0, 2: 0, 3: 0 },
-    minionAttack: { 1: 0, 2: 1, 3: 1 },
+    minionAttack: { 1: 0, 2: 0, 3: 0 },
     minionHealth: { 1: 0, 2: 0, 3: 0 },
   },
   hard: {
-    heroHealth: { 1: 0, 2: 8, 3: 16 },
-    minionAttack: { 1: 1, 2: 1, 3: 2 },
+    heroHealth: { 1: 0, 2: 0, 3: 0 },
+    minionAttack: { 1: 1, 2: 1, 3: 1 },
     minionHealth: { 1: 0, 2: 0, 3: 0 },
   },
 };
@@ -1318,7 +1318,7 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
   encounter.status = "active";
   const shuffled = shuffle(run.deck, battleSeed);
   const enemyDeck = createEnemyDeck(enemy, shuffled.state, `${run.runId}-enemy-${encounterIndex + 1}`, run.difficulty);
-  const existingHardBonus = run.difficulty === "hard" ? (enemy.kind === "boss" ? 5 : 3) : 0;
+  const existingHardBonus = run.difficulty === "hard" ? (enemy.kind === "boss" ? 3 : 2) : 0;
   const phaseHealthBonus = enemyPhaseBonus(run.difficulty, encounter.phase, run.completedBattles, "heroHealth");
   const enemyMaxHealth = enemy.maxHealth + existingHardBonus + phaseHealthBonus;
   const nextRun = { ...run, phase: encounter.phase, battle: null } as RunState;

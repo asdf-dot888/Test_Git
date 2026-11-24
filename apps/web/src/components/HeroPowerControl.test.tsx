@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { gameConstants } from "@board-game/game-core";
 import { HeroPowerControl } from "./HeroPowerControl.js";
 
 afterEach(cleanup);
@@ -38,10 +39,10 @@ describe("HeroPowerControl", () => {
     const onActivate = vi.fn();
     const { container } = render(<HeroPowerControl playerClass="demonist" currentMana={5} used={false} active resolving={false} shardCount={4} boardSize={1} targetMode={false} onActivate={onActivate} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /마나 2, 영혼 조각 3/ }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`마나 2, 영혼 조각 ${gameConstants.soulShardHeroPowerCost}`) }));
 
     expect(onActivate).toHaveBeenCalledOnce();
-    expect(container.querySelector(".hero-power-cost-badge.is-shard")?.textContent).toContain("3");
+    expect(container.querySelector(".hero-power-cost-badge.is-shard")?.textContent).toContain(String(gameConstants.soulShardHeroPowerCost));
     expect(screen.getByText("보유 영혼 조각 4/6")).toBeTruthy();
   });
 
@@ -54,12 +55,12 @@ describe("HeroPowerControl", () => {
   });
 
   it("keeps the icon disabled when Demonist resources are insufficient and explains why", () => {
-    render(<HeroPowerControl playerClass="demonist" currentMana={2} used={false} active resolving={false} shardCount={2} boardSize={0} targetMode={false} onActivate={vi.fn()} />);
-    const button = screen.getByRole("button", { name: /영혼 조각 3/ });
+    render(<HeroPowerControl playerClass="demonist" currentMana={2} used={false} active resolving={false} shardCount={gameConstants.soulShardHeroPowerCost - 1} boardSize={0} targetMode={false} onActivate={vi.fn()} />);
+    const button = screen.getByRole("button", { name: new RegExp(`영혼 조각 ${gameConstants.soulShardHeroPowerCost}`) });
 
     expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.mouseEnter(button);
-    expect(screen.getByText("영혼 조각 3 부족")).toBeTruthy();
+    expect(screen.getByText(`영혼 조각 ${gameConstants.soulShardHeroPowerCost} 부족`)).toBeTruthy();
   });
 });
 

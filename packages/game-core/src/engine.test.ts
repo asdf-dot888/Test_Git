@@ -627,7 +627,7 @@ describe("class hero powers and battle resources", () => {
     expect(cleaned.battle?.enemyBoard).toHaveLength(1);
   });
 
-  it("spends three shards for a deterministic demon, preserves state on failure, and resets resources between battles", () => {
+  it("spends the hero power shard cost for a deterministic demon, preserves state on failure, and resets resources between battles", () => {
     const base = createRun(1240, "demonist");
     activeBattle(base).soulShards = 4;
     const first = useHeroPower(base);
@@ -636,11 +636,11 @@ describe("class hero powers and battle resources", () => {
     const second = useHeroPower(secondRun);
     expect(first.battle?.playerBoard[0]?.cardId).toBe(second.battle?.playerBoard[0]?.cardId);
     expect(first.battle?.playerBoard[0]?.cardId).toMatch(/^demon-/);
-    expect(first.battle?.soulShards).toBe(1);
+    expect(first.battle?.soulShards).toBe(4 - gameConstants.soulShardHeroPowerCost);
     expect(first.battle?.playerMana.current).toBe(8);
 
     const tooFew = copyRun(base);
-    activeBattle(tooFew).soulShards = 2;
+    activeBattle(tooFew).soulShards = gameConstants.soulShardHeroPowerCost - 1;
     const tooFewBefore = copyRun(tooFew);
     expect(() => useHeroPower(tooFew)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
     expect(tooFew).toEqual(tooFewBefore);
@@ -1338,7 +1338,7 @@ describe("enemy turns, rewards, and run progression", () => {
     const run = copyRun(createRun(236));
     const battle = activeBattle(run);
     battle.enemyId = "boss-grave-king";
-    battle.turnNumber = 3;
+    battle.turnNumber = gameConstants.bossAreaCadence.normal;
     battle.enemyMana.current = 1;
     battle.enemyHand = [instance("boss-minion", "ash-wolf")];
     battle.enemyDrawPile = [instance("boss-expensive", "healing-mist")];
@@ -1405,7 +1405,7 @@ describe("enemy turns, rewards, and run progression", () => {
 
     const lethalArea = asEnemyTurn(createRun(240));
     activeBattle(lethalArea).enemyId = "boss-grave-king";
-    activeBattle(lethalArea).turnNumber = 3;
+    activeBattle(lethalArea).turnNumber = gameConstants.bossAreaCadence.normal;
     activeBattle(lethalArea).enemyMana.current = 0;
     activeBattle(lethalArea).enemyHand = [];
     activeBattle(lethalArea).enemyDrawPile = [instance("area-expensive-card", "healing-mist")];
@@ -1521,24 +1521,26 @@ describe("enemy turns, rewards, and run progression", () => {
     expect(result.battle?.enemyHero.health).toBe(result.battle!.enemyHero.maxHealth - 1);
   });
 
-  it("keeps Normal boss attacks on turns 3, 6, and 9 and schedules Hard attacks every 2 turns", () => {
-    for (const turnNumber of [3, 6, 9]) {
+  it("keeps Normal boss attacks on every 4th turn and schedules Hard attacks every 3rd turn", () => {
+    const normalEvery = gameConstants.bossAreaCadence.normal;
+    const hardEvery = gameConstants.bossAreaCadence.hard;
+    for (const turnNumber of [normalEvery, 2 * normalEvery, 3 * normalEvery]) {
       const bossRun = asEnemyTurn(createRun(54 + turnNumber));
       const bossBattle = activeBattle(bossRun);
       bossBattle.enemyId = "boss-grave-king";
       bossBattle.turnNumber = turnNumber;
       bossBattle.enemyMana.current = 0;
-      bossBattle.enemyHand = turnNumber === 3 ? [instance("boss-minion", "ash-wolf")] : [];
+      bossBattle.enemyHand = turnNumber === normalEvery ? [instance("boss-minion", "ash-wolf")] : [];
       bossBattle.enemyDrawPile = [instance(`boss-expensive-${turnNumber}`, "healing-mist")];
       bossBattle.playerBoard = [minion({ instanceId: `one-health-${turnNumber}`, health: 1, maxHealth: 1 }), minion({ instanceId: `survivor-${turnNumber}`, health: 3, maxHealth: 3 })];
-      bossBattle.enemyBoard = turnNumber === 3 ? [minion({ instanceId: "boss-attacker", owner: "enemy", attack: 1, summonedTurn: 0 })] : [];
+      bossBattle.enemyBoard = turnNumber === normalEvery ? [minion({ instanceId: "boss-attacker", owner: "enemy", attack: 1, summonedTurn: 0 })] : [];
       const result = resolveEnemyTurn(bossRun);
       expect(result.battle?.playerHero.health).toBe(29);
       expect(result.battle?.playerBoard.map((minion) => minion.instanceId)).toEqual([`survivor-${turnNumber}`]);
       expect(result.battle?.playerBoard[0]?.health).toBe(2);
-      expect(result.battle?.enemyBoard.some((minion) => minion.cardId === "ash-wolf")).toBe(turnNumber === 3);
+      expect(result.battle?.enemyBoard.some((minion) => minion.cardId === "ash-wolf")).toBe(turnNumber === normalEvery);
       expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(true);
-      if (turnNumber === 3) expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "attack" && event.targetId === `one-health-${turnNumber}`)).toBe(true);
+      if (turnNumber === normalEvery) expect(result.battle?.enemyTurnEvents?.some((event) => event.type === "attack" && event.targetId === `one-health-${turnNumber}`)).toBe(true);
     }
 
     const offTurn = asEnemyTurn(createRun(55));
@@ -1550,7 +1552,7 @@ describe("enemy turns, rewards, and run progression", () => {
     const secondTurn = resolveEnemyTurn(offTurn);
     expect(secondTurn.battle?.enemyTurnEvents?.some((event) => event.type === "boss-area")).toBe(false);
 
-    for (const turnNumber of [2, 4, 6]) {
+    for (const turnNumber of [hardEvery, 2 * hardEvery, 3 * hardEvery]) {
       const hardRun = asEnemyTurn(createRun(155 + turnNumber, "warrior", "hard"));
       const hardBattle = activeBattle(hardRun);
       hardBattle.enemyId = "boss-grave-king";
@@ -1566,7 +1568,7 @@ describe("enemy turns, rewards, and run progression", () => {
 
     const hardOffTurn = asEnemyTurn(createRun(162, "warrior", "hard"));
     activeBattle(hardOffTurn).enemyId = "boss-grave-king";
-    activeBattle(hardOffTurn).turnNumber = 3;
+    activeBattle(hardOffTurn).turnNumber = hardEvery - 1;
     activeBattle(hardOffTurn).enemyMana.current = 0;
     activeBattle(hardOffTurn).enemyHand = [];
     activeBattle(hardOffTurn).enemyDrawPile = [];
@@ -1574,7 +1576,7 @@ describe("enemy turns, rewards, and run progression", () => {
 
     const lethal = asEnemyTurn(createRun(56));
     activeBattle(lethal).enemyId = "boss-grave-king";
-    activeBattle(lethal).turnNumber = 3;
+    activeBattle(lethal).turnNumber = normalEvery;
     activeBattle(lethal).enemyMana.current = 0;
     activeBattle(lethal).enemyHand = [];
     activeBattle(lethal).enemyDrawPile = [instance("boss-expensive", "healing-mist")];
@@ -1838,33 +1840,37 @@ describe("Hard expedition enemy health and tactical AI", () => {
   }
 
   it("adds only the specified Hard-mode enemy health and preserves Normal values", () => {
-    expect(startAtEnemy("fallen-elf-scout", "normal").battle?.enemyHero).toMatchObject({ health: 19, maxHealth: 19 });
-    expect(startAtEnemy("fallen-elf-scout", "hard").battle?.enemyHero).toMatchObject({ health: 22, maxHealth: 22 });
-    expect(startAtEnemy("boss-blood-matron", "normal").battle?.enemyHero).toMatchObject({ health: 34, maxHealth: 34 });
-    expect(startAtEnemy("boss-blood-matron", "hard").battle?.enemyHero).toMatchObject({ health: 39, maxHealth: 39 });
+    const scout = ENEMY_BY_ID.get("fallen-elf-scout")!.maxHealth;
+    const matron = ENEMY_BY_ID.get("boss-blood-matron")!.maxHealth;
+    expect(startAtEnemy("fallen-elf-scout", "normal").battle?.enemyHero).toMatchObject({ health: scout, maxHealth: scout });
+    expect(startAtEnemy("fallen-elf-scout", "hard").battle?.enemyHero).toMatchObject({ health: scout + 2, maxHealth: scout + 2 });
+    expect(startAtEnemy("boss-blood-matron", "normal").battle?.enemyHero).toMatchObject({ health: matron, maxHealth: matron });
+    expect(startAtEnemy("boss-blood-matron", "hard").battle?.enemyHero).toMatchObject({ health: matron + 3, maxHealth: matron + 3 });
   });
 
   it("adds the selected Hard hero-health bonus at phase boundaries, including bosses", () => {
     const hard = gameConstants.enemyPhaseBonus.hard.heroHealth;
     const normal = gameConstants.enemyPhaseBonus.normal.heroHealth;
+    const scout = ENEMY_BY_ID.get("fallen-elf-scout")!.maxHealth;
+    const king = ENEMY_BY_ID.get("boss-grave-king")!.maxHealth;
     const health = (value: number) => ({ health: value, maxHealth: value });
-    expect(startAtEnemy("fallen-elf-scout", "normal", 2).battle?.enemyHero).toMatchObject(health(19 + normal[2]));
-    expect(startAtEnemy("fallen-elf-scout", "hard", 1).battle?.enemyHero).toMatchObject(health(22));
-    expect(startAtEnemy("fallen-elf-scout", "hard", 2).battle?.enemyHero).toMatchObject(health(22 + hard[2]));
-    expect(startAtEnemy("fallen-elf-scout", "hard", 3).battle?.enemyHero).toMatchObject(health(22 + hard[3]));
-    expect(startAtEnemy("boss-grave-king", "normal", 2).battle?.enemyHero).toMatchObject(health(40 + normal[2]));
-    expect(startAtEnemy("boss-grave-king", "hard", 2).battle?.enemyHero).toMatchObject(health(45 + hard[2]));
-    expect(startAtEnemy("boss-grave-king", "hard", 3).battle?.enemyHero).toMatchObject(health(45 + hard[3]));
+    expect(startAtEnemy("fallen-elf-scout", "normal", 2).battle?.enemyHero).toMatchObject(health(scout + normal[2]));
+    expect(startAtEnemy("fallen-elf-scout", "hard", 1).battle?.enemyHero).toMatchObject(health(scout + 2));
+    expect(startAtEnemy("fallen-elf-scout", "hard", 2).battle?.enemyHero).toMatchObject(health(scout + 2 + hard[2]));
+    expect(startAtEnemy("fallen-elf-scout", "hard", 3).battle?.enemyHero).toMatchObject(health(scout + 2 + hard[3]));
+    expect(startAtEnemy("boss-grave-king", "normal", 2).battle?.enemyHero).toMatchObject(health(king + normal[2]));
+    expect(startAtEnemy("boss-grave-king", "hard", 2).battle?.enemyHero).toMatchObject(health(king + 3 + hard[2]));
+    expect(startAtEnemy("boss-grave-king", "hard", 3).battle?.enemyHero).toMatchObject(health(king + 3 + hard[3]));
   });
 
-  it("scales every enemy minion and summon in Hard phases but never scales player minions", () => {
+it("scales every enemy minion and summon in Hard phases but never scales player minions", () => {
     const hardDirect = asEnemyTurn(startAtEnemy("fallen-elf-scout", "hard", 2));
     activeBattle(hardDirect).enemyMana.current = 5;
     activeBattle(hardDirect).enemyHand = [instance("enemy-ash-wolf", "ash-wolf")];
     activeBattle(hardDirect).enemyStarterDeck = [];
     activeBattle(hardDirect).enemyDrawPile = [];
     const directResult = resolveEnemyTurn(hardDirect);
-    expect(directResult.battle?.enemyBoard).toContainEqual(expect.objectContaining({ cardId: "ash-wolf", attack: 3, health: 1, maxHealth: 1 }));
+    expect(directResult.battle?.enemyBoard).toContainEqual(expect.objectContaining({ cardId: "ash-wolf", attack: 2 + gameConstants.enemyPhaseBonus.hard.minionAttack[2], health: 1, maxHealth: 1 }));
 
     const hardSummon = asEnemyTurn(startAtEnemy("boss-grave-king", "hard", 3));
     activeBattle(hardSummon).enemyMana.current = 10;
@@ -1874,8 +1880,8 @@ describe("Hard expedition enemy health and tactical AI", () => {
     const summonResult = resolveEnemyTurn(hardSummon);
     expect(summonResult.battle?.enemyBoard.filter(({ cardId }) => cardId === "grave-king-demon")).toHaveLength(2);
     expect(summonResult.battle?.enemyBoard).toEqual(expect.arrayContaining([
-      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 4, maxHealth: 4 }),
-      expect.objectContaining({ cardId: "grave-king-demon", attack: 6, health: 4, maxHealth: 4 }),
+      expect.objectContaining({ cardId: "grave-king-demon", attack: 4 + gameConstants.enemyPhaseBonus.hard.minionAttack[3], health: 4, maxHealth: 4 }),
+      expect.objectContaining({ cardId: "grave-king-demon", attack: 4 + gameConstants.enemyPhaseBonus.hard.minionAttack[3], health: 4, maxHealth: 4 }),
     ]));
 
     const playerRun = startAtEnemy("fallen-elf-scout", "hard", 3);
@@ -2027,17 +2033,17 @@ describe("Hard expedition enemy health and tactical AI", () => {
 describe("enemy turn characterization (first battle and Hard planner stay unchanged)", () => {
   // Hashes were re-captured on 2026-11-24 for the new enemy rules (enemy mana +2 per turn, no minion health bonus, no wasted heals, Hearthstone mana curve, 5 draws per turn, all-attack); older captures predate the Normal turn planner.
   const GOLDEN_HASHES: Record<string, string> = {
-    "normal-first-9101": "0246db8f1ca2",
-    "normal-first-9102": "7542fc27a638",
-    "normal-first-9103": "b75676a28d17",
-    "normal-first-9104": "8cfd79b1b00f",
-    "normal-first-9105": "de92e731a0ff",
-    "hard-first-9201": "5fcb4ee3766a",
-    "hard-first-9202": "426e9ba2f857",
-    "hard-first-9203": "eeaa6733ebce",
-    "hard-second-9301": "e2440bda65c7",
-    "hard-second-9302": "bae7ec97b8d1",
-    "hard-second-9303": "68b9bed4b590",
+    "normal-first-9101": "f5c94a722501",
+    "normal-first-9102": "114a8b1d5753",
+    "normal-first-9103": "6f4f0639308b",
+    "normal-first-9104": "c2421c0e5742",
+    "normal-first-9105": "99a901f81e20",
+    "hard-first-9201": "499320fd4efa",
+    "hard-first-9202": "9f9ed1531142",
+    "hard-first-9203": "9b8ed827f44c",
+    "hard-second-9301": "1a9681dbf939",
+    "hard-second-9302": "0df9f05e7f5e",
+    "hard-second-9303": "ead78a623e9d",
   };
 
   function summarize(run: RunState) {
@@ -2190,8 +2196,8 @@ describe("Normal enemy turn planner (second battle onward, no hidden information
 });
 
 describe("per-difficulty enemy phase bonus tables", () => {
-  const BASE_SCOUT_HEALTH = 19; // fallen-elf-scout, Normal base value
-  const BASE_GRAVE_KING_HEALTH = 40; // boss-grave-king, Normal base value
+  const BASE_SCOUT_HEALTH = ENEMY_BY_ID.get("fallen-elf-scout")!.maxHealth; // fallen-elf-scout, Normal base value
+  const BASE_GRAVE_KING_HEALTH = ENEMY_BY_ID.get("boss-grave-king")!.maxHealth; // boss-grave-king, Normal base value
   const phaseOf = (value: number): 1 | 2 | 3 => value as 1 | 2 | 3;
 
   function startAtEnemy(enemyId: string, difficulty: "normal" | "hard", phase: 1 | 2 | 3, completedBattles: number) {
@@ -2240,9 +2246,9 @@ describe("per-difficulty enemy phase bonus tables", () => {
       const normal = gameConstants.enemyPhaseBonus.normal.heroHealth[phase];
       const hard = gameConstants.enemyPhaseBonus.hard.heroHealth[phase];
       expect(startAtEnemy("fallen-elf-scout", "normal", phaseOf(phase), completedBattles).battle?.enemyHero.maxHealth).toBe(BASE_SCOUT_HEALTH + normal);
-      expect(startAtEnemy("fallen-elf-scout", "hard", phaseOf(phase), completedBattles).battle?.enemyHero.maxHealth).toBe(BASE_SCOUT_HEALTH + 3 + hard);
+      expect(startAtEnemy("fallen-elf-scout", "hard", phaseOf(phase), completedBattles).battle?.enemyHero.maxHealth).toBe(BASE_SCOUT_HEALTH + 2 + hard);
       expect(startAtEnemy("boss-grave-king", "normal", phaseOf(phase), completedBattles).battle?.enemyHero.maxHealth).toBe(BASE_GRAVE_KING_HEALTH + normal);
-      expect(startAtEnemy("boss-grave-king", "hard", phaseOf(phase), completedBattles).battle?.enemyHero.maxHealth).toBe(BASE_GRAVE_KING_HEALTH + 5 + hard);
+      expect(startAtEnemy("boss-grave-king", "hard", phaseOf(phase), completedBattles).battle?.enemyHero.maxHealth).toBe(BASE_GRAVE_KING_HEALTH + 3 + hard);
     }
   });
 
@@ -2284,26 +2290,28 @@ describe("per-difficulty enemy phase bonus tables", () => {
 });
 
 describe("boss area attack cadence constant", () => {
-  it("is every 3rd turn on normal and every 2nd turn on hard", () => {
-    expect(gameConstants.bossAreaCadence).toEqual({ normal: 3, hard: 2 });
+  it("is every 4th turn on normal and every 3rd turn on hard", () => {
+    expect(gameConstants.bossAreaCadence).toEqual({ normal: 4, hard: 3 });
   });
 });
 
 
 
 describe("starter deck curve", () => {
-  it("gives every class a 30-card deck with one Mana Spring, four 5-cost shared minions and an average cost near 3", () => {
+  it("gives every class a 30-card deck with a low early curve and an average cost near 2.5", () => {
     expect(SHARED_STARTER_CARD_IDS).toHaveLength(20);
-    expect(SHARED_STARTER_CARD_IDS.filter((id) => id === "mana-spring")).toHaveLength(1);
-    expect(SHARED_STARTER_CARD_IDS.filter((id) => CARD_BY_ID.get(id)!.cost >= 5)).toHaveLength(4);
+    const shared = (cost: number) => SHARED_STARTER_CARD_IDS.filter((id) => CARD_BY_ID.get(id)!.cost === cost).length;
+    // Turns 1-3 must never be empty: at least ten cards cost 1 or 2, and only one card costs 5 or more.
+    expect(shared(1) + shared(2)).toBeGreaterThanOrEqual(10);
+    expect(SHARED_STARTER_CARD_IDS.filter((id) => CARD_BY_ID.get(id)!.cost >= 5)).toHaveLength(1);
     // Boss-tier cards are boss rewards and must not be in the starting deck.
     expect(SHARED_STARTER_CARD_IDS.some((id) => CARD_BY_ID.get(id)!.rewardTier === "boss")).toBe(false);
     for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
       const run = createRun(900, playerClass);
       expect(run.deck).toHaveLength(30);
       const average = run.deck.reduce((total, { cardId }) => total + CARD_BY_ID.get(cardId)!.cost, 0) / run.deck.length;
-      expect(average).toBeGreaterThan(2.6);
-      expect(average).toBeLessThan(3.4);
+      expect(average).toBeGreaterThan(2.1);
+      expect(average).toBeLessThan(3.0);
     }
   });
 });

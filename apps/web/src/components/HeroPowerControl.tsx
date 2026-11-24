@@ -31,7 +31,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
     && !used
     && active
     && !resolving
-    && (playerClass !== "demonist" || (shardCount >= 3 && boardSize < gameConstants.maxBoard));
+    && (playerClass !== "demonist" || (shardCount >= gameConstants.soulShardHeroPowerCost && boardSize < gameConstants.maxBoard));
   // Only the assassin picks a target, so only its button can be dragged. A short press is still a tap (target mode).
   const touchDrag = useTouchDrag({
     payload: HERO_POWER_PAYLOAD,
@@ -53,8 +53,8 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
         ? "행동 처리 중"
         : currentMana < 2
           ? "마나 2 부족"
-          : playerClass === "demonist" && shardCount < 3
-            ? "영혼 조각 3 부족"
+          : playerClass === "demonist" && shardCount < gameConstants.soulShardHeroPowerCost
+            ? `영혼 조각 ${gameConstants.soulShardHeroPowerCost} 부족`
             : playerClass === "demonist" && boardSize >= gameConstants.maxBoard
               ? "필드가 가득 참"
               : "사용 가능";
@@ -72,7 +72,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
         type="button"
         className={`hero-power-button is-${playerClass}`}
         disabled={disabled}
-        aria-label={`${definition.heroPowerName}, 마나 2${playerClass === "demonist" ? ", 영혼 조각 3" : ""}`}
+        aria-label={`${definition.heroPowerName}, 마나 2${playerClass === "demonist" ? `, 영혼 조각 ${gameConstants.soulShardHeroPowerCost}` : ""}`}
         aria-describedby="hero-power-details"
         aria-pressed={targetMode}
         onClick={handleActivate}
@@ -87,7 +87,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
         <strong>{definition.heroPowerName}</strong>
         <div className="hero-power-costs">
           <span className="hero-power-cost-badge is-mana"><i aria-hidden="true">◆</i> 마나 <b>2</b></span>
-          {playerClass === "demonist" && <span className="hero-power-cost-badge is-shard"><i aria-hidden="true">✦</i> 영혼 조각 <b>3</b></span>}
+          {playerClass === "demonist" && <span className="hero-power-cost-badge is-shard"><i aria-hidden="true">✦</i> 영혼 조각 <b>{gameConstants.soulShardHeroPowerCost}</b></span>}
         </div>
         {playerClass === "demonist" && <small className="hero-power-shard-total">보유 영혼 조각 {shardCount}/6</small>}
         <p>{definition.heroPowerDescription}</p>

@@ -7,7 +7,7 @@
 [P03 Balance and Close-out](./phases/2026-11-24-hearthstone-rules-and-taunt/P03-balance-and-close-out/phase.md)
 
 ## Active Task
-[P03-T01 Balance Retune with the Simulation](./phases/2026-11-24-hearthstone-rules-and-taunt/P03-balance-and-close-out/T01-balance-retune.md) — status `todo`.
+[P03-T02 Audit, User Checklist, Close-out](./phases/2026-11-24-hearthstone-rules-and-taunt/P03-balance-and-close-out/T02-audit-and-close-out.md) — status `todo`.
 
 ## Plan Overview (10 tasks)
 - P01 engine: T01 fatigue and 1 draw (+API fields), T02 taunt and attack rules (10 cards), T03 turn-order pick and the Coin (+API fields), T04 enemy AI and simulation bot.
@@ -27,4 +27,4 @@
 - Browser note: sound problems were Safari-only (`.ogg`); the user decided to use Chrome and dropped the `.m4a` conversion.
 
 ## Next Step (IMPORTANT)
-Continue with P03-T01 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.
+Continue with P03-T02 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.

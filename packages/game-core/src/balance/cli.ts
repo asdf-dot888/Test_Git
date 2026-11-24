@@ -17,6 +17,7 @@ const USAGE = `Usage: npm run balance:sim -- [options]
   --seed <n>                    Base seed (default ${DEFAULT_SEED})
   --class <warrior|assassin|demonist|all>   (default all)
   --difficulty <normal|hard|all>            (default all)
+  --turn-order <alternate|first|second>      Which turn-order card the bot picks (default alternate)
   --out <path>                  Write the Markdown report to a file instead of stdout
   --label <text>                Report label (default "simulation")`;
 
@@ -25,6 +26,7 @@ interface CliOptions {
   seed: number;
   classes: readonly PlayerClass[];
   difficulties: readonly RunDifficulty[];
+  turnOrder: "alternate" | "first" | "second";
   out: string | null;
   label: string;
 }
@@ -41,7 +43,7 @@ function parsePositiveInteger(flag: string, raw: string | undefined): number {
 }
 
 function parseArgs(argv: readonly string[]): CliOptions {
-  const options: CliOptions = { runs: DEFAULT_RUNS, seed: DEFAULT_SEED, classes: ALL_CLASSES, difficulties: ALL_DIFFICULTIES, out: null, label: "simulation" };
+  const options: CliOptions = { runs: DEFAULT_RUNS, seed: DEFAULT_SEED, classes: ALL_CLASSES, difficulties: ALL_DIFFICULTIES, turnOrder: "alternate", out: null, label: "simulation" };
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
     const value = argv[index + 1];
@@ -55,6 +57,9 @@ function parseArgs(argv: readonly string[]): CliOptions {
       if (value === "all") options.difficulties = ALL_DIFFICULTIES;
       else if (ALL_DIFFICULTIES.includes(value as RunDifficulty)) options.difficulties = [value as RunDifficulty];
       else fail(`Unknown difficulty: ${value ?? "(missing)"}`);
+    } else if (flag === "--turn-order") {
+      if (value === "alternate" || value === "first" || value === "second") options.turnOrder = value;
+      else fail(`Unknown turn order: ${value ?? "(missing)"}`);
     } else if (flag === "--out") {
       if (!value) fail("--out needs a path.");
       options.out = value;
@@ -84,6 +89,7 @@ function main(): void {
     baseSeed: options.seed,
     classes: options.classes,
     difficulties: options.difficulties,
+    turnOrder: options.turnOrder,
     onCellDone: (cell) => {
       const seconds = ((Date.now() - startedAt) / 1000).toFixed(0);
       process.stderr.write(`[${seconds}s] ${cell.difficulty}/${cell.playerClass}: completion ${(cell.completionRate * 100).toFixed(1)}%, per-battle ${(cell.perBattleWinRate * 100).toFixed(1)}%\n`);

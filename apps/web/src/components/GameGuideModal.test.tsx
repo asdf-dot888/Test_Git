@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { gameConstants } from "@board-game/game-core";
 import { GameGuideModal } from "./GameGuideModal.js";
 
 afterEach(cleanup);
@@ -19,7 +20,7 @@ describe("GameGuideModal", () => {
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(screen.getByText("MANGO STONE")).toBeTruthy();
     expect(dialog.textContent).toContain("일반 전투 3회 후 보스 전투 1회");
-    expect(dialog.textContent).toContain("일반 난이도에서는 3턴마다, 하드에서는 2턴마다");
+    expect(dialog.textContent).toContain(`일반 난이도에서는 ${gameConstants.bossAreaCadence.normal}턴마다, 하드에서는 ${gameConstants.bossAreaCadence.hard}턴마다`);
     expect(dialog.textContent).toContain("전투는 마나 1/1로 시작하고");
     expect(dialog.textContent).toContain("최대 마나가 1씩 늘어 10까지");
     expect(dialog.textContent).toContain("카드를 1장 뽑고");

@@ -8,7 +8,7 @@ import {
   skipReward,
 } from "../engine.js";
 import type { PlayerClass, RunDifficulty, RunState } from "../types.js";
-import { cardValue, playBotTurn, startBattleAsBot } from "./bot.js";
+import { cardValue, playBotTurn, startBattleAsBot, type BotTurnOrderPreference } from "./bot.js";
 
 /** Dev-only expedition simulator. Not exported from the package index. */
 
@@ -124,8 +124,8 @@ export interface RunSimulationResult {
   finalDeckSize: number;
 }
 
-export function simulateRun(seed: number, playerClass: PlayerClass, difficulty: RunDifficulty): RunSimulationResult {
-  let run = startBattleAsBot(createRun(seed, playerClass, difficulty, { pickTurnOrder: true }));
+export function simulateRun(seed: number, playerClass: PlayerClass, difficulty: RunDifficulty, turnOrder: BotTurnOrderPreference = "alternate"): RunSimulationResult {
+  let run = startBattleAsBot(createRun(seed, playerClass, difficulty, { pickTurnOrder: true }), turnOrder);
   const encounterResults: EncounterResult[] = [];
   let stalledBattles = 0;
   let completed = false;
@@ -162,7 +162,7 @@ export function simulateRun(seed: number, playerClass: PlayerClass, difficulty: 
       break;
     }
     run = applyReward(run);
-    run = startBattleAsBot(advanceRun(run, run.seed + run.completedBattles * SEED_STRIDE + 1, { pickTurnOrder: true }));
+    run = startBattleAsBot(advanceRun(run, run.seed + run.completedBattles * SEED_STRIDE + 1, { pickTurnOrder: true }), turnOrder);
   }
 
   if (!completed && failedEncounterIndex === null) {
@@ -191,6 +191,8 @@ export interface BatchOptions {
   baseSeed: number;
   classes: readonly PlayerClass[];
   difficulties: readonly RunDifficulty[];
+  /** Which turn-order card the bot picks: both roles alternately (default), or always first / second. */
+  turnOrder?: BotTurnOrderPreference;
   onCellDone?: (summary: CellSummary) => void;
 }
 
@@ -256,7 +258,7 @@ export function simulateBatch(options: BatchOptions): CellSummary[] {
     for (const playerClass of options.classes) {
       const results: RunSimulationResult[] = [];
       for (let index = 0; index < options.runs; index += 1) {
-        results.push(simulateRun(options.baseSeed + index * SEED_STRIDE, playerClass, difficulty));
+        results.push(simulateRun(options.baseSeed + index * SEED_STRIDE, playerClass, difficulty, options.turnOrder));
       }
       const summary = summarizeCell(results, playerClass, difficulty);
       summaries.push(summary);
