@@ -2,7 +2,7 @@
 
 - Date: 2026-11-24
 - Decisions: [2026-11-24-playtest-feedback-round](../decisions/2026-11-24-playtest-feedback-round.md)
-- Status: planned (no task started)
+- Status: done (2026-11-24). All 12 tasks implemented and covered by automated checks; 1194 tests. Not verified by Claude: layout, sound and feel on real devices (checklist in the previous plan's P04-T02 addendum). Difficulty averages are in range (normal 55.7%, hard 7.1%) but the class gap target (5 points) is not met (12.1 / 9.7); see `docs/balance/2026-11-24-feedback-round-summary.md`. Not released.
 - Shell setup for every validation command: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"` and run from the repository root `/Users/gimjinhyeon/Downloads/Mango_Stone`.
 
 ## Goal
@@ -31,7 +31,7 @@ Besides the enemy's low mana (fixed in P04-T01), `planEnemyTurn` starts from an 
 | P02 | `done` | Floating damage and heal numbers for every source, card rustle hover sound with preview | [P02](../phases/2026-11-24-playtest-feedback-round/P02-combat-feedback/phase.md) |
 | P03 | `done` | Player mana recovery 2/3/4 and two Mana Springs in the starter deck | [P03](../phases/2026-11-24-playtest-feedback-round/P03-mana-and-starter-deck/phase.md) |
 | P04 | `done` | Enemy minion health bonus removed, enemy mana +2, attack planning, mana-efficient card plans, balance tuning with the simulation | [P04](../phases/2026-11-24-playtest-feedback-round/P04-enemy-difficulty/phase.md) |
-| P05 | `todo` | Guide and docs, phone checklist addendum, full audit and close-out | [P05](../phases/2026-11-24-playtest-feedback-round/P05-close-out/phase.md) |
+| P05 | `done` | Guide and docs, phone checklist addendum, full audit and close-out | [P05](../phases/2026-11-24-playtest-feedback-round/P05-close-out/phase.md) |
 
 ## Risks
 - P04 needs many simulation runs (about 0.15 s per run; 500 runs x 3 classes x 2 difficulties is several minutes, more with the new AI). Mitigation: iterate with 200-300 runs, confirm the final numbers with 500+ (README advice), keep every report under `docs/balance/`.

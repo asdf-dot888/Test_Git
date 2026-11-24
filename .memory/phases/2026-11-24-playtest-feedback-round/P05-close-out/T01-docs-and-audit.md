@@ -1,6 +1,6 @@
 # Task: T01 Docs, Checklist and Audit
 
-## Status: todo
+## Status: done
 
 ## Goal
 Make sure every player-facing text and doc matches the new rules, give the user one checklist for the things Claude cannot verify (layout on a phone, sound, feel), run the full audit and close the plan.
@@ -51,6 +51,7 @@ Task: T01-docs-and-audit
 ```
 
 ## Progress
-- [ ] implementation complete
-- [ ] validation passed (record counts)
-- commit: pending
+- [x] implementation complete. Texts: README (카드 조작 notes on the button positions, turn indicators and 30 s; difficulty paragraph from P04-T04), `GameGuideModal` (mana line from P03, new boss area cadence sentence), both copies of `game-architecture.html` (mana, 30 s timer, enemy rules, boss cadence). The first-run tutorial only says "턴 종료를 눌러", which is still correct. The PC/phone checklist is appended to the previous plan's P04-T02 and listed in `current.md`.
+- Audit: `grep -rnE "20초|1·2·3|3·6·9"` over `apps/web/src`, `apps/web/public`, README and docs finds nothing outside tests (the boss text is computed from the cadence constant). No debug code left; only intended files changed; the unrelated untracked files were not touched.
+- [x] validation passed: build clean, lint clean, 1194 tests (101 files, up from 1151 at the start of this plan's code work). No flaky failure occurred.
+- commit: see Git history

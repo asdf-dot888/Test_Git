@@ -1,17 +1,18 @@
 # Current Context
 
 ## Active Plan
-[Playtest Feedback Round (UI, sound, mana, difficulty)](./plans/2026-11-24-playtest-feedback-round.md) — planned 2026-11-24; decisions in [2026-11-24-playtest-feedback-round](./decisions/2026-11-24-playtest-feedback-round.md). 5 phases, 12 tasks. Run it to the end without asking between tasks (the user's standing instruction for memory plans).
+None — [Playtest Feedback Round (UI, sound, mana, difficulty)](./plans/2026-11-24-playtest-feedback-round.md) is complete (implementation, 2026-11-24); not released. Waiting for the user's PC/phone check.
 
 ## Active Phase
-[P05 Close-out](./phases/2026-11-24-playtest-feedback-round/P05-close-out/phase.md)
+None — P01 to P05 are complete.
 
 ## Active Task
-[P05-T01 Docs, Checklist and Audit](./phases/2026-11-24-playtest-feedback-round/P05-close-out/T01-docs-and-audit.md)
+None — no active task.
 
 ## Status
-- Plan order: P01 layout and turn clarity (T01 buttons, T02 badge/banner, T03 30 s timer and boss panel text), P02 combat feedback (T01 damage/heal numbers, T02 card rustle hover sound), P03 mana (T01 player recovery 2/3/4, T02 two Mana Springs), P04 enemy difficulty (T01 enemy mana +2 and no minion health bonus, T02 attack planning, T03 card plan fix and mana efficiency, T04 balance tuning to normal 55-65% / hard 6-10% / class gap <= 5 points), P05 close-out (docs, checklist, audit). No release is part of the plan.
-- Findings during planning: the enemy cannot hit the hero while the player has minions (so "go face" is already automatic); `planEnemyTurn` can return an empty plan when the enemy is behind on board (probable cause of idle enemy turns, reproduce first in P04-T03). Both are written into the plan file.
+- Plan done (12 tasks): P01 button layout (PC all-attack beside end turn; compact end turn in the hero panel), turn badge/border/banner, 30 s timer and boss text; P02 damage/heal numbers and the card-rustle hover sound; P03 player mana 2/3/4 and two Mana Springs (one Bone Rat removed); P04 enemy minion health bonus 0, enemy mana +2, attack planning, card-plan idle fix (reproduced and fixed), balance tuning. 1194 tests (101 files), lint and build pass. Commits 7b523f4 .. 44013c7 plus the close-out commit. Decisions: [playtest-feedback-round](./decisions/2026-11-24-playtest-feedback-round.md).
+- Difficulty result (1000 runs per cell): normal 55.7% (in range, near the low edge), hard 7.1% (in range); **class gap 12.1 / 9.7 points, target 5 not met** (warrior lowest, assassin highest). Fixing it needs class card or hero power tuning, which was outside the decided design: ask the user. Report: `docs/balance/2026-11-24-feedback-round-summary.md`.
+- Pending checks only the user can do: the PC/phone checklist (addendum in the previous plan's [P04-T02](./phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/T02-audit-and-close-out.md)): button layout, badge/banner, damage numbers, hover sound (retune the `HOVER_*` constants in `game/audio.ts` if needed), 30 s feel, enemy behavior.
 - Public HTML presentation released on Azure at `https://mango-stone-0631f0d00.5.azurestaticapps.net/presentation/` as part of v1.0.7; 1140 tests, lint, build, and live route checks passed. Plan: [public-azure-presentation](./plans/2026-11-20-public-azure-presentation.md). The earlier private ChatGPT Sites copy remains owner-only because the connected Sites tools do not expose deletion; remove it through Sites UI.
 - Plan done: 2 phases and 4 tasks (drag payload and drop rules, App drop handling, hero power button drag UI, guide text and whole-screen tests). 1140 tests (98 files), lint and build pass. Decision: [assassin-hero-power-touch](./decisions/2026-11-19-assassin-hero-power-touch.md) (D08 of the mobile decision is now confirmed: both tap-then-tap and drag, invalid drop cancels).
 - Previous plan [card details and touch drag](./plans/2026-11-19-card-details-and-touch-drag.md): implemented (10/10 tasks), released in v1.0.6. Its P04-T02 holds the phone checklist, now with an addendum for the Assassin hero power drag.
@@ -25,8 +26,4 @@
 - An unexplained flaky test failure happened once (P01-T01 of the previous plan; reruns passed); mention it if it recurs.
 
 ## Next Step (IMPORTANT)
-Start the active task: `/memory-execute` (or "current 보고 이어서 해줘"), continuing the Playtest Feedback Round at P05-T01 (P01-P04 are done). Validation setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`. Commit by explicit file path (unrelated untracked files exist).
-
-Still pending from before: delete the old private ChatGPT Sites copy `mango-stone-project-story-2026` through the Sites UI when accessible; the current connector has no delete/unpublish operation.
-
-No active task. Both touch plans are released (v1.0.6) and the presentation is live in v1.0.7. Wait for the user's phone check of both touch plans (checklists in the previous plan's [P04-T02](./phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/T02-audit-and-close-out.md)) and retune in a small follow-up plan and a new release only when the user asks. Also pending: rotate the Azure token.
+No active task. Wait for the user's feedback on the checklist; a release (version bump, changelog entry in `apps/web/public/changelog.html`, deploy) only when the user asks. Open question for the user: tune class cards / hero powers to close the class gap? Also pending from before: the user's phone check of the touch controls, rotate the Azure token, the untracked files question (`.agents/`, `local-work.patch`, `docs/2026-11-19-session-handoff.md`, 19 older `.memory` files), and deleting the old private ChatGPT Sites copy `mango-stone-project-story-2026` through the Sites UI.
