@@ -1,15 +1,17 @@
 # Current Context
 
 ## Active Plan
-None — [Assassin Hero Power on Touch (tap-then-tap and drag)](./plans/2026-11-19-assassin-hero-power-touch.md) is complete (implementation); the user's check on a real phone is pending.
+[Playtest Feedback Round (UI, sound, mana, difficulty)](./plans/2026-11-24-playtest-feedback-round.md) — planned 2026-11-24; decisions in [2026-11-24-playtest-feedback-round](./decisions/2026-11-24-playtest-feedback-round.md). 5 phases, 12 tasks. Run it to the end without asking between tasks (the user's standing instruction for memory plans).
 
 ## Active Phase
-None — P01 and P02 are complete.
+[P01 Battle Layout and Turn Clarity](./phases/2026-11-24-playtest-feedback-round/P01-battle-layout-and-turn-clarity/phase.md)
 
 ## Active Task
-None — no active task.
+[P01-T02 Turn Badge, Board Border and Turn Banner](./phases/2026-11-24-playtest-feedback-round/P01-battle-layout-and-turn-clarity/T02-turn-badge-and-banner.md)
 
 ## Status
+- Plan order: P01 layout and turn clarity (T01 buttons, T02 badge/banner, T03 30 s timer and boss panel text), P02 combat feedback (T01 damage/heal numbers, T02 card rustle hover sound), P03 mana (T01 player recovery 2/3/4, T02 two Mana Springs), P04 enemy difficulty (T01 enemy mana +2 and no minion health bonus, T02 attack planning, T03 card plan fix and mana efficiency, T04 balance tuning to normal 55-65% / hard 6-10% / class gap <= 5 points), P05 close-out (docs, checklist, audit). No release is part of the plan.
+- Findings during planning: the enemy cannot hit the hero while the player has minions (so "go face" is already automatic); `planEnemyTurn` can return an empty plan when the enemy is behind on board (probable cause of idle enemy turns, reproduce first in P04-T03). Both are written into the plan file.
 - Public HTML presentation released on Azure at `https://mango-stone-0631f0d00.5.azurestaticapps.net/presentation/` as part of v1.0.7; 1140 tests, lint, build, and live route checks passed. Plan: [public-azure-presentation](./plans/2026-11-20-public-azure-presentation.md). The earlier private ChatGPT Sites copy remains owner-only because the connected Sites tools do not expose deletion; remove it through Sites UI.
 - Plan done: 2 phases and 4 tasks (drag payload and drop rules, App drop handling, hero power button drag UI, guide text and whole-screen tests). 1140 tests (98 files), lint and build pass. Decision: [assassin-hero-power-touch](./decisions/2026-11-19-assassin-hero-power-touch.md) (D08 of the mobile decision is now confirmed: both tap-then-tap and drag, invalid drop cancels).
 - Previous plan [card details and touch drag](./plans/2026-11-19-card-details-and-touch-drag.md): implemented (10/10 tasks), released in v1.0.6. Its P04-T02 holds the phone checklist, now with an addendum for the Assassin hero power drag.
@@ -23,6 +25,8 @@ None — no active task.
 - An unexplained flaky test failure happened once (P01-T01 of the previous plan; reruns passed); mention it if it recurs.
 
 ## Next Step (IMPORTANT)
-Delete the old private ChatGPT Sites copy `mango-stone-project-story-2026` through the Sites UI when accessible; the current connector has no delete/unpublish operation.
+Start the active task: `/memory-execute` (or "current 보고 이어서 해줘"), continuing the Playtest Feedback Round at P01-T02 (P01-T01 is done). Validation setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`. Commit by explicit file path (unrelated untracked files exist).
+
+Still pending from before: delete the old private ChatGPT Sites copy `mango-stone-project-story-2026` through the Sites UI when accessible; the current connector has no delete/unpublish operation.
 
 No active task. Both touch plans are released (v1.0.6) and the presentation is live in v1.0.7. Wait for the user's phone check of both touch plans (checklists in the previous plan's [P04-T02](./phases/2026-11-19-card-details-and-touch-drag/P04-guidance-and-verification/T02-audit-and-close-out.md)) and retune in a small follow-up plan and a new release only when the user asks. Also pending: rotate the Azure token.

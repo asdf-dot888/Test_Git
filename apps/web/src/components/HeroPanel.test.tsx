@@ -32,4 +32,14 @@ describe("HeroPanel", () => {
     const markup = renderToStaticMarkup(<HeroPanel hero={hero} side="player" artKey="player" name="잿빛 방랑자" armor={4} targetable={false} onSelectTarget={vi.fn()} />);
     expect(markup).toContain('aria-label="방어도 4"');
   });
+
+  it("draws the top control above the player portrait only", () => {
+    const hero = createRun(4).battle!.playerHero;
+    const control = <button className="probe-control" type="button">control</button>;
+    const player = renderToStaticMarkup(<HeroPanel hero={hero} side="player" artKey="player" name="잿빛 방랑자" targetable={false} topControl={control} onSelectTarget={vi.fn()} />);
+    expect(player.indexOf("probe-control")).toBeGreaterThan(-1);
+    expect(player.indexOf("probe-control")).toBeLessThan(player.indexOf("hero-portrait-wrap"));
+    const enemy = renderToStaticMarkup(<HeroPanel hero={hero} side="enemy" artKey="boss-grave-king" name="무덤의 왕" targetable={false} topControl={control} onSelectTarget={vi.fn()} />);
+    expect(enemy).not.toContain("probe-control");
+  });
 });

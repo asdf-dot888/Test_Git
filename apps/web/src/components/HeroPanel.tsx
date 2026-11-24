@@ -12,13 +12,15 @@ interface HeroPanelProps {
   armor?: number;
   intentTarget?: boolean;
   heroPowerControl?: ReactNode;
+  /** Rendered above the portrait of the player hero (the compact layout puts the end-turn button here). */
+  topControl?: ReactNode;
   onSelectTarget(targetId: string): void;
   onDropTarget?(payload: NonNullable<ReturnType<typeof readDragPayload>>, target: DropTarget): void;
   /** Touch drag: outlines the enemy hero while it is a valid drop target. */
   dropHighlight?: "valid" | "hover" | null;
 }
 
-export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, heroPowerControl, onSelectTarget, onDropTarget, dropHighlight = null }: HeroPanelProps) {
+export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, intentTarget = false, heroPowerControl, topControl, onSelectTarget, onDropTarget, dropHighlight = null }: HeroPanelProps) {
   const isPlayer = side === "player";
   return (
     <section
@@ -34,6 +36,7 @@ export function HeroPanel({ hero, side, artKey, name, targetable, armor = 0, int
       }}
     >
       {targetable && <button className="hero-target-button" type="button" aria-label={`${name}을(를) 대상으로 선택`} onClick={() => onSelectTarget(hero.id)} />}
+      {isPlayer && topControl}
       <div className="hero-portrait-wrap">
         <img className="hero-portrait" src={`/art/${isPlayer ? "heroes" : "enemies"}/${artKey}.png`} alt={`${name} 초상화`} />
         <span className="hero-side-mark" aria-hidden="true">{isPlayer ? "✦" : "☠"}</span>

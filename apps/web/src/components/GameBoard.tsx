@@ -13,12 +13,14 @@ import { MinionLane } from "./MinionLane.js";
 import { sameDropTarget } from "./touchDrag.js";
 import type { DragState } from "./useTouchDrag.js";
 import { TargetPicker } from "./TargetPicker.js";
-import { TurnControls } from "./TurnControls.js";
+import { AllAttackButton } from "./AllAttackButton.js";
+import { EndTurnButton, TurnControls } from "./TurnControls.js";
 import { HeroPowerControl } from "./HeroPowerControl.js";
 import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
 import { OpeningHandRedrawControl } from "./OpeningHandRedrawControl.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
 import { getValidDropTargets } from "../game/dropRules.js";
+import { useCompactBoard } from "../game/useCompactBoard.js";
 import { getPlayerSpellSelection } from "../game/spellTargeting.js";
 import type { TutorialStepId } from "./FirstRunTutorial.js";
 
@@ -60,6 +62,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
 export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onAllAttack = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
   // Touch drag progress: which targets to outline and which one is under the finger.
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const compactBoard = useCompactBoard();
   const dropHighlights = { valid: dragState?.valid ?? [], hovered: dragState?.hovered ?? null };
   const getValidTargets = (payload: DragPayload) => getValidDropTargets(run, payload);
   const battle = run.battle;
@@ -118,9 +121,6 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
       {enemy?.kind === "boss" && <aside className="boss-pattern-panel" data-testid="boss-pattern-panel"><strong>보스 고유 패턴</strong><span>보스의 3·6·9번째 턴 행동은 카드 행동 후 이어집니다.</span><span>광역 강타: 내 하수인과 영웅 모두에게 피해 1</span></aside>}
 
       <section className={`battle-board${showTimerWarning ? " is-timer-critical" : ""}`} id="battle" aria-label="카드 전투 보드">
-        <div className="field-action-bar">
-          <button className={`all-attack-button${allAttackDisabled ? " is-unavailable" : " is-ready"}`} type="button" disabled={allAttackDisabled} aria-label={`전체 공격, 공격 가능한 하수인 ${readyMinionCount}명`} onClick={onAllAttack} title={battle.enemyBoard.length > 0 ? "적 하수인이 남아 있으면 사용할 수 없습니다." : "공격 가능한 아군 하수인을 모두 순서대로 적 영웅에게 보냅니다."}><span aria-hidden="true">⚔</span> 전체 공격</button>
-        </div>
         {enemyIntentStep && <EnemyIntentPreview step={enemyIntentStep} />}
         <div className="battle-opponent">
           <div className="enemy-resource-bar">
@@ -143,6 +143,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             artKey={playerHeroArtKey}
             name="잿빛 방랑자"
             armor={battle.playerArmor}
+            topControl={compactBoard ? <EndTurnButton className="hero-end-turn-button" onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled || !canEndTurn} /> : undefined}
             targetable={false}
             intentTarget={intentHeroTarget}
             onSelectTarget={onSelectTarget}
@@ -175,7 +176,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
             {run.openingHandRedrawAvailable === true && <OpeningHandRedrawControl disabled={actionsDisabled} onRedraw={onRedrawOpeningHand} />}
           </div>
           <ManaDisplay current={battle.playerMana.current} max={battle.playerMana.max} temporary={battle.playerMana.temporary} />
-          <div className="turn-controls-spacer"><TurnControls onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled || !canEndTurn} /></div>
+          <div className="turn-controls-spacer"><TurnControls leading={<AllAttackButton disabled={allAttackDisabled} readyMinionCount={readyMinionCount} enemyHasMinions={battle.enemyBoard.length > 0} onAllAttack={onAllAttack} />} showEndTurn={!compactBoard} onEndTurn={onEndTurn} status={battle.status} disabled={actionsDisabled || !canEndTurn} /></div>
         </div>
         <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "play-card" && !(tutorialStep === "attack" && readyMinionCount === 0))} canSelectCard={canSelectCard} onSelectCard={onSelectCard} getValidTargets={getValidTargets} onDragStateChange={setDragState} {...(onDropInteraction ? { onDropInteraction } : {})} />
       </footer>

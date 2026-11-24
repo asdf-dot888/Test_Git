@@ -282,13 +282,52 @@ describe("GameBoard", () => {
     run.battle!.playerBoard = [{ instanceId: "ready", cardId: "ash-wolf", owner: "player", attack: 2, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
     const ready = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
     expect(ready).toContain('class="all-attack-button is-ready"');
-    expect(ready.indexOf('class="all-attack-button is-ready"')).toBeLessThan(ready.indexOf('class="battle-opponent"'));
     expect(ready).toContain("⚔</span> 전체 공격");
-    expect(ready.indexOf('class="all-attack-button is-ready"')).toBeLessThan(ready.indexOf('class="player-toolbar"'));
+    expect(ready).not.toContain("field-action-bar");
+    // PC layout: the all-attack button sits in the player toolbar, directly before the end-turn button.
+    expect(ready.indexOf('class="player-toolbar"')).toBeLessThan(ready.indexOf('class="all-attack-button is-ready"'));
+    expect(ready.indexOf('class="all-attack-button is-ready"')).toBeLessThan(ready.indexOf('class="end-turn-button"'));
 
     run.battle!.enemyBoard = [{ instanceId: "blocker", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
     const blocked = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:20", remainingSeconds: 20, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
     expect(blocked).toContain('class="all-attack-button is-unavailable"');
+  });
+
+  describe("button layout", () => {
+    // This file renders in a node environment: provide a minimal `window.matchMedia` for the compact-layout hook.
+    const render = (compact: boolean) => {
+      const globals = globalThis as { window?: unknown };
+      const original = globals.window;
+      globals.window = { matchMedia: (query: string) => ({ matches: compact && query === "(max-width: 760px)", media: query, addEventListener: () => undefined, removeEventListener: () => undefined }) };
+      try {
+        const run = createRun(420);
+        run.battle!.turnNumber = 2;
+        run.battle!.playerBoard = [{ instanceId: "ready", cardId: "ash-wolf", owner: "player", attack: 2, health: 1, maxHealth: 1, summonedTurn: 0, hasAttacked: false }];
+        run.battle!.enemyBoard = [];
+        return renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:30", remainingSeconds: 30, visible: true }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+      } finally {
+        if (original === undefined) delete globals.window;
+        else globals.window = original;
+      }
+    };
+
+    it("keeps the end-turn button in the toolbar next to all-attack on wide screens", () => {
+      const markup = render(false);
+      expect(markup.match(/class="end-turn-button"/g)).toHaveLength(1);
+      expect(markup).not.toContain("hero-end-turn-button");
+      expect(markup.indexOf('class="all-attack-button is-ready"')).toBeLessThan(markup.indexOf('class="end-turn-button"'));
+    });
+
+    it("moves the end-turn button above the player portrait on phone-width screens", () => {
+      const markup = render(true);
+      expect(markup.match(/턴 종료/g)).toHaveLength(1);
+      const heroPanel = markup.match(/<section class="hero-panel hero-player[\s\S]*?<\/section>/)?.[0] ?? "";
+      expect(heroPanel).toContain("hero-end-turn-button");
+      expect(heroPanel.indexOf("hero-end-turn-button")).toBeLessThan(heroPanel.indexOf("hero-portrait-wrap"));
+      const toolbar = markup.slice(markup.indexOf('class="player-toolbar"'));
+      expect(toolbar.slice(0, toolbar.indexOf("</footer>"))).toContain('class="all-attack-button is-ready"');
+      expect(toolbar.slice(0, toolbar.indexOf("</footer>"))).not.toContain("end-turn-button");
+    });
   });
 
   it("keeps the boss area-attack cadence and targets visible throughout the boss battle", () => {
