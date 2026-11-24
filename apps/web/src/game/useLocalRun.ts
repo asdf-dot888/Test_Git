@@ -82,7 +82,7 @@ export function useLocalRun(): LocalRunController {
   }, [userId]);
 
   const createRun = useCallback(async (seed: number, playerClass: PlayerClass, difficulty: RunDifficulty) => {
-    const run = createGameRun(seed, playerClass, difficulty);
+    const run = createGameRun(seed, playerClass, difficulty, { pickTurnOrder: true });
     await saveRun(run);
     return run;
   }, [saveRun]);

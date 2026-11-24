@@ -7,7 +7,7 @@
 [P02 Web UI](./phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/phase.md)
 
 ## Active Task
-[P02-T03 Turn-Order Pick Overlay, Coin and Enemy-First Playback](./phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/T03-turn-order-pick-and-coin-ui.md) — status `todo`.
+[P02-T04 Texts and Docs Match the New Rules](./phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/T04-texts-and-docs.md) — status `todo`.
 
 ## Plan Overview (10 tasks)
 - P01 engine: T01 fatigue and 1 draw (+API fields), T02 taunt and attack rules (10 cards), T03 turn-order pick and the Coin (+API fields), T04 enemy AI and simulation bot.
@@ -27,4 +27,4 @@
 - Browser note: sound problems were Safari-only (`.ogg`); the user decided to use Chrome and dropped the `.m4a` conversion.
 
 ## Next Step (IMPORTANT)
-Continue with P02-T03 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.
+Continue with P02-T04 per its blueprint (user asked to run the whole plan to the end without questions): implement, validate, commit with the message in the task file, then advance this file.

@@ -2,7 +2,13 @@ import { CARD_BY_ID, type MinionState } from "@board-game/game-core";
 import { describe, expect, it } from "vitest";
 import { initialGameSession, reduceGameAction } from "./gameActions.js";
 
+/** A started run with the turn order already picked as first player (a new battle starts pending). */
 function startSession(seed = 71) {
+  const pending = reduceGameAction(initialGameSession, { type: "start-run", seed, playerClass: "warrior", difficulty: "normal" });
+  return reduceGameAction(pending, { type: "choose-turn-order", cardIndex: pending.run!.battle!.turnOrderCards![0] === "first" ? 0 : 1 });
+}
+
+function pendingSession(seed = 72) {
   return reduceGameAction(initialGameSession, { type: "start-run", seed, playerClass: "warrior", difficulty: "normal" });
 }
 
@@ -102,5 +108,26 @@ describe("game action adapter", () => {
     expect(skipped.run?.deck).toHaveLength(deckSize);
     expect(skipped.run?.pendingReward).toBeNull();
     expect(skipped.run?.status).toBe("victory");
+  });
+
+  it("starts every new battle pending and plays the enemy's opening turn when the second card is picked", () => {
+    const pending = pendingSession();
+    expect(pending.run?.battle?.firstSide).toBeNull();
+    expect(pending.run?.battle?.hand).toHaveLength(0);
+    expect(reduceGameAction(pending, { type: "end-turn" }).error).toBe("먼저 선후공을 정하세요.");
+
+    const secondIndex = pending.run!.battle!.turnOrderCards![0] === "second" ? 0 : 1;
+    const second = reduceGameAction(pending, { type: "choose-turn-order", cardIndex: secondIndex });
+    expect(second.run?.battle?.firstSide).toBe("enemy");
+    expect(second.run?.battle?.activeSide).toBe("player");
+    expect(second.run?.battle?.hand.some(({ cardId }) => cardId === "the-coin")).toBe(true);
+    // The enemy's opening turn is queued as a playback (it may play nothing on 1 mana, then there is nothing to replay).
+    expect(second.enemyTurnPlayback === null || second.enemyTurnPlayback.steps.length > 0).toBe(true);
+
+    const firstIndex = secondIndex === 0 ? 1 : 0;
+    const first = reduceGameAction(pending, { type: "choose-turn-order", cardIndex: firstIndex });
+    expect(first.run?.battle?.firstSide).toBe("player");
+    expect(first.run?.battle?.hand).toHaveLength(4);
+    expect(first.enemyTurnPlayback).toBeNull();
   });
 });

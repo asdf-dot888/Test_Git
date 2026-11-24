@@ -5,6 +5,7 @@ import {
   attackWithMinion,
   castSpellWithResolution,
   chooseReward,
+  chooseTurnOrder,
   chooseRewardAndDiscard,
   createRun,
   discardBeforeDraw,
@@ -15,6 +16,7 @@ import {
   hydrateRunForCurrentBattle,
   playMinion,
   redrawOpeningHand,
+  resolveEnemyTurnWithPlayback,
   skipReward,
   useHeroPower as applyHeroPower,
   type PlayerClass,
@@ -30,6 +32,7 @@ export type GameAction =
   | { type: "start-run"; seed: number; playerClass: PlayerClass; difficulty: RunDifficulty }
   | { type: "restore-run"; run: RunState }
   | { type: "redraw-opening-hand" }
+  | { type: "choose-turn-order"; cardIndex: 0 | 1 }
   | { type: "set-turn-timer"; timer: TurnTimerState | undefined }
   | { type: "clear-run" }
   | { type: "select-card"; instanceId: string }
@@ -200,7 +203,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     };
   }
   if (session.enemyTurnPlayback) return session;
-  if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass, action.difficulty), session);
+  if (action.type === "start-run") return sessionForRun(createRun(action.seed, action.playerClass, action.difficulty, { pickTurnOrder: true }), session);
   if (action.type === "restore-run") {
     const run = hydrateRunForCurrentBattle(action.run);
     return { ...sessionForRun(run, session), victoryPresentation: run.pendingVictoryAcknowledgement ? "victory-reveal" : null };
@@ -233,6 +236,12 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
   if (!session.run) return { ...session, error: "먼저 새 원정을 시작하세요." };
   try {
     if (action.type === "redraw-opening-hand") return sessionForRun(redrawOpeningHand(session.run), session);
+    if (action.type === "choose-turn-order") {
+      const chosen = chooseTurnOrder(session.run, action.cardIndex);
+      // When the enemy plays first, its opening turn is played out step by step like any other enemy turn.
+      if (chosen.battle?.activeSide === "enemy") return sessionForEnemyTurn(resolveEnemyTurnWithPlayback(chosen), session);
+      return sessionForRun(chosen, session);
+    }
     if (action.type === "play-minion") return sessionForAction(playMinion(session.run, action.instanceId, action.slotIndex), session, action);
     if (action.type === "cast-spell") {
       const resolution = castSpellWithResolution(session.run, action.instanceId, action.targetId);
@@ -257,7 +266,7 @@ export function reduceGameAction(session: GameSession, action: InternalAction): 
     if (action.type === "skip-reward") return sessionForRun(skipReward(session.run), session);
     if (action.type === "continue-run") {
       if (action.nextSeed === undefined) return { ...session, error: "다음 전투의 시드를 준비하지 못했습니다." };
-      return sessionForRun(advanceRun(session.run, action.nextSeed), session);
+      return sessionForRun(advanceRun(session.run, action.nextSeed, { pickTurnOrder: true }), session);
     }
   } catch (error) {
     if (error instanceof GameRuleError) return { ...session, error: ruleMessage(error), resolving: false };

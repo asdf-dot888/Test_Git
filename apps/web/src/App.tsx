@@ -15,6 +15,7 @@ import { DiscardPicker } from "./components/DiscardPicker.js";
 import { GameMenu } from "./components/GameMenu.js";
 import { AudioSettingsModal } from "./components/AudioSettingsModal.js";
 import { TurnBanner } from "./components/TurnBanner.js";
+import type { TurnOrderPick } from "./components/TurnOrderPicker.js";
 import { TurnStartGlow } from "./components/TurnStartGlow.js";
 import { LeaderboardModal, type LeaderboardLoadState } from "./components/LeaderboardModal.js";
 import { useGameSession } from "./game/useGameSession.js";
@@ -92,6 +93,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const [tutorialMode, setTutorialMode] = useState<"inactive" | "first-run" | "replay">("inactive");
   const [tutorialStep, setTutorialStep] = useState<TutorialStepId>("inspect-hand");
   const [tutorialNotice, setTutorialNotice] = useState<string | null>(null);
+  const [turnOrderPick, setTurnOrderPick] = useState<TurnOrderPick | null>(null);
   const tutorialCheckedKey = useRef<string | null>(null);
   const tutorialReplaySnapshot = useRef<{ run: RunState | null; screen: "menu" | "class-selection" | "map" | "game" } | null>(null);
   const tutorialActionRef = useRef<{ action: TutorialAction | "attack-retry" | "first-turn-end" | "second-turn-end" | "play-card-recovery"; turn: number; handCount: number; boardIds: string[]; attackerId?: string } | null>(null);
@@ -125,7 +127,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   // The enemy turn is replayed step by step; its banner shows once for the playback of each enemy turn.
   const enemyTurnBattle = playback?.steps[0]?.beforeRun.battle;
   const enemyTurnKey = enemyTurnBattle ? `enemy-${enemyTurnBattle.battleId}:${enemyTurnBattle.turnNumber}` : null;
-  const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active"
+  const activeTurnId = screen === "game" && !playback && run?.battle?.activeSide === "player" && run.battle.status === "active" && run.battle.firstSide !== null
     ? `${run.battle.battleId}:${run.battle.turnNumber}`
     : null;
   const dispatch = useCallback((action: GameAction) => {
@@ -341,6 +343,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       let cancelled = false;
       queueMicrotask(() => {
         if (cancelled) return;
+        // The first-run tutorial always starts as the first player: it picks the "first" card without showing the picker.
+        const waiting = run.battle;
+        if (waiting?.firstSide === null && waiting.turnOrderCards) dispatchGameAction({ type: "choose-turn-order", cardIndex: waiting.turnOrderCards[0] === "first" ? 0 : 1 });
         setTutorialStep("inspect-hand");
         setTutorialMode("first-run");
       });
@@ -349,7 +354,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         if (tutorialCheckedKey.current === key) tutorialCheckedKey.current = null;
       };
     }
-  }, [auth.userId, run, screen, tutorialMode]);
+  }, [auth.userId, dispatchGameAction, run, screen, tutorialMode]);
 
   useEffect(() => {
     const pending = tutorialActionRef.current;
@@ -387,6 +392,15 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   // finishTutorial is intentionally kept stable through refs below.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.run]);
+
+  // The player picks one of the two face-down cards; the role behind it decides who plays first.
+  const pickTurnOrder = (index: 0 | 1) => {
+    const currentBattle = run?.battle;
+    const role = currentBattle?.turnOrderCards?.[index];
+    if (!currentBattle || currentBattle.firstSide !== null || !role) return;
+    setTurnOrderPick({ battleId: currentBattle.battleId, index, role });
+    dispatch({ type: "choose-turn-order", cardIndex: index });
+  };
 
   const startNewLocalRun = async (playerClass: PlayerClass, difficulty: RunDifficulty) => {
     pendingReplacement.current = true;
@@ -778,6 +792,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onCancelTarget={() => dispatch({ type: session.error ? "clear-error" : "cancel-selection" })}
           onEndTurn={() => { if (tutorialMode === "inactive" || tutorialAllows("end-turn")) { if (tutorialMode !== "inactive") advanceTutorial("end-turn"); dispatch({ type: "end-turn" }); } }}
           onRedrawOpeningHand={() => { if (tutorialMode === "inactive") dispatch({ type: "redraw-opening-hand" }); }}
+          onPickTurnOrder={pickTurnOrder}
+          turnOrderPick={turnOrderPick}
           onMenu={() => { if (tutorialMode === "inactive") setMenuView("choices"); }}
           onUseHeroPower={() => { if (tutorialMode === "inactive") activateHeroPower(); }}
           onDropInteraction={handleDropInteraction}

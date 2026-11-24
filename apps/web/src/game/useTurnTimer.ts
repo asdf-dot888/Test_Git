@@ -22,7 +22,8 @@ export function useTurnTimer(options: {
   const [documentVisible, setDocumentVisible] = useState(() => typeof document === "undefined" || document.visibilityState === "visible");
   const timeoutTurnId = useRef<string | null>(null);
   const activeBattle = run?.battle;
-  const isPlayerTurn = activeBattle?.status === "active" && activeBattle.activeSide === "player";
+  // No clock while the turn order is still to be picked (`firstSide === null`).
+  const isPlayerTurn = activeBattle?.status === "active" && activeBattle.activeSide === "player" && activeBattle.firstSide !== null;
   const turnId = isPlayerTurn && activeBattle ? `${activeBattle.battleId}:${activeBattle.turnNumber}` : null;
   const currentTimer = run?.turnTimer;
   const timerMatchesTurn = Boolean(turnId && activeBattle && currentTimer?.battleId === activeBattle.battleId && currentTimer.turnNumber === activeBattle.turnNumber);

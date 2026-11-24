@@ -1,6 +1,6 @@
 # Task: T03 Turn-Order Pick Overlay, Coin and Enemy-First Playback
 
-## Status: todo
+## Status: done
 
 ## Goal
 At the start of every battle the player sees two face-down cards and picks one; the chosen role is revealed (first or second), the hands are dealt and, when the enemy is first, its turn plays out with the normal playback before the player's turn begins. The Coin appears in the hand like any card.
@@ -44,4 +44,5 @@ Task: T03-turn-order-pick-and-coin-ui
 ```
 
 ## Progress
-- [ ] done
+- [x] done. New `TurnOrderPicker` (two face-down cards, flip reveal, 선공/후공 text, keyboard/touch friendly, click-through while revealing); `choose-turn-order` action (enemy-first goes through the enemy-turn playback); start-run, continue-run, `useLocalRun.createRun` and the API's default `newRun` use `pickTurnOrder: true`; actions and the turn timer stay off while `firstSide === null`; `activeTurnId` ignores the pending state; the first-run tutorial auto-picks the first card, the tutorial replay uses the default (player first). The Coin shows like any spell (name 동전, Mana Spring art/visual). Tests: picker component, reducer, App flow (pick first/second, tutorial), GameBoard markup, timer. 1261 tests (104 files), lint and build pass.
+- commit: see Git history

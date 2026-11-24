@@ -17,6 +17,7 @@ import { EndTurnButton, TurnControls } from "./TurnControls.js";
 import { HeroPowerControl } from "./HeroPowerControl.js";
 import { EnemyIntentPreview } from "./EnemyIntentPreview.js";
 import { OpeningHandRedrawControl } from "./OpeningHandRedrawControl.js";
+import { TurnOrderPicker, type TurnOrderPick } from "./TurnOrderPicker.js";
 import type { DragPayload, DropTarget } from "./dragInteractions.js";
 import { getValidDropTargets } from "../game/dropRules.js";
 import { useCompactBoard } from "../game/useCompactBoard.js";
@@ -43,6 +44,10 @@ export interface GameBoardProps {
   onCancelTarget(): void;
   onEndTurn(): void;
   onRedrawOpeningHand?(): void;
+  /** The player picked one of the two face-down turn-order cards. */
+  onPickTurnOrder?(index: 0 | 1): void;
+  /** The pick of the current battle, shown as a short reveal. */
+  turnOrderPick?: TurnOrderPick | null;
   onMenu(): void;
   onUseHeroPower?(): void;
   onDropInteraction?(payload: DragPayload, target: DropTarget): void;
@@ -59,7 +64,7 @@ function spellTargetSide(instanceId: string | null, run: RunState): PlayerSide |
   return null;
 }
 
-export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, enemyTurnActive = false, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onMenu, onUseHeroPower = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
+export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPaused = false, onCombatEffectComplete, selectedCardInstanceId, selectedAttackerId, targetMode, isResolving, enemyTurnActive = false, actionsDisabled: syncDisabled = false, error, onSelectCard, onSelectTarget, onDiscardCard, onCancelTarget, onEndTurn, onRedrawOpeningHand = () => undefined, onPickTurnOrder = () => undefined, turnOrderPick = null, onMenu, onUseHeroPower = () => undefined, onDropInteraction, enemyIntentStep = null, tutorialStep }: GameBoardProps): ReactElement {
   // Touch drag progress: which targets to outline and which one is under the finger.
   const [dragState, setDragState] = useState<DragState | null>(null);
   const compactBoard = useCompactBoard();
@@ -88,7 +93,8 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const turnLive = battle.status === "active";
   const turnSide: "player" | "enemy" = enemyTurnActive || battle.activeSide === "enemy" ? "enemy" : "player";
   const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
-  const actionsDisabled = syncDisabled || isResolving || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
+  const turnOrderPending = battle.firstSide === null;
+  const actionsDisabled = syncDisabled || isResolving || turnOrderPending || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
   const fieldActionsDisabled = actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "attack" && !(tutorialStep === "play-card" && targetMode === "spell"));
   const canEndTurn = tutorialStep === undefined || tutorialStep === "end-first-turn" || tutorialStep === "end-second-turn";
   const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")).length;
@@ -192,6 +198,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
         </div>
         <HandPanel cards={battle.hand} selectedCardInstanceId={selectedCardInstanceId} currentMana={battle.playerMana.current} boardSize={battle.playerBoard.length} disabled={actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "play-card" && !(tutorialStep === "attack" && readyMinionCount === 0))} canSelectCard={canSelectCard} onSelectCard={onSelectCard} getValidTargets={getValidTargets} onDragStateChange={setDragState} {...(onDropInteraction ? { onDropInteraction } : {})} />
       </footer>
+      <TurnOrderPicker battleId={battle.battleId} cards={battle.turnOrderCards} pending={turnOrderPending} pick={turnOrderPick} onPick={onPickTurnOrder} />
       {error && <div className="game-error" role="alert"><span>{error}</span><button type="button" onClick={onCancelTarget}>확인</button></div>}
       {battle.pendingDiscardBeforeDraw && <DiscardPicker cards={battle.hand} disabled={actionsDisabled} onDiscard={onDiscardCard} />}
     </main>

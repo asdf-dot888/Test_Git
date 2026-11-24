@@ -115,7 +115,7 @@ export function createRunRouter(deps: {
   const router = Router();
   const now = deps.now ?? (() => new Date());
   const newOwnerId = deps.newOwnerId ?? randomUUID;
-  const makeRun = deps.newRun ?? ((seed: number, difficulty: RunDifficulty) => createRun(seed, "warrior", difficulty));
+  const makeRun = deps.newRun ?? ((seed: number, difficulty: RunDifficulty) => createRun(seed, "warrior", difficulty, { pickTurnOrder: true }));
 
   router.get("/", asyncRoute(async (request, response) => {
     const userId = authenticatedUserId(request);

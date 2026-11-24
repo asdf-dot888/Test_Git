@@ -32,6 +32,19 @@ afterEach(() => {
 });
 
 describe("useTurnTimer", () => {
+  it("keeps no clock while the turn order is still to be picked and starts one afterwards", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(BASE_TIME);
+    const { result } = setup(createRun(62, "warrior", "normal", { pickTurnOrder: true }));
+    expect(result.current.run?.turnTimer).toBeUndefined();
+    expect(result.current.timer.isPaused).toBe(false);
+    act(() => {
+      const pending = result.current.run!;
+      result.current.setRun({ ...pending, battle: { ...pending.battle!, firstSide: "player" } });
+    });
+    expect(result.current.run?.turnTimer?.deadlineAt).toBe(BASE_TIME + 30_000);
+  });
+
   it("starts the player's turn at thirty seconds without saving each display tick", () => {
     vi.useFakeTimers();
     vi.setSystemTime(BASE_TIME);

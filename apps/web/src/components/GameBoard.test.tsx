@@ -276,6 +276,16 @@ describe("GameBoard", () => {
     expect(markup).toContain("타락한 엘프 정찰자을(를) 대상으로 선택");
   });
 
+  it("shows the turn-order picker and disables the end-turn button while the order is still to be chosen", () => {
+    const run = createRun(422, "warrior", "normal", { pickTurnOrder: true });
+    const markup = renderToStaticMarkup(<GameBoard run={run} turnTimer={{ text: "00:30", remainingSeconds: 30, visible: false }} selectedCardInstanceId={null} selectedAttackerId={null} targetMode="none" isResolving={false} error={null} onSelectCard={vi.fn()} onSelectTarget={vi.fn()} onDiscardCard={vi.fn()} onCancelTarget={vi.fn()} onEndTurn={vi.fn()} onMenu={vi.fn()} />);
+    expect(markup).toContain("선후공을 정하세요");
+    expect(markup).toContain("카드 1 선택");
+    expect(markup).toContain("카드 2 선택");
+    expect(markup).not.toContain("선공입니다");
+    expect(markup).toMatch(/<button class="end-turn-button" type="button" disabled/);
+  });
+
   it("has no All Attack button and keeps the end-turn button in the toolbar", () => {
     const run = createRun(419);
     run.battle!.turnNumber = 2;
