@@ -2218,3 +2218,16 @@ describe("player mana recovery by turn", () => {
     expect([2, 3, 4, 5, 6, 7, 8, 12].map(gameConstants.playerManaRecovery)).toEqual([2, 2, 3, 3, 3, 4, 4, 4]);
   });
 });
+
+describe("starter deck Mana Springs", () => {
+  it("gives every class two Mana Springs in a 30-card deck and one Bone Rat among the shared cards", () => {
+    expect(SHARED_STARTER_CARD_IDS).toHaveLength(20);
+    expect(SHARED_STARTER_CARD_IDS.filter((id) => id === "mana-spring")).toHaveLength(2);
+    expect(SHARED_STARTER_CARD_IDS.filter((id) => id === "bone-rat")).toHaveLength(1);
+    for (const playerClass of ["warrior", "assassin", "demonist"] as const) {
+      const run = createRun(900, playerClass);
+      expect(run.deck).toHaveLength(30);
+      expect(run.deck.filter(({ cardId }) => cardId === "mana-spring")).toHaveLength(2);
+    }
+  });
+});

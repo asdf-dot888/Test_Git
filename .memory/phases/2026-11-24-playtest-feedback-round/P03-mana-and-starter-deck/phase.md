@@ -4,7 +4,7 @@
 | Task | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
 | T01 | `done` | Player mana recovery 2 / 3 / 4 per turn, guide text and docs | [T01](./T01-player-mana-recovery.md) |
-| T02 | `todo` | Two Mana Springs in the shared starter cards (one weak duplicate removed, chosen with the simulation) | [T02](./T02-mana-spring-copies.md) |
+| T02 | `done` | Two Mana Springs in the shared starter cards (one weak duplicate removed, chosen with the simulation) | [T02](./T02-mana-spring-copies.md) |
 
 ## Progress
-- done: 1/2 (active: none; next P03-T02)
+- done: 2/2 (phase complete; next P04-T01)

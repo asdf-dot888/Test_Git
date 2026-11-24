@@ -1,6 +1,6 @@
 # Task: T02 Two Mana Springs in the Starter Deck
 
-## Status: todo
+## Status: done
 
 ## Goal
 New runs start with 2 copies of `mana-spring` (cost 0, +1 mana) instead of 1, and the starter deck stays at 30 cards by removing one copy of a weak duplicated card.
@@ -41,6 +41,7 @@ Task: T02-mana-spring-copies
 ```
 
 ## Progress
-- [ ] implementation complete (record the removed card here)
-- [ ] validation passed
-- commit: pending
+- [x] implementation complete. **Removed card: one Bone Rat** (1 cost, 1/1, no effect; the weakest duplicate in the shared 20 — the others are Ash Wolf 2/1, Crypt Guard 2/3 and cards with effects; Cinder Imp and Mire Witch still summon Bone Rat tokens). `SHARED_STARTER_CARD_IDS` now has 2 `mana-spring` and 1 `bone-rat`; `STARTER_DECK_CARD_IDS` (legacy, tests only) is unchanged and commented.
+- Simulation: with the faster player mana (P03-T01) and the old enemy, the 100-run normal control had 99.3% average completion (100 / 99 / 99) and the deck with two Mana Springs 99.0% (100 / 100 / 97). Both are saturated, so the simulation cannot separate the three candidate removals at this stage; the choice rests on card strength. P04-T04 measures again against the tuned enemy and can revisit the card if the numbers point to it.
+- [x] validation passed: build clean, lint clean, 1170 tests (101 files; +2 new deck tests).
+- commit: see Git history

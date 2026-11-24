@@ -4,10 +4,10 @@
 [Playtest Feedback Round (UI, sound, mana, difficulty)](./plans/2026-11-24-playtest-feedback-round.md) — planned 2026-11-24; decisions in [2026-11-24-playtest-feedback-round](./decisions/2026-11-24-playtest-feedback-round.md). 5 phases, 12 tasks. Run it to the end without asking between tasks (the user's standing instruction for memory plans).
 
 ## Active Phase
-[P03 Mana and Starter Deck](./phases/2026-11-24-playtest-feedback-round/P03-mana-and-starter-deck/phase.md)
+[P04 Enemy Difficulty](./phases/2026-11-24-playtest-feedback-round/P04-enemy-difficulty/phase.md)
 
 ## Active Task
-[P03-T02 Two Mana Springs in the Starter Deck](./phases/2026-11-24-playtest-feedback-round/P03-mana-and-starter-deck/T02-mana-spring-copies.md)
+[P04-T01 Enemy Mana +2 and No Minion Health Bonus](./phases/2026-11-24-playtest-feedback-round/P04-enemy-difficulty/T01-enemy-mana-and-health-bonus.md)
 
 ## Status
 - Plan order: P01 layout and turn clarity (T01 buttons, T02 badge/banner, T03 30 s timer and boss panel text), P02 combat feedback (T01 damage/heal numbers, T02 card rustle hover sound), P03 mana (T01 player recovery 2/3/4, T02 two Mana Springs), P04 enemy difficulty (T01 enemy mana +2 and no minion health bonus, T02 attack planning, T03 card plan fix and mana efficiency, T04 balance tuning to normal 55-65% / hard 6-10% / class gap <= 5 points), P05 close-out (docs, checklist, audit). No release is part of the plan.
@@ -25,7 +25,7 @@
 - An unexplained flaky test failure happened once (P01-T01 of the previous plan; reruns passed); mention it if it recurs.
 
 ## Next Step (IMPORTANT)
-Start the active task: `/memory-execute` (or "current 보고 이어서 해줘"), continuing the Playtest Feedback Round at P03-T02 (P01, P02 and P03-T01 are done). Validation setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`. Commit by explicit file path (unrelated untracked files exist).
+Start the active task: `/memory-execute` (or "current 보고 이어서 해줘"), continuing the Playtest Feedback Round at P04-T01 (P01-P03 are done). Validation setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`. Commit by explicit file path (unrelated untracked files exist).
 
 Still pending from before: delete the old private ChatGPT Sites copy `mango-stone-project-story-2026` through the Sites UI when accessible; the current connector has no delete/unpublish operation.
 

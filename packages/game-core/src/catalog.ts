@@ -234,6 +234,7 @@ const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
 
 export const CARD_CATALOG: readonly CardDefinition[] = [...BASE_CARD_CATALOG, ...CLASS_CARD_CATALOG, ...BOSS_CARD_CATALOG];
 
+// Legacy 30-card list kept for tests; new runs are built from SHARED_STARTER_CARD_IDS plus the class cards (see below).
 export const STARTER_DECK_CARD_IDS: readonly string[] = [
   "ash-wolf", "ash-wolf", "crypt-guard", "crypt-guard", "cinder-imp", "cinder-imp",
   "bone-rat", "bone-rat", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
@@ -242,9 +243,11 @@ export const STARTER_DECK_CARD_IDS: readonly string[] = [
   "healing-mist", "mana-spring", "raise-bones", "raise-bones", "rune-surge", "rune-surge",
 ];
 
+// Every run starts with these 20 cards plus 10 class cards. Two Mana Springs help the faster player mana curve reach expensive cards;
+// one Bone Rat (the weakest duplicate: 1 cost, 1/1, no effect) made room for the second.
 export const SHARED_STARTER_CARD_IDS: readonly string[] = [
   "ash-wolf", "ash-wolf", "crypt-guard", "crypt-guard", "cinder-imp", "cinder-imp",
-  "bone-rat", "bone-rat", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
+  "bone-rat", "mana-spring", "grave-knight", "grave-knight", "mire-witch", "mire-witch",
   "iron-hound", "iron-hound", "ember-priest", "ember-priest", "shadow-bolt", "shadow-bolt",
   "mana-spring", "healing-mist",
 ];
