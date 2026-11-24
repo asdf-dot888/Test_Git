@@ -232,7 +232,20 @@ const CLASS_CARD_CATALOG: readonly CardDefinition[] = [
   forClass(minion("demonist-abyss-lord", "심연의 군주", 7, 7, 8, "normal", { kind: "battlecrySummon", cardId: "demon-lesser-imp", count: 2 }), "demonist", "demon"),
 ];
 
-export const CARD_CATALOG: readonly CardDefinition[] = [...BASE_CARD_CATALOG, ...CLASS_CARD_CATALOG, ...BOSS_CARD_CATALOG];
+/** Minions with the taunt keyword (Hearthstone): while one stands on a board, the opposing minions can only attack taunt minions. */
+export const TAUNT_CARD_IDS: ReadonlySet<string> = new Set([
+  "demonist-imp-caller", "demonist-pit-ritualist", "assassin-shadow-duelist", "demonist-demon-houndmaster", "demonist-infernal-guardian",
+  "demonist-summoner", "storm-crow", "demonist-abyssal-matriarch", "warrior-vanguard", "warrior-stonewall",
+]);
+
+function withTaunt(card: CardDefinition): CardDefinition {
+  if (!card.minion) throw new Error(`Taunt needs a minion card: ${card.id}`);
+  const base = card.minion.effect ? card.description : "";
+  return { ...card, description: base ? `도발. ${base}` : "도발", minion: { ...card.minion, taunt: true } };
+}
+
+export const CARD_CATALOG: readonly CardDefinition[] = [...BASE_CARD_CATALOG, ...CLASS_CARD_CATALOG, ...BOSS_CARD_CATALOG]
+  .map((card) => (TAUNT_CARD_IDS.has(card.id) ? withTaunt(card) : card));
 
 // Legacy 30-card list kept for tests; new runs are built from SHARED_STARTER_CARD_IDS plus the class cards (see below).
 export const STARTER_DECK_CARD_IDS: readonly string[] = [

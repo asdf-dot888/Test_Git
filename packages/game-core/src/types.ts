@@ -41,7 +41,7 @@ export interface CardDefinition {
   tokenOnly?: boolean;
   classId?: PlayerClass;
   race?: "demon";
-  minion?: { attack: number; maxHealth: number; effect?: MinionEffect };
+  minion?: { attack: number; maxHealth: number; effect?: MinionEffect; taunt?: boolean };
   spellEffects?: SpellEffect[];
 }
 

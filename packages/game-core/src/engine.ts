@@ -65,6 +65,27 @@ function fail(code: ConstructorParameters<typeof GameRuleError>[0], message: str
   throw new GameRuleError(code, message);
 }
 
+/** True for a minion whose card has the taunt keyword. */
+export function hasTaunt(minion: Pick<MinionState, "cardId">): boolean {
+  return CARD_BY_ID.get(minion.cardId)?.minion?.taunt === true;
+}
+
+/**
+ * Hearthstone attack legality: while the opposing board holds a taunt minion only taunt minions can be attacked (not the hero);
+ * otherwise every opposing minion and the hero can be attacked. Spells and hero powers ignore taunt.
+ */
+function legalAttackTargets(battle: BattleState, attackerSide: PlayerSide): { minions: MinionState[]; heroAllowed: boolean } {
+  const opposing = attackerSide === "player" ? battle.enemyBoard : battle.playerBoard;
+  const taunts = opposing.filter(hasTaunt);
+  return taunts.length > 0 ? { minions: taunts, heroAllowed: false } : { minions: [...opposing], heroAllowed: true };
+}
+
+/** The ids a minion of `attackerSide` may attack right now (shared by the engine and the UI). */
+export function getLegalAttackTargets(battle: BattleState, attackerSide: PlayerSide): { minionIds: string[]; heroAllowed: boolean } {
+  const legal = legalAttackTargets(battle, attackerSide);
+  return { minionIds: legal.minions.map(({ instanceId }) => instanceId), heroAllowed: legal.heroAllowed };
+}
+
 function cloneRun(run: RunState): RunState {
   return structuredClone(run);
 }
@@ -1048,6 +1069,7 @@ interface AttackSimMinion {
   id: string;
   attack: number;
   health: number;
+  taunt: boolean;
 }
 
 interface AttackSimState {
@@ -1078,7 +1100,7 @@ function isEnemyAttackReady(minion: MinionState, battle: BattleState): boolean {
 function planEnemyAttacks(run: RunState): EnemyAttackStep[] {
   const battle = run.battle;
   if (!battle) return [];
-  const toSim = (minion: MinionState): AttackSimMinion => ({ id: minion.instanceId, attack: minion.attack, health: minion.health });
+  const toSim = (minion: MinionState): AttackSimMinion => ({ id: minion.instanceId, attack: minion.attack, health: minion.health, taunt: hasTaunt(minion) });
   const initial: AttackSimState = {
     enemy: battle.enemyBoard.map(toSim),
     player: battle.playerBoard.map(toSim),
@@ -1099,7 +1121,8 @@ function planEnemyAttacks(run: RunState): EnemyAttackStep[] {
     const children: Array<{ state: AttackSimState; score: number }> = [];
     for (const node of beam) {
       for (const attackerId of node.ready) {
-        const targets = node.player.length > 0 ? node.player.map((minion) => minion.id) : [heroId];
+        const taunts = node.player.filter((minion) => minion.taunt);
+        const targets = taunts.length > 0 ? taunts.map((minion) => minion.id) : [...node.player.map((minion) => minion.id), heroId];
         for (const targetId of targets) {
           const child = applySimAttack(node, attackerId, targetId, heroId);
           children.push({ state: child, score: attackSimScore(child) });
@@ -1145,9 +1168,17 @@ function applySimAttack(node: AttackSimState, attackerId: string, targetId: stri
   };
 }
 
-/** The attack choice of the first battle and of earlier versions: kill what can be killed, then the strongest minion. */
-function greedyEnemyAttackTarget(battle: BattleState, attacker: MinionState, difficulty: RunDifficulty): MinionState | undefined {
-  return [...battle.playerBoard]
+/**
+ * The attack choice of the first battle: among the legal targets kill what can be killed, then the strongest minion; the hero is
+ * attacked when the ready minions together are lethal, or when no minion can be attacked.
+ */
+function greedyEnemyAttackTarget(battle: BattleState, attacker: MinionState, difficulty: RunDifficulty): string | null {
+  const legal = legalAttackTargets(battle, "enemy");
+  if (legal.heroAllowed) {
+    const readyDamage = battle.enemyBoard.filter((minion) => isEnemyAttackReady(minion, battle)).reduce((total, minion) => total + minion.attack, 0);
+    if (readyDamage >= battle.playerHero.health + battle.playerArmor) return battle.playerHero.id;
+  }
+  const target = legal.minions
     .map((minion, index) => ({ minion, index }))
     .sort((left, right) => {
       if (difficulty === "hard") {
@@ -1168,6 +1199,8 @@ function greedyEnemyAttackTarget(battle: BattleState, attacker: MinionState, dif
         || left.minion.health - right.minion.health
         || left.index - right.index;
     })[0]?.minion;
+  if (target) return target.instanceId;
+  return legal.heroAllowed ? battle.playerHero.id : null;
 }
 
 function resolveEnemyMinionAttacks(
@@ -1177,28 +1210,32 @@ function resolveEnemyMinionAttacks(
 ): RunState {
   const initialBattle = run.battle;
   if (!initialBattle) return run;
-  // From the second battle on the attacks are planned; the first battle keeps the base rules.
+  // From the second battle on the attacks are planned; the first battle keeps the greedy choice.
   const plan = run.completedBattles > 0 ? planEnemyAttacks(run) : null;
-  const attackerIds = plan ? plan.map((step) => step.attackerId) : initialBattle.enemyBoard.map((minion) => minion.instanceId);
-  for (const [stepIndex, attackerId] of attackerIds.entries()) {
+  const queue: Array<{ attackerId: string; plannedTargetId?: string }> = plan
+    ? plan.map((step) => ({ attackerId: step.attackerId, plannedTargetId: step.targetId }))
+    : initialBattle.enemyBoard.map((minion) => ({ attackerId: minion.instanceId }));
+  const done = new Set<number>();
+
+  // The target of one queued attacker right now, or null when its planned target is no longer legal.
+  const targetFor = (battle: BattleState, attacker: MinionState, plannedTargetId: string | undefined): string | null => {
+    if (plannedTargetId === undefined) return greedyEnemyAttackTarget(battle, attacker, run.difficulty);
+    const legal = legalAttackTargets(battle, "enemy");
+    if (plannedTargetId === battle.playerHero.id) return legal.heroAllowed ? plannedTargetId : null;
+    return legal.minions.some((minion) => minion.instanceId === plannedTargetId) ? plannedTargetId : null;
+  };
+
+  for (const [stepIndex, entry] of queue.entries()) {
+    if (done.has(stepIndex)) continue;
     const battle = run.battle;
     if (!battle) break;
-    const attacker = battle.enemyBoard.find((minion) => minion.instanceId === attackerId);
+    const attacker = battle.enemyBoard.find((minion) => minion.instanceId === entry.attackerId);
     if (!attacker || !isEnemyAttackReady(attacker, battle)) continue;
+    const targetId = targetFor(battle, attacker, entry.plannedTargetId);
+    if (targetId === null) continue;
     const beforeRun = onAttack ? cloneRun(run) : run;
-    const plannedTargetId = plan?.[stepIndex]?.targetId;
-    let target: MinionState | undefined;
-    if (plan) {
-      if (plannedTargetId !== battle.playerHero.id) {
-        target = battle.playerBoard.find((minion) => minion.instanceId === plannedTargetId);
-        if (!target) continue;
-      } else if (battle.playerBoard.length > 0) {
-        continue;
-      }
-    } else {
-      target = greedyEnemyAttackTarget(battle, attacker, run.difficulty);
-    }
-    if (target) {
+    if (targetId !== battle.playerHero.id) {
+      const target = battle.playerBoard.find((minion) => minion.instanceId === targetId)!;
       const action: EnemyCombatRecord = { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: target.instanceId };
       battle.enemyTurnEvents?.push(action);
       applyMinionCombatDamage(attacker, target);
@@ -1206,25 +1243,30 @@ function resolveEnemyMinionAttacks(
       run = removeDeadMinions(run, "player");
       run = removeDeadMinions(run, "enemy");
       onAttack?.(action, beforeRun, run);
-    } else {
-      // The player board is empty: every other ready minion hits the hero too, shown as one all-attack action.
-      const group = [attacker, ...attackerIds.slice(stepIndex + 1)
-        .map((id) => battle.enemyBoard.find((minion) => minion.instanceId === id))
-        .filter((minion): minion is MinionState => minion !== undefined && minion.instanceId !== attacker.instanceId && isEnemyAttackReady(minion, battle))];
-      const attackers: Array<{ attackerId: string; cardId: string }> = [];
-      for (const member of group) {
-        attackers.push({ attackerId: member.instanceId, cardId: member.cardId });
-        member.hasAttacked = true;
-        run = dealDamageToPlayerHero(run, member.attack, deferDefeat);
-        if (run.status !== "active" || run.battle?.playerHero.health === 0) break;
-      }
-      const action: EnemyCombatRecord = attackers.length > 1
-        ? { type: "all-attack", attackers, targetId: battle.playerHero.id }
-        : { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
-      run.battle?.enemyTurnEvents?.push(action);
-      onAttack?.(action, beforeRun, run);
-      return run;
+      continue;
     }
+    // The hero is attacked: the following queued attackers that also hit the hero join in as one all-attack action.
+    const group = [attacker];
+    for (let next = stepIndex + 1; next < queue.length; next += 1) {
+      const member = battle.enemyBoard.find((minion) => minion.instanceId === queue[next]!.attackerId);
+      if (!member || group.includes(member) || !isEnemyAttackReady(member, battle)) continue;
+      if (targetFor(battle, member, queue[next]!.plannedTargetId) !== battle.playerHero.id) break;
+      group.push(member);
+      done.add(next);
+    }
+    const attackers: Array<{ attackerId: string; cardId: string }> = [];
+    for (const member of group) {
+      attackers.push({ attackerId: member.instanceId, cardId: member.cardId });
+      member.hasAttacked = true;
+      run = dealDamageToPlayerHero(run, member.attack, deferDefeat);
+      if (run.status !== "active" || run.battle?.playerHero.health === 0) break;
+    }
+    const action: EnemyCombatRecord = attackers.length > 1
+      ? { type: "all-attack", attackers, targetId: battle.playerHero.id }
+      : { type: "attack", cardId: attacker.cardId, attackerId: attacker.instanceId, targetId: battle.playerHero.id };
+    run.battle?.enemyTurnEvents?.push(action);
+    onAttack?.(action, beforeRun, run);
+    if (run.status !== "active" || run.battle?.playerHero.health === 0) return run;
   }
   return run;
 }
@@ -1519,15 +1561,17 @@ export function attackWithMinion(run: RunState, attackerId: string, targetId: st
     fail("INVALID_ACTION", "This minion cannot attack again this turn.");
   }
 
-  if (battle.enemyBoard.length > 0) {
+  const legal = legalAttackTargets(battle, "player");
+  if (targetId !== battle.enemyHero.id) {
     const target = battle.enemyBoard.find((minion) => minion.instanceId === targetId);
-    if (!target) fail("INVALID_TARGET", "Attack an enemy minion while any are on the board.");
+    if (!target) fail("INVALID_TARGET", "Attack an enemy minion or the enemy hero.");
+    if (!legal.minions.includes(target)) fail("INVALID_TARGET", "A taunt minion must be attacked first.");
     applyMinionCombatDamage(attacker, target);
     attacker.hasAttacked = true;
     const afterEnemyCleanup = removeDeadMinions(next, "enemy");
     return consumeOpeningHandRedraw(removeDeadMinions(afterEnemyCleanup, "player"));
   }
-  if (targetId !== battle.enemyHero.id) fail("INVALID_TARGET", "The enemy hero is the only available target.");
+  if (!legal.heroAllowed) fail("INVALID_TARGET", "A taunt minion must be attacked first.");
   attacker.hasAttacked = true;
   return consumeOpeningHandRedraw(dealDamageToEnemyHero(next, attacker.attack));
 }
@@ -1535,7 +1579,7 @@ export function attackWithMinion(run: RunState, attackerId: string, targetId: st
 export function attackAllReadyMinions(run: RunState): RunState {
   const initial = cloneRun(run);
   const battle = assertPlayerTurn(initial);
-  if (battle.enemyBoard.length > 0) fail("INVALID_TARGET", "Clear enemy minions before attacking the enemy hero.");
+  if (!legalAttackTargets(battle, "player").heroAllowed) fail("INVALID_TARGET", "A taunt minion must be attacked first.");
   const attackerIds = battle.playerBoard
     .filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root"))
     .map(({ instanceId }) => instanceId);

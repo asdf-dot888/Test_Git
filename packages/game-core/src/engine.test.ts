@@ -11,6 +11,7 @@ import {
   SHARED_STARTER_CARD_IDS,
   NORMAL_ENEMIES,
   STARTER_DECK_CARD_IDS,
+  TAUNT_CARD_IDS,
 } from "./catalog.js";
 import {
   advanceRun,
@@ -27,6 +28,8 @@ import {
   endPlayerTurnWithPlayback,
   fuseMinions,
   gameConstants,
+  getLegalAttackTargets,
+  hasTaunt,
   hydrateRunForCurrentBattle,
   playMinion,
   redrawOpeningHand,
@@ -277,7 +280,7 @@ describe("card and enemy catalog", () => {
       "hollow-giant": "특수 효과 없음",
       "blood-oracle": "전투의 함성: 자신에게 체력 +2를 부여합니다.",
       "frost-wraith": "죽음의 메아리: 뼈 쥐 2마리를 소환합니다.",
-      "storm-crow": "특수 효과 없음",
+      "storm-crow": "도발",
       "ancient-treant": "특수 효과 없음",
       "dread-colossus": "특수 효과 없음",
       "shadow-bolt": "적 영웅에게 2의 피해를 줍니다.",
@@ -903,12 +906,12 @@ describe("player actions and battle rules", () => {
     expect(run.battle?.enemyHero.health).toBe(4);
   });
 
-  it("rejects All Attack when enemy minions block the hero or no minion is ready", () => {
+  it("rejects All Attack when a taunt minion blocks the hero or no minion is ready", () => {
     const blocked = copyRun(createRun(62));
     const blockedBattle = activeBattle(blocked);
     blockedBattle.turnNumber = 2;
     blockedBattle.playerBoard = [minion({ instanceId: "ready" })];
-    blockedBattle.enemyBoard = [{ ...minion({ instanceId: "enemy", owner: "enemy" }), attack: 1 }];
+    blockedBattle.enemyBoard = [{ ...minion({ instanceId: "enemy", owner: "enemy", cardId: "warrior-vanguard" }), attack: 1 }];
     expect(() => attackAllReadyMinions(blocked)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
 
     const noneReady = copyRun(createRun(63));
@@ -1022,7 +1025,9 @@ describe("player actions and battle rules", () => {
     const battle = activeBattle(run);
     battle.playerBoard = [minion({ instanceId: "attacker", attack: 3, health: 5, maxHealth: 5, summonedTurn: 0 })];
     battle.enemyBoard = [minion({ instanceId: "defender", owner: "enemy", health: 3, maxHealth: 3, attack: 1 })];
-    expect(() => attackWithMinion(run, "attacker", battle.enemyHero.id)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+    // Without taunt the hero can be attacked past the minion.
+    expect(attackWithMinion(run, "attacker", battle.enemyHero.id).battle?.enemyHero.health).toBe(battle.enemyHero.health - 3);
+    expect(() => attackWithMinion(run, "attacker", "missing")).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
     const attacked = attackWithMinion(run, "attacker", "defender");
     expect(attacked.battle?.enemyBoard).toHaveLength(0);
     expect(attacked.battle?.playerBoard[0]).toMatchObject({ hasAttacked: true, health: 4 });
@@ -1953,7 +1958,7 @@ describe("Hard expedition enemy health and tactical AI", () => {
     expect(firstPlayedCard(makeChoiceRun(true))).toBe("rune-smith");
   });
 
-  it("attacks the hero for nonlethal damage only when the Hard player board is empty", () => {
+  it("attacks the hero for nonlethal damage unless a taunt minion blocks it", () => {
     const open = asEnemyTurn(createRun(8804, "warrior", "hard"));
     const openBattle = activeBattle(open);
     openBattle.enemyMana.current = 0;
@@ -1971,7 +1976,7 @@ describe("Hard expedition enemy health and tactical AI", () => {
     blockedBattle.enemyHand = [];
     blockedBattle.enemyDrawPile = [];
     blockedBattle.playerHero.health = 2;
-    blockedBattle.playerBoard = [minion({ instanceId: "blocker", attack: 1, health: 3, maxHealth: 3 })];
+    blockedBattle.playerBoard = [minion({ instanceId: "blocker", cardId: "warrior-vanguard", attack: 1, health: 3, maxHealth: 3 })];
     blockedBattle.enemyBoard = [minion({ instanceId: "blocked-attacker", owner: "enemy", attack: 2, health: 4, maxHealth: 4, summonedTurn: 0 })];
     const blockedResult = resolveEnemyTurnWithPlayback(blocked);
     expect(blockedResult.steps[0]?.action).toMatchObject({ type: "attack", targetId: "blocker" });
@@ -2373,14 +2378,14 @@ describe("enemy bonuses after the playtest feedback round", () => {
 describe("enemy attack planning (second battle onward)", () => {
   type Stats = { attack: number; health: number };
   const enemyMinion = (id: string, { attack, health }: Stats) => minion({ instanceId: id, owner: "enemy", attack, health, maxHealth: health, summonedTurn: 0 });
-  const playerMinion = (id: string, { attack, health }: Stats) => minion({ instanceId: id, owner: "player", attack, health, maxHealth: health, summonedTurn: 0 });
+  const playerMinion = (id: string, { attack, health }: Stats, cardId = "ash-wolf") => minion({ instanceId: id, cardId, owner: "player", attack, health, maxHealth: health, summonedTurn: 0 });
 
-  function attackRun(options: { enemy: Array<[string, Stats]>; player: Array<[string, Stats]>; completedBattles: number; heroHealth?: number; difficulty?: "normal" | "hard"; armor?: number }): RunState {
+  function attackRun(options: { enemy: Array<[string, Stats]>; player: Array<[string, Stats] | [string, Stats, string]>; completedBattles: number; heroHealth?: number; difficulty?: "normal" | "hard"; armor?: number }): RunState {
     const run = asEnemyTurn(createRun(970, "warrior", options.difficulty ?? "normal"));
     run.completedBattles = options.completedBattles;
     const battle = activeBattle(run);
     battle.enemyBoard = options.enemy.map(([id, stats]) => enemyMinion(id, stats));
-    battle.playerBoard = options.player.map(([id, stats]) => playerMinion(id, stats));
+    battle.playerBoard = options.player.map(([id, stats, cardId]) => playerMinion(id, stats, cardId));
     battle.enemyHand = [];
     battle.enemyStarterDeck = [];
     battle.enemyDrawPile = [];
@@ -2391,7 +2396,8 @@ describe("enemy attack planning (second battle onward)", () => {
   }
 
   it("never holds an attack back: every ready minion attacks, even into a bad trade", () => {
-    const setup = (completedBattles: number) => attackRun({ enemy: [["scout", { attack: 2, health: 1 }]], player: [["wall", { attack: 1, health: 5 }]], completedBattles });
+    // The wall has taunt, so the scout has no other legal target.
+    const setup = (completedBattles: number) => attackRun({ enemy: [["scout", { attack: 2, health: 1 }]], player: [["wall", { attack: 1, health: 5 }, "warrior-vanguard"]], completedBattles });
     for (const completedBattles of [0, 1]) {
       const result = resolveEnemyTurn(setup(completedBattles));
       expect(result.battle?.enemyBoard).toHaveLength(0);
@@ -2424,8 +2430,8 @@ describe("enemy attack planning (second battle onward)", () => {
     expect(action.attackers.map(({ attackerId }) => attackerId)).toEqual(["a", "b"]);
   });
 
-  it("still takes a good trade", () => {
-    const planned = resolveEnemyTurn(attackRun({ enemy: [["brute", { attack: 3, health: 3 }]], player: [["target", { attack: 2, health: 3 }]], completedBattles: 1 }));
+  it("still takes a good trade into a taunt minion", () => {
+    const planned = resolveEnemyTurn(attackRun({ enemy: [["brute", { attack: 3, health: 3 }]], player: [["target", { attack: 2, health: 3 }, "warrior-vanguard"]], completedBattles: 1 }));
     expect(planned.battle?.playerBoard).toHaveLength(0);
     expect(planned.battle?.enemyBoard[0]).toMatchObject({ instanceId: "brute", health: 1 });
   });
@@ -2433,7 +2439,7 @@ describe("enemy attack planning (second battle onward)", () => {
   it("orders its attackers to clear the blocker first and reach the hero for lethal", () => {
     const setup = (completedBattles: number) => attackRun({
       enemy: [["heavy", { attack: 3, health: 3 }], ["light", { attack: 1, health: 1 }]],
-      player: [["blocker", { attack: 1, health: 1 }]],
+      player: [["blocker", { attack: 1, health: 1 }, "warrior-vanguard"]],
       heroHealth: 3,
       completedBattles,
     });
@@ -2582,3 +2588,90 @@ describe("opening hand on a 1-mana first turn", () => {
   });
 });
 
+
+describe("taunt", () => {
+  const TAUNT_ID = "warrior-vanguard";
+
+  function tauntRun(options: { difficulty?: "normal" | "hard"; completedBattles?: number } = {}): RunState {
+    const run = copyRun(createRun(1700, "warrior", options.difficulty ?? "normal"));
+    run.completedBattles = options.completedBattles ?? 0;
+    const battle = activeBattle(run);
+    battle.turnNumber = 3;
+    battle.playerMana = { current: 10, max: 10, temporary: 0 };
+    battle.hand = [];
+    battle.playerBoard = [minion({ instanceId: "mine", cardId: "ash-wolf", attack: 3, health: 5, maxHealth: 5, summonedTurn: 0 })];
+    battle.enemyBoard = [
+      minion({ instanceId: "plain", owner: "enemy", cardId: "ash-wolf", attack: 2, health: 3, maxHealth: 3, summonedTurn: 0 }),
+      minion({ instanceId: "tank", owner: "enemy", cardId: TAUNT_ID, attack: 1, health: 4, maxHealth: 4, summonedTurn: 0 }),
+    ];
+    return run;
+  }
+
+  it("marks exactly the ten chosen minions with taunt and shows it in their text", () => {
+    expect(TAUNT_CARD_IDS.size).toBe(10);
+    for (const card of CARD_CATALOG) {
+      const marked = card.minion?.taunt === true;
+      expect(marked).toBe(TAUNT_CARD_IDS.has(card.id));
+      expect(hasTaunt({ cardId: card.id })).toBe(marked);
+      if (marked) expect(card.description.startsWith("도발")).toBe(true);
+    }
+    expect(CARD_BY_ID.get("demonist-imp-caller")?.description).toBe("도발. 전투의 함성: 하급 임프 1마리를 소환합니다.");
+    expect(CARD_BY_ID.get(TAUNT_ID)?.description).toBe("도발");
+  });
+
+  it("lets the player attack only taunt minions while one stands, and the hero and everything else afterwards", () => {
+    const run = tauntRun();
+    const battle = activeBattle(run);
+    expect(getLegalAttackTargets(battle, "player")).toEqual({ minionIds: ["tank"], heroAllowed: false });
+    expect(() => attackWithMinion(run, "mine", "plain")).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+    expect(() => attackWithMinion(run, "mine", battle.enemyHero.id)).toThrowError(expect.objectContaining({ code: "INVALID_TARGET" }));
+    const killed = attackWithMinion({ ...run, battle: { ...battle, playerBoard: [minion({ instanceId: "mine", attack: 6, health: 5, maxHealth: 5, summonedTurn: 0 })] } }, "mine", "tank");
+    expect(killed.battle?.enemyBoard.map(({ instanceId }) => instanceId)).toEqual(["plain"]);
+    expect(getLegalAttackTargets(killed.battle!, "player")).toEqual({ minionIds: ["plain"], heroAllowed: true });
+  });
+
+  it("lets attackers reach the hero past minions without taunt", () => {
+    const run = tauntRun();
+    activeBattle(run).enemyBoard = [minion({ instanceId: "plain", owner: "enemy", cardId: "ash-wolf", health: 3, maxHealth: 3 }), minion({ instanceId: "plain-2", owner: "enemy", cardId: "ash-wolf", health: 3, maxHealth: 3 })];
+    const heroHealth = activeBattle(run).enemyHero.health;
+    const hit = attackWithMinion(run, "mine", activeBattle(run).enemyHero.id);
+    expect(hit.battle?.enemyHero.health).toBe(heroHealth - 3);
+    expect(hit.battle?.enemyBoard).toHaveLength(2);
+    const allAttack = attackAllReadyMinions(run);
+    expect(allAttack.battle?.enemyHero.health).toBe(heroHealth - 3);
+  });
+
+  it("ignores taunt for spells", () => {
+    const run = tauntRun();
+    activeBattle(run).hand = [instance("shard", "meteor-shard")];
+    const next = castSpell(run, "shard", "plain");
+    expect(next.battle?.enemyBoard.map(({ instanceId }) => instanceId)).toEqual(["tank"]);
+  });
+
+  it.each([0, 1])("makes the enemy attack taunt minions first (completed battles: %i)", (completedBattles) => {
+    const run = asEnemyTurn(tauntRun({ completedBattles }));
+    const battle = activeBattle(run);
+    battle.enemyMana.current = 0;
+    battle.enemyHand = [];
+    battle.enemyBoard = [minion({ instanceId: "e1", owner: "enemy", cardId: "ash-wolf", attack: 4, health: 4, maxHealth: 4, summonedTurn: 0 })];
+    battle.playerBoard = [
+      minion({ instanceId: "squishy", cardId: "ash-wolf", attack: 1, health: 1, maxHealth: 1, summonedTurn: 0 }),
+      minion({ instanceId: "guard", cardId: TAUNT_ID, attack: 1, health: 6, maxHealth: 6, summonedTurn: 0 }),
+    ];
+    const resolution = resolveEnemyTurnWithPlayback(run);
+    const attack = resolution.steps.find(({ action }) => action.type === "attack")?.action;
+    expect(attack).toMatchObject({ type: "attack", attackerId: "e1", targetId: "guard" });
+    expect(resolution.run.battle?.playerHero.health).toBe(30);
+  });
+
+  it.each([0, 1])("lets the enemy hit the hero past minions without taunt when it is lethal (completed battles: %i)", (completedBattles) => {
+    const run = asEnemyTurn(tauntRun({ completedBattles }));
+    const battle = activeBattle(run);
+    battle.enemyMana.current = 0;
+    battle.enemyHand = [];
+    battle.playerHero.health = 4;
+    battle.enemyBoard = [minion({ instanceId: "e1", owner: "enemy", cardId: "ash-wolf", attack: 4, health: 4, maxHealth: 4, summonedTurn: 0 })];
+    battle.playerBoard = [minion({ instanceId: "blocker", cardId: "ash-wolf", attack: 1, health: 6, maxHealth: 6, summonedTurn: 0 })];
+    expect(resolveEnemyTurn(run).status).toBe("defeat");
+  });
+});

@@ -1,6 +1,6 @@
 # Task: T02 Taunt Keyword and the New Attack Rules
 
-## Status: todo
+## Status: done
 
 ## Goal
 Add the taunt keyword to 10 cards and make attacks follow Hearthstone: with a taunt minion on the opposing board only taunt minions can be attacked; without one any minion or the hero can be attacked. The old rule "the hero can only be attacked when the opposing board is empty" disappears for both sides.
@@ -46,4 +46,5 @@ Task: T02-taunt-and-attack-rules
 ```
 
 ## Progress
-- [ ] done
+- [x] done. Taunt keyword: `CardDefinition.minion.taunt`, `TAUNT_CARD_IDS` (10 cards, descriptions start with 도발) in catalog.ts, exported `hasTaunt` and `getLegalAttackTargets`, `legalAttackTargets` used by attackWithMinion, attackAllReadyMinions (kept until P02-T01; now hits the hero unless taunt blocks), the enemy plan (taunt flag per simulated minion), the first-battle greedy choice (taunt first, lethal goes face) and `resolveEnemyMinionAttacks` (consecutive hero attackers grouped into one all-attack action). Tests added/updated (taunt describe, attack planning cases use a taunt blocker). The property 'planned never worse than greedy' test is unchanged (boards without taunt). 1220 tests (101 files), lint and build pass.
+- commit: see Git history

@@ -51,18 +51,18 @@ describe("game action adapter", () => {
     expect(result.run?.battle?.enemyBoard).toHaveLength(0);
   });
 
-  it("requires clearing enemy minions and only allows one attack per ready minion", () => {
+  it("requires attacking a taunt minion first and only allows one attack per ready minion", () => {
     const session = startSession();
     const battle = session.run!.battle!;
     battle.turnNumber = 3;
     battle.playerBoard = [makeMinion("attacker", "ash-wolf", "player", 1)];
-    battle.enemyBoard = [makeMinion("blocker", "crypt-guard", "enemy")];
+    battle.enemyBoard = [makeMinion("blocker", "warrior-vanguard", "enemy")];
 
     const blockedHeroAttack = reduceGameAction(session, { type: "attack", attackerId: "attacker", targetId: "enemy" });
     expect(blockedHeroAttack.error).toBe("현재 선택할 수 없는 대상입니다.");
 
     const firstAttack = reduceGameAction(session, { type: "attack", attackerId: "attacker", targetId: "blocker" });
-    expect(firstAttack.run?.battle?.enemyBoard[0]?.health).toBe(1);
+    expect(firstAttack.run?.battle?.enemyBoard[0]?.health).toBe(battle.enemyBoard[0]!.health - 2); // an Ash Wolf hits for 2
     const secondAttack = reduceGameAction(firstAttack, { type: "attack", attackerId: "attacker", targetId: "blocker" });
     expect(secondAttack.error).toBe("지금은 할 수 없는 행동입니다.");
   });
