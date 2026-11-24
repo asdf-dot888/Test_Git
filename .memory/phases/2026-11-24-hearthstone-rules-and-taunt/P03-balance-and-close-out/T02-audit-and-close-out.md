@@ -1,6 +1,6 @@
 # Task: T02 Audit, User Checklist, Close-out
 
-## Status: todo
+## Status: done
 
 ## Goal
 Run the full validation, give the user one checklist for what only they can verify (feel, look, sound, phone), and close the plan.
@@ -40,4 +40,5 @@ Task: T02-audit-and-close-out
 ```
 
 ## Progress
-- [ ] done
+- [x] done. Audit: build clean, lint clean, 1261 tests (104 files, up from 1198 at the start of the plan); no leftover references to attackAllReadyMinions/AllAttackButton/refillDrawPile or experiment env knobs, no new console.log; unrelated untracked files untouched. The PC/phone checklist is appended to the previous plan's P04-T02 and mirrored in current.md. No flaky failure occurred. Not released.
+- commit: see Git history

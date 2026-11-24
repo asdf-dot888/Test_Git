@@ -2,7 +2,7 @@
 
 - Date: 2026-11-24
 - Decisions: [2026-11-24-hearthstone-rules-and-taunt](../decisions/2026-11-24-hearthstone-rules-and-taunt.md) (D01-D09)
-- Status: `todo` (nothing implemented yet)
+- Status: `done` (2026-11-24, 10 tasks, not released). Summary: Hearthstone rules (1 draw, fatigue, taunt, turn-order pick with the Coin), no all-attack button, 10 taunt cards, difficulty retuned: normal 55.8 %, hard 8.5 % (class gap 3.1 / 5.4 points).
 - Replaces: the unfinished T03 of [2026-11-24-full-mana-and-triple-draw](./2026-11-24-full-mana-and-triple-draw.md) (balance retune), which is done here in P03-T01 under the new rules.
 - Shell setup: `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"`, repository root `/Users/gimjinhyeon/Downloads/Mango_Stone`. `npm test` runs `src` and `dist` copies: run `npm run build` before testing.
 
@@ -20,9 +20,9 @@ Make the game follow Hearthstone's rules: 1 draw per turn, fatigue instead of re
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `todo` | Engine: fatigue and 1 draw, taunt and attack rules, turn order and the Coin, enemy AI and bot | [P01](../phases/2026-11-24-hearthstone-rules-and-taunt/P01-engine-rules/phase.md) |
-| P02 | `todo` | Web: attack targets, taunt visuals and sound, turn-order pick screen, texts and docs | [P02](../phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/phase.md) |
-| P03 | `todo` | Balance retune with the simulation, audit and close-out | [P03](../phases/2026-11-24-hearthstone-rules-and-taunt/P03-balance-and-close-out/phase.md) |
+| P01 | `done` | Engine: fatigue and 1 draw, taunt and attack rules, turn order and the Coin, enemy AI and bot | [P01](../phases/2026-11-24-hearthstone-rules-and-taunt/P01-engine-rules/phase.md) |
+| P02 | `done` | Web: attack targets, taunt visuals and sound, turn-order pick screen, texts and docs | [P02](../phases/2026-11-24-hearthstone-rules-and-taunt/P02-web-ui/phase.md) |
+| P03 | `done` | Balance retune with the simulation, audit and close-out | [P03](../phases/2026-11-24-hearthstone-rules-and-taunt/P03-balance-and-close-out/phase.md) |
 
 ## Rules for every task
 - One task = one commit with the message in the task file plus the attribution trailer; stage by explicit path only (the repository has unrelated untracked files that must stay untouched).
