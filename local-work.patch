@@ -1,0 +1,30 @@
+diff --git a/apps/web/src/components/EnemyHeroDefeatEffect.tsx b/apps/web/src/components/EnemyHeroDefeatEffect.tsx
+index 67a37de..67da16a 100644
+--- a/apps/web/src/components/EnemyHeroDefeatEffect.tsx
++++ b/apps/web/src/components/EnemyHeroDefeatEffect.tsx
+@@ -16,12 +16,11 @@ export function EnemyHeroDefeatEffect({ onComplete }: EnemyHeroDefeatEffectProps
+     if (portrait) setBounds(portrait.getBoundingClientRect());
+     const board = document.querySelector<HTMLElement>(".battle-board");
+     board?.classList.add("is-enemy-defeat");
+-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+     const timer = window.setTimeout(() => {
+       if (completed.current) return;
+       completed.current = true;
+       callback.current();
+-    }, reducedMotion ? 100 : 2_200);
++    }, 2_200);
+     return () => {
+       window.clearTimeout(timer);
+       board?.classList.remove("is-enemy-defeat");
+diff --git a/apps/web/src/styles/board.css b/apps/web/src/styles/board.css
+index db9c4ba..a9884ed 100644
+--- a/apps/web/src/styles/board.css
++++ b/apps/web/src/styles/board.css
+@@ -636,7 +636,6 @@
+   100% { opacity: 0; transform: scale(1.8); }
+ }
+ @media (prefers-reduced-motion: reduce) {
+-  .victory-card h1, .victory-light { animation: none; }
+   .turn-timer.is-critical { animation: none; }
+ }
+ .game-guide-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(5 5 5 / 78%); }

@@ -9,3 +9,4 @@ apps/leaderboard-api/local.settings.json
 .swa/
 .azurite/
 swa-cli.config.json
+.claude/settings.local.json
