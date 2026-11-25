@@ -2,33 +2,38 @@
   "releases": [
     {
       "version": "1.0.1",
-      "deployedAtUtc": "2026-10-30T05:29:54.0000000+00:00",
+      "deployedAtUtc": "2026-10-30T14:29:54+09:00",
       "sourceCommit": "5c86fffb9df7a547562a0efca134c13c984d6048"
     },
     {
       "version": "1.0.2",
-      "deployedAtUtc": "2026-10-30T08:16:04.9112009+00:00",
+      "deployedAtUtc": "2026-10-30T17:16:04.9112009+09:00",
       "sourceCommit": "eda9cd2047a4b73610537716c595cfdac90bf03f"
     },
     {
       "version": "1.0.3",
-      "deployedAtUtc": "2026-11-12T12:43:48.5680136+00:00",
+      "deployedAtUtc": "2026-11-12T21:43:48.5680136+09:00",
       "sourceCommit": "e75559a4dc8ac94e776d0c6f98eeffc679a6af70"
     },
     {
       "version": "1.0.5",
-      "deployedAtUtc": "2026-11-19T00:08:52.5206694+00:00",
+      "deployedAtUtc": "2026-11-19T09:08:52.5206694+09:00",
       "sourceCommit": "85872e91a74459c8f25cca72d20898f267fc9d8c"
     },
     {
       "version": "1.0.6",
-      "deployedAtUtc": "2026-11-19T11:38:07.0000000+00:00",
+      "deployedAtUtc": "2026-11-19T20:38:07+09:00",
       "sourceCommit": "cb51d25e9b8df04ea94b9a2f57992ee194404087"
     },
     {
       "version": "1.0.7",
-      "deployedAtUtc": "2026-11-19T16:02:02.953462+00:00",
+      "deployedAtUtc": "2026-11-20T01:02:02.953462+09:00",
       "sourceCommit": "3a39316f7f735d2b9d0ccadcac933d6a93098cdf"
+    },
+    {
+      "version": "1.0.8",
+      "deployedAtUtc": "2026-11-25T02:21:34.0831120+00:00",
+      "sourceCommit": "04e403484220a874647ee01e62da48521c8d9dc6"
     }
   ]
 }
