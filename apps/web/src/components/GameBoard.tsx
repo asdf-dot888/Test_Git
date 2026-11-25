@@ -170,6 +170,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
                 {...(run.playerClass ? { playerClass: run.playerClass } : {})}
                 currentMana={battle.playerMana.current}
                 used={battle.heroPowerUsed}
+                cooldown={battle.heroPowerCooldown}
                 active={tutorialStep === undefined && battle.activeSide === "player" && battle.status === "active"}
                 resolving={isResolving || syncDisabled}
                 shardCount={battle.soulShards}

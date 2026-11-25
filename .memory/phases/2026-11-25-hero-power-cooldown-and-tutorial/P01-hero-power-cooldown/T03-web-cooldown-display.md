@@ -1,6 +1,6 @@
 # Task: T03 Cooldown on the Hero Power Button and in the Texts
 
-## Status: pending
+## Status: done
 
 ## Goal
 While the hero power rests, its button is disabled and shows the remaining rest turns as a number over the illustration; the popover says how many turns are left. Touch drag of the assassin power is refused while recharging. Every text that describes the hero power mentions the cooldown.
@@ -58,9 +58,9 @@ While the hero power rests, its button is disabled and shows the remaining rest 
 - Update every existing `<HeroPowerControl>` render in tests with `cooldown={0}` if TypeScript requires it (or give the prop a default of 0 — preferred: `cooldown = 0` in the destructuring, so old call sites stay valid).
 
 ## Acceptance Criteria
-- [ ] Locked button shows the remaining rest turns and cannot be clicked or dragged.
-- [ ] Popover and accessible label state the cooldown.
-- [ ] Guide, README and architecture page describe the cooldown.
+- [x] Locked button shows the remaining rest turns and cannot be clicked or dragged.
+- [x] Popover and accessible label state the cooldown.
+- [x] Guide, README and architecture page describe the cooldown.
 
 ## Validation
 - `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"; npm test` — all pass.
@@ -80,6 +80,7 @@ Task: T03-web-cooldown-display
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (web tsc clean; HeroPowerControl, dropRules, GameGuide, GameBoard, App.heroPowerDrop tests pass; full suite run with P02 in the next commits)
+- Note: committed before T02 because T02 waits for the 1000-run simulation; the CSS for the cooldown veil went into theme.css (loaded last).
+- commit: see git log (feat(web): show the hero power cooldown on its button)

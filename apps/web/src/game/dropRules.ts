@@ -89,7 +89,7 @@ function resolveMinionDrop(run: RunState, battle: BattleState, attackerId: strin
  * target even while enemy minions remain (matches `useHeroPower` in the engine).
  */
 function resolveHeroPowerDrop(run: RunState, battle: BattleState, target: DropTarget): DropAction | null {
-  if (run.playerClass !== "assassin" || battle.heroPowerUsed || battle.playerMana.current < HERO_POWER_MANA_COST) return null;
+  if (run.playerClass !== "assassin" || battle.heroPowerUsed || battle.heroPowerCooldown > 0 || battle.playerMana.current < HERO_POWER_MANA_COST) return null;
   if (target.kind === "minion" && target.side === "enemy") {
     return battle.enemyBoard.some((minion) => minion.instanceId === target.instanceId) ? { type: "use-hero-power", targetId: target.instanceId } : null;
   }

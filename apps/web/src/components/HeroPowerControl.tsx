@@ -9,6 +9,8 @@ interface HeroPowerControlProps {
   playerClass?: PlayerClass;
   currentMana: number;
   used: boolean;
+  /** Player turns the power still rests; 0 = no cooldown. */
+  cooldown?: number;
   active: boolean;
   resolving: boolean;
   shardCount: number;
@@ -21,7 +23,7 @@ interface HeroPowerControlProps {
   onDragStateChange?(state: DragState | null): void;
 }
 
-export function HeroPowerControl({ playerClass, currentMana, used, active, resolving, shardCount, boardSize, targetMode, onActivate, getValidTargets, onDrop, onDragStateChange }: HeroPowerControlProps) {
+export function HeroPowerControl({ playerClass, currentMana, used, cooldown = 0, active, resolving, shardCount, boardSize, targetMode, onActivate, getValidTargets, onDrop, onDragStateChange }: HeroPowerControlProps) {
   const [showDetails, setShowDetails] = useState(false);
   const dismissTimer = useRef<number | null>(null);
   useEffect(() => () => {
@@ -29,6 +31,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
   }, []);
   const ready = currentMana >= 2
     && !used
+    && cooldown === 0
     && active
     && !resolving
     && (playerClass !== "demonist" || (shardCount >= gameConstants.soulShardHeroPowerCost && boardSize < gameConstants.maxBoard));
@@ -46,8 +49,10 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
   const definition = PLAYER_CLASS_DEFINITIONS.find(({ id }) => id === playerClass)!;
   const disabled = !ready && !targetMode;
   const status = used
-    ? "이번 턴 사용 완료"
-    : !active
+    ? (cooldown > 0 ? `사용 완료 · ${cooldown}턴 쉰 뒤 다시 사용` : "이번 턴 사용 완료")
+    : cooldown > 0
+      ? `재사용까지 ${cooldown}턴`
+      : !active
       ? "내 턴에 사용할 수 있음"
       : resolving
         ? "행동 처리 중"
@@ -72,13 +77,14 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
         type="button"
         className={`hero-power-button is-${playerClass}`}
         disabled={disabled}
-        aria-label={`${definition.heroPowerName}, 마나 2${playerClass === "demonist" ? `, 영혼 조각 ${gameConstants.soulShardHeroPowerCost}` : ""}`}
+        aria-label={`${definition.heroPowerName}, 마나 2${playerClass === "demonist" ? `, 영혼 조각 ${gameConstants.soulShardHeroPowerCost}` : ""}${cooldown > 0 ? `, 재사용까지 ${cooldown}턴` : ""}`}
         aria-describedby="hero-power-details"
         aria-pressed={targetMode}
         onClick={handleActivate}
         {...touchDrag.handlers}
       >
         <img className="hero-power-illustration" src={`/art/hero-powers/${playerClass}.png`} alt="" aria-hidden="true" />
+        {cooldown > 0 && !used && <span className="hero-power-cooldown" aria-hidden="true">{cooldown}</span>}
         <span className="hero-power-mana-mark" aria-hidden="true">2</span>
         {playerClass === "demonist" && <span className="hero-power-shard-mark" aria-label={`영혼 조각 ${shardCount}/6`}>{shardCount}/6</span>}
       </button>
@@ -89,6 +95,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, active, resol
           <span className="hero-power-cost-badge is-mana"><i aria-hidden="true">◆</i> 마나 <b>2</b></span>
           {playerClass === "demonist" && <span className="hero-power-cost-badge is-shard"><i aria-hidden="true">✦</i> 영혼 조각 <b>{gameConstants.soulShardHeroPowerCost}</b></span>}
         </div>
+        <small className="hero-power-cooldown-note">사용 후 {gameConstants.heroPowerCooldownTurns}턴 동안 쉽니다</small>
         {playerClass === "demonist" && <small className="hero-power-shard-total">보유 영혼 조각 {shardCount}/6</small>}
         <p>{definition.heroPowerDescription}</p>
         <small className="hero-power-status">{targetMode ? "대상을 선택하세요" : status}</small>

@@ -155,6 +155,10 @@ describe("resolveDrop for the assassin hero power", () => {
     const used = setup({ playerClass: "assassin", enemy });
     used.battle!.heroPowerUsed = true;
     expect(resolveDrop(used, heroPower, target)).toBeNull();
+
+    const recharging = setup({ playerClass: "assassin", enemy });
+    recharging.battle!.heroPowerCooldown = 1;
+    expect(resolveDrop(recharging, heroPower, target)).toBeNull();
   });
 
   it("does nothing on the enemy's turn, after the battle ended, or while a discard is pending", () => {

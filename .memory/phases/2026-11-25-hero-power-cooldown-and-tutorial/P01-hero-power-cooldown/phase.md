@@ -3,9 +3,9 @@
 ## Tasks
 | Task | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| T01 | `pending` | Engine: `heroPowerCooldown` field, use/turn-start rules, hydration, API schema, tests | [T01](./T01-engine-cooldown.md) |
-| T02 | `pending` | Simulation bot respects the cooldown; 1000-run measurement report, no tuning | [T02](./T02-bot-and-measurement.md) |
+| T01 | `done ✅` | Engine: `heroPowerCooldown` field, use/turn-start rules, hydration, API schema, tests | [T01](./T01-engine-cooldown.md) |
+| T02 | `in_progress 🔵` | Simulation bot respects the cooldown; 1000-run measurement report, no tuning | [T02](./T02-bot-and-measurement.md) |
 | T03 | `pending` | Web: cooldown on the hero power button, drop rules, guide/README/architecture texts | [T03](./T03-web-cooldown-display.md) |
 
 ## Progress
-- done: 0/3 (active: T01)
+- done: 1/3 (active: T02)

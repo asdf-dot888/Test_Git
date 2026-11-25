@@ -382,3 +382,7 @@ button:focus-visible, a:focus-visible { outline-color: var(--soul); }
 
 /* Enemy deck counts sit on the light board art, so give them a small dark plaque to stay readable. */
 .enemy-deck-counts { padding: 4px 9px; color: var(--ash); border: 1px solid rgb(214 180 122 / 35%); border-radius: 3px; background: rgb(16 12 18 / 82%); }
+
+/* Hero power cooldown: a dark veil over the illustration with the turns left. */
+.hero-power-cooldown { position: absolute; inset: 1px; z-index: 2; display: grid; place-items: center; border-radius: 50%; background: rgb(8 6 10 / 72%); color: var(--bone); font: 400 20px/1 var(--display); pointer-events: none; }
+.hero-power-cooldown-note { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
