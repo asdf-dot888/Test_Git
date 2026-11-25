@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { findSpotlightTarget } from "../game/spotlightTarget.js";
 
 export interface TutorialSpotlightProps {
   /** CSS selector list; the first matching element with a non-zero box is highlighted. null = no hole, callout centred. */
@@ -22,15 +23,6 @@ const EDGE = 12;
 const CALLOUT_WIDTH = 340;
 const SPACE_BELOW_NEEDED = 180;
 const REMEASURE_MS = 250;
-
-/** The first element matching the selector list whose box is visible (non-zero width and height). */
-export function findSpotlightTarget(selector: string): HTMLElement | null {
-  for (const element of Array.from(document.querySelectorAll<HTMLElement>(selector))) {
-    const rect = element.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) return element;
-  }
-  return null;
-}
 
 function measure(selector: string | null, padding: number): Box | null {
   if (!selector) return null;

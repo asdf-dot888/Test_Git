@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { findSpotlightTarget, TutorialSpotlight } from "./TutorialSpotlight.js";
+import { findSpotlightTarget } from "../game/spotlightTarget.js";
+import { TutorialSpotlight } from "./TutorialSpotlight.js";
 
 function mockBox(element: HTMLElement, box: { top: number; left: number; width: number; height: number }) {
   element.getBoundingClientRect = () => ({ ...box, right: box.left + box.width, bottom: box.top + box.height, x: box.left, y: box.top, toJSON: () => box }) as DOMRect;
