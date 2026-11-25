@@ -1,6 +1,6 @@
 # Task: T01 Spotlight Overlay Component
 
-## Status: pending
+## Status: done
 
 ## Goal
 A reusable `TutorialSpotlight` component darkens the whole screen except one on-screen element, draws a ring around it, and places a callout (title, text, optional "계속" button, "건너뛰기" button) with an arrow next to it. It follows the element when the layout changes (resize, scroll, hand growing). T02 wires it into the tutorial.
@@ -60,7 +60,7 @@ A reusable `TutorialSpotlight` component darkens the whole screen except one on-
 ## Acceptance Criteria
 - [ ] Only the target stays bright; the rest is dimmed; the callout and arrow sit next to the target and stay on screen at 390 px and 1440 px widths.
 - [ ] The overlay does not block clicks or drags anywhere.
-- [ ] Component tests pass.
+- [x] Component tests pass.
 
 ## Validation
 - `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"; npm test` — all pass.
@@ -79,6 +79,6 @@ Task: T01-spotlight-overlay
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (5 component tests, eslint, web tsc)
+- commit: see git log (feat(web): add a spotlight overlay for the tutorial)
