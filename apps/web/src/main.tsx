@@ -7,6 +7,7 @@ import { GameErrorBoundary } from "./components/GameErrorBoundary.js";
 import "./styles/tokens.css";
 import "./styles/board.css";
 import "./styles/spellEffects.css";
+import "./styles/theme.css";
 
 const rootElement = document.getElementById("root");
 
@@ -21,7 +22,23 @@ const auth = readAuthConfig();
 // Development-only effects gallery (no login); the branch is removed from production builds.
 const previewRequested = import.meta.env.DEV && new URLSearchParams(window.location.search).has("effects-preview");
 
-if (previewRequested) {
+// Development-only: the real game with a stand-in account, for checking screens without signing in.
+const designPreviewRequested = import.meta.env.DEV && new URLSearchParams(window.location.search).has("design-preview");
+
+if (designPreviewRequested) {
+  void import("./auth/authState.js").then(({ AuthContext }) => {
+    const previewAuth = {
+      isAuthenticated: true,
+      isLoading: false,
+      userId: "design-preview",
+      displayName: "디자인 미리보기",
+      getLeaderboardAccessToken: async () => { throw new Error("The design preview has no leaderboard access."); },
+      signIn: async () => undefined,
+      signOut: async () => undefined,
+    };
+    root.render(<StrictMode><AuthContext.Provider value={previewAuth}><GameErrorBoundary><App /></GameErrorBoundary></AuthContext.Provider></StrictMode>);
+  });
+} else if (previewRequested) {
   void import("./dev/EffectsPreview.js").then(({ EffectsPreview }) => {
     root.render(<StrictMode><EffectsPreview /></StrictMode>);
   });

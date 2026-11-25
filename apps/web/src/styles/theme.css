@@ -1,0 +1,248 @@
+/*
+  Mangostone visual theme: a candle-lit crypt.
+  Loaded after board.css. It changes colour, type and surfaces only; layout and sizing stay in board.css
+  so drag targets, touch behaviour and the responsive rules keep working.
+
+  Palette (all from the game's own art):
+    crypt  #141119  the base dark, a violet-black from the canyon shadows
+    bone   #e8ddc9  text
+    brass  #a8844f  frames and structure (tarnished, not shiny gold)
+    ember  #c4472d  enemy side, danger, the one primary action per screen
+    soul   #58bfae  player side and mana
+    ash    #857c8c  secondary text
+*/
+:root {
+  --crypt: #141119;
+  --crypt-2: #1c1722;
+  --crypt-3: #261f2c;
+  --bone: #e8ddc9;
+  --brass: #a8844f;
+  --brass-bright: #d6b47a;
+  --ember: #c4472d;
+  --ember-deep: #6e2014;
+  --soul: #58bfae;
+  --ash: #857c8c;
+
+  --display: "Song Myung", "Nanum Myeongjo", "AppleMyungjo", serif;
+  --ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+
+  /* Re-point the old tokens so every existing rule picks up the new palette. */
+  --ink: var(--bone);
+  --muted: var(--ash);
+  --gold: var(--brass);
+  --gold-bright: var(--brass-bright);
+  --panel: var(--crypt-2);
+  --panel-light: var(--crypt-3);
+  --line: rgb(168 132 79 / 28%);
+  --teal: var(--soul);
+  --danger: #d4573c;
+
+  font-family: var(--ui);
+  color: var(--bone);
+  background: var(--crypt);
+  word-break: keep-all;
+}
+button:focus-visible, a:focus-visible { outline-color: var(--soul); }
+
+/* Brand line: the Latin name sits quietly under the Korean title, not as a shouted eyebrow. */
+.eyebrow { color: var(--brass); font-family: var(--display); font-size: 13px; font-weight: 400; letter-spacing: .12em; }
+
+/* ---------- Buttons: carved slabs with an engraved inner line ---------- */
+.menu-primary, .menu-secondary, .skip-reward, .end-turn-button, .menu-button,
+.dialog-actions button {
+  font-family: var(--ui);
+  font-weight: 600;
+  letter-spacing: .01em;
+  border-radius: 3px;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.menu-secondary, .skip-reward, .menu-button {
+  color: var(--bone);
+  border: 1px solid rgb(168 132 79 / 50%);
+  background: linear-gradient(180deg, #241e29, #17131b);
+  box-shadow: inset 0 0 0 3px var(--crypt), inset 0 0 0 4px rgb(168 132 79 / 18%), 0 6px 16px rgb(0 0 0 / 40%);
+}
+.menu-secondary:hover:not(:disabled), .skip-reward:hover, .menu-button:hover {
+  color: #fff6e4;
+  border-color: var(--brass-bright);
+  background: linear-gradient(180deg, #2d2533, #1b161f);
+}
+/* The one action that moves the game forward is lit from inside like a coal. */
+.menu-primary, .end-turn-button {
+  color: #fff1dc;
+  border: 1px solid #e0794f;
+  background: radial-gradient(120% 140% at 50% 120%, #e2623a 0%, #a8341f 38%, #4a140d 100%);
+  box-shadow: inset 0 0 0 3px rgb(30 8 5 / 55%), inset 0 0 0 4px rgb(255 170 120 / 25%), 0 0 22px rgb(196 71 45 / 32%), 0 8px 18px rgb(0 0 0 / 45%);
+  text-shadow: 0 1px 2px rgb(40 6 2 / 80%);
+}
+.menu-primary:hover:not(:disabled), .end-turn-button:hover:not(:disabled) {
+  filter: none;
+  border-color: #ffab7f;
+  box-shadow: inset 0 0 0 3px rgb(30 8 5 / 55%), inset 0 0 0 4px rgb(255 190 140 / 40%), 0 0 30px rgb(226 98 58 / 50%), 0 8px 18px rgb(0 0 0 / 45%);
+}
+.end-turn-button:disabled { opacity: 1; color: #9a8f86; border-color: #4d3d38; background: linear-gradient(180deg, #2a2226, #1b161b); box-shadow: inset 0 0 0 3px var(--crypt), 0 4px 10px rgb(0 0 0 / 35%); text-shadow: none; }
+
+/* ---------- Main menu: the title stands in the canyon, not in a box ---------- */
+.menu-screen {
+  place-items: end start;
+  padding: clamp(24px, 7vh, 72px) clamp(20px, 8vw, 120px);
+  background:
+    linear-gradient(90deg, rgb(20 17 25 / 92%) 0%, rgb(20 17 25 / 55%) 45%, rgb(20 17 25 / 10%) 100%),
+    linear-gradient(0deg, rgb(20 17 25 / 95%) 0%, transparent 45%),
+    #0d0b10 url("/art/expedition-route-background.png") 60% 30% / cover no-repeat;
+  backdrop-filter: none;
+}
+.menu-card {
+  width: min(100%, 460px);
+  padding: 0;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.menu-card h1 {
+  margin: 0;
+  color: var(--bone);
+  font: 400 clamp(64px, 13vw, 132px)/.95 var(--display);
+  letter-spacing: -.02em;
+  text-shadow: 0 0 42px rgb(196 71 45 / 55%), 0 2px 0 rgb(0 0 0 / 50%);
+  animation: menu-title-kindle 1.8s ease-out both;
+}
+.menu-card .eyebrow { display: block; margin: 10px 0 0 4px; }
+.menu-card p { max-width: 30ch; margin: 22px 0 28px; color: #cfc4b3; font-size: 15px; line-height: 1.7; }
+.menu-card .menu-primary, .menu-card .menu-secondary { width: min(100%, 300px); min-height: 50px; margin: 10px 0; font-size: 15px; }
+.menu-card .menu-primary { min-height: 56px; font-size: 16px; }
+.menu-note { margin-top: 22px; color: var(--ash); font-size: 11px; }
+.menu-version { margin: 4px 0 0 -8px; color: var(--ash); }
+.menu-audio-settings-button {
+  color: var(--bone);
+  border-color: rgb(168 132 79 / 55%);
+  background: radial-gradient(circle at 35% 25%, #2f2735, #141119 70%);
+  box-shadow: 0 0 0 4px rgb(20 17 25 / 60%);
+}
+@keyframes menu-title-kindle {
+  from { opacity: 0; filter: blur(8px); text-shadow: 0 0 0 rgb(196 71 45 / 0%); }
+  55% { opacity: 1; filter: blur(0); }
+  to { opacity: 1; text-shadow: 0 0 42px rgb(196 71 45 / 55%), 0 2px 0 rgb(0 0 0 / 50%); }
+}
+@media (max-width: 720px) {
+  .menu-screen { place-items: end stretch; padding: 24px 20px 32px; background-position: 70% 30%, 0 0, 70% 30%; }
+  .menu-card .menu-primary, .menu-card .menu-secondary { width: 100%; }
+}
+
+/* ---------- Battle screen ---------- */
+.game-shell { background: radial-gradient(ellipse at 50% 55%, #221b26 0, #141119 62%, #0c0a0f 100%); }
+.game-topbar { border-bottom: 1px solid rgb(168 132 79 / 16%); background: linear-gradient(180deg, #0f0d12, rgb(20 17 25 / 85%)); }
+.brand-mark { color: var(--bone); font: 400 20px/1 var(--display); letter-spacing: 0; }
+.brand-mark span { color: var(--ember); }
+.turn-status { color: var(--ash); letter-spacing: .02em; }
+.turn-badge { border-radius: 3px; letter-spacing: .02em; }
+.turn-badge.is-player { color: #bff0e6; border-color: rgb(88 191 174 / 70%); background: rgb(24 60 56 / 70%); }
+.turn-badge.is-enemy { color: #ffb4a0; border-color: rgb(196 71 45 / 75%); background: rgb(80 22 14 / 75%); }
+
+/* The board art becomes a dark altar slab: the stone is pressed down under a violet-black wash,
+   the enemy half is cold, and the player's half is lit by candlelight from below. */
+.battle-board {
+  border-color: rgb(168 132 79 / 38%);
+  border-radius: 10px;
+  background:
+    radial-gradient(70% 55% at 50% 108%, rgb(214 120 60 / 26%), transparent 70%),
+    radial-gradient(80% 50% at 50% -8%, rgb(150 30 40 / 22%), transparent 70%),
+    radial-gradient(130% 120% at 50% 50%, transparent 45%, rgb(8 6 10 / 85%) 100%),
+    linear-gradient(#584a60, #584a60),
+    #1c1620 url("/art/board-surface.png") center / cover no-repeat;
+  background-blend-mode: screen, normal, normal, multiply, normal;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 60%), inset 0 0 0 1px rgb(0 0 0 / 60%), inset 0 0 80px rgb(0 0 0 / 55%);
+}
+.battle-board::before { background: linear-gradient(180deg, rgb(10 8 12 / 35%), transparent 30%, transparent 70%, rgb(10 8 12 / 30%)); }
+.battle-board.is-player-turn { border-color: rgb(214 180 122 / 60%); box-shadow: 0 24px 70px rgb(0 0 0 / 60%), inset 0 0 80px rgb(0 0 0 / 55%), 0 0 26px rgb(214 140 70 / 18%); }
+.battle-board.is-enemy-turn { border-color: rgb(196 71 45 / 70%); box-shadow: 0 24px 70px rgb(0 0 0 / 60%), inset 0 0 80px rgb(0 0 0 / 55%), 0 0 26px rgb(196 71 45 / 25%); }
+.board-divider { background: linear-gradient(90deg, transparent, rgb(168 132 79 / 40%), transparent); }
+.board-divider span { color: var(--brass-bright); background: #221b26; }
+.lane-enemy::before { background: radial-gradient(ellipse, rgb(160 34 30 / 26%), rgb(160 34 30 / 8%) 54%, transparent 76%); }
+.empty-slot { border: 1px dashed rgb(214 180 122 / 18%); border-radius: 6px; background: rgb(10 8 12 / 22%); }
+
+/* Hero plaques */
+.hero-panel {
+  border: 1px solid rgb(196 71 45 / 45%);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgb(30 22 30 / 90%), rgb(16 12 18 / 92%));
+  box-shadow: inset 0 0 0 3px rgb(12 9 14 / 70%), inset 0 0 0 4px rgb(196 71 45 / 14%), 0 10px 26px rgb(0 0 0 / 50%);
+}
+.hero-player { border-color: rgb(88 191 174 / 45%); box-shadow: inset 0 0 0 3px rgb(12 9 14 / 70%), inset 0 0 0 4px rgb(88 191 174 / 14%), 0 10px 26px rgb(0 0 0 / 50%); }
+.hero-portrait-wrap { border-color: var(--ember); background: #1a141c; box-shadow: 0 0 0 3px rgb(0 0 0 / 55%), 0 0 16px rgb(196 71 45 / 35%); }
+.hero-player .hero-portrait-wrap { border-color: var(--soul); box-shadow: 0 0 0 3px rgb(0 0 0 / 55%), 0 0 16px rgb(88 191 174 / 30%); }
+.hero-side-mark { color: #1a0d09; background: #e0794f; border-color: #1a141c; }
+.hero-name { color: var(--bone); font: 400 17px/1.25 var(--display); }
+.hero-label { letter-spacing: .02em; }
+.health-track { height: 5px; border-radius: 1px; background: rgb(0 0 0 / 45%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%); }
+.health-track span { border-radius: 1px; background: linear-gradient(90deg, #7a1d12, #d4573c); }
+.hero-player .health-track span { background: linear-gradient(90deg, #1d5f58, #58bfae); }
+.health-value { color: #f0a58c; }
+.hero-player .health-value { color: #9fe3d6; }
+
+/* Cards on the board and in hand: dark iron with a tarnished brass edge */
+.minion-card, .game-card, .reward-card {
+  border: 1px solid rgb(214 180 122 / 55%);
+  border-radius: 6px;
+  background: linear-gradient(170deg, #2e2633 0%, #1a151e 60%, #120f15 100%);
+  box-shadow: inset 0 0 0 2px #0e0b11, inset 0 0 0 3px rgb(168 132 79 / 22%), 0 8px 16px rgb(0 0 0 / 50%);
+}
+.minion-card.minion-enemy { border-color: rgb(196 71 45 / 60%); box-shadow: inset 0 0 0 2px #0e0b11, inset 0 0 0 3px rgb(196 71 45 / 20%), 0 8px 16px rgb(0 0 0 / 50%); }
+.card-spell, .reward-card.card-spell { border-color: rgb(130 120 190 / 60%); background: linear-gradient(170deg, #2b2840 0%, #18151f 60%, #120f15 100%); }
+.card-art, .minion-art-frame { border-color: rgb(0 0 0 / 70%); border-radius: 3px; }
+.card-name { color: var(--bone); font-weight: 600; }
+.card-stats { color: #d9b77a; }
+.card-cost {
+  color: #06201d;
+  border-color: #c8f5ec;
+  background: radial-gradient(circle at 35% 25%, #e9fffb, #58bfae 55%, #1d5f58);
+  box-shadow: 0 0 0 2px #0e0b11, 0 0 8px rgb(88 191 174 / 45%);
+}
+.game-card.is-selected { outline-color: var(--soul); }
+
+/* Hand tray and toolbar */
+.hand-panel { border-color: rgb(168 132 79 / 22%); border-radius: 6px; background: linear-gradient(180deg, #1c1722, #110e14); box-shadow: inset 0 1px 0 rgb(214 180 122 / 8%); }
+.hand-heading h2 { color: var(--bone); font: 400 15px/1.2 var(--display); }
+.mana-display { border-color: rgb(88 191 174 / 30%); border-radius: 4px; background: #110e14; }
+.mana-display strong { color: var(--soul); font-family: var(--display); font-weight: 400; font-size: 20px; }
+.mana-display strong span:first-child { color: #dffaf4; }
+.mana-orb { border-color: #4a4250; background: #1a151e; }
+.mana-orb.is-full { border-color: #c8f5ec; background: radial-gradient(circle at 35% 30%, #eafffb, #58bfae 50%, #1d5f58); box-shadow: 0 0 8px rgb(88 191 174 / 70%); }
+.hero-power-button { border-color: rgb(168 132 79 / 60%); background: radial-gradient(circle at 35% 25%, #3a2f40, #141119 72%); box-shadow: inset 0 0 0 2px #0e0b11, 0 4px 10px #0009; }
+.opening-hand-redraw-button { color: var(--brass-bright); border-color: var(--brass); background: radial-gradient(circle at 34% 25%, #3d3141, #141119 72%); box-shadow: 0 0 14px rgb(214 180 122 / 25%); }
+.enemy-card-back { color: #e0794f; border-color: rgb(196 71 45 / 70%); border-radius: 3px; background: repeating-linear-gradient(135deg, #3a1610 0 4px, #1c1018 4px 8px); }
+.enemy-card-back span { border-color: rgb(224 121 79 / 70%); }
+
+/* Dialogs and panels share the plaque look */
+.game-menu-panel, .game-guide-panel, .leaderboard-panel, .card-details-dialog, .discard-dialog, .run-card,
+.class-selection-panel, .first-run-tutorial {
+  border-color: rgb(168 132 79 / 45%);
+  border-radius: 6px;
+  background: linear-gradient(180deg, #1f1925, #120f15);
+  box-shadow: inset 0 0 0 4px #120f15, inset 0 0 0 5px rgb(168 132 79 / 14%), 0 28px 90px rgb(0 0 0 / 70%);
+}
+.game-menu-panel h2, .game-guide-panel h2, .leaderboard-panel h2, .card-details-dialog h2, .discard-dialog h2,
+.run-card h1, .class-selection-panel h1, .first-run-tutorial h2 {
+  color: var(--bone);
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.class-selection-screen { background: radial-gradient(ellipse at 50% 30%, #2a1f2c, #141119 62%, #0c0a0f); }
+.class-choice, .difficulty-choice { border-radius: 4px; background: linear-gradient(170deg, #221c27, #141119); }
+.class-choice strong { color: var(--bone); font: 400 24px/1.2 var(--display); }
+.class-choice:hover:not(:disabled), .class-choice.is-selected, .difficulty-choice.is-selected { border-color: var(--brass-bright); box-shadow: inset 0 0 0 3px #141119, inset 0 0 0 4px rgb(214 180 122 / 30%), 0 0 22px rgb(196 71 45 / 18%); }
+.turn-order-card { border-color: rgb(196 71 45 / 75%); border-radius: 6px; background: repeating-linear-gradient(135deg, #3a1610 0 8px, #1c1018 8px 16px); color: #e0794f; }
+.turn-order-card.is-picked { color: #fff1dc; border-color: #e0794f; background: radial-gradient(120% 140% at 50% 120%, #e2623a 0%, #a8341f 40%, #4a140d 100%); }
+.expedition-roadmap__node-button { border-radius: 4px; }
+
+/* Turn banner: the words themselves, set in the display face, no box behind them */
+.turn-banner > span { padding: 0; font: 400 clamp(44px, 10vw, 96px)/1 var(--display); letter-spacing: .04em; background: none; text-shadow: 0 0 30px currentcolor, 0 0 80px rgb(0 0 0 / 90%), 0 3px 0 #000; }
+.turn-banner.is-player > span { color: #c8f5ec; }
+.turn-banner.is-enemy > span { color: #ff9a7e; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-card h1 { animation: none; }
+}
