@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CARD_BY_ID, ENEMY_BY_ID, gameConstants, type PlayerClass } from "@board-game/game-core";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CARD_BY_ID, ENEMY_BY_ID, gameConstants, hasTaunt, type PlayerClass } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
 import { EnemyHeroDefeatEffect } from "./components/EnemyHeroDefeatEffect.js";
@@ -28,7 +28,8 @@ import { loadAudioSettings, saveAudioSettings } from "./game/audioSettings.js";
 import { getTopTen, LeaderboardApiError, submitProgress, type LeaderboardRecord, type RunDifficulty } from "./leaderboard/leaderboardClient.js";
 import { combatEventSounds, spellCueFor } from "./game/combatEffects.js";
 import { useAuth } from "./auth/useAuth.js";
-import { loadTutorialProgress, markTutorialCompleted } from "./game/tutorialProgress.js";
+import { loadSeenTips, loadTutorialProgress, markTipSeen, markTutorialCompleted, type TutorialTipId } from "./game/tutorialProgress.js";
+import { TutorialTip } from "./components/TutorialTip.js";
 import { restoreTutorialPlayerHealth } from "./game/tutorialHealth.js";
 import { resolveDrop } from "./game/dropRules.js";
 import { getPlayerSpellSelection } from "./game/spellTargeting.js";
@@ -124,6 +125,25 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const musicKind: MusicKind = hasBattlePresentation ? (enemyKind === "boss" ? "boss" : "normal") : "menu";
   const tutorialAttackUnavailable = Boolean(tutorialMode !== "inactive" && battle
     && !battle.playerBoard.some((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")));
+  // One-time rule tips (taunt, fatigue): the stored flags plus the tips closed in this session.
+  const storedSeenTips = useMemo(() => {
+    if (!auth.userId) return new Set<TutorialTipId>();
+    try {
+      return loadSeenTips(window.localStorage, auth.userId);
+    } catch {
+      return new Set<TutorialTipId>();
+    }
+  }, [auth.userId]);
+  const [closedTips, setClosedTips] = useState<ReadonlySet<TutorialTipId>>(() => new Set());
+  const tipSeen = (tip: TutorialTipId) => storedSeenTips.has(tip) || closedTips.has(tip);
+  const pendingTip: TutorialTipId | null = screen === "game" && tutorialMode === "inactive" && battle && battle.status === "active"
+    ? (!tipSeen("taunt") && [...battle.playerBoard, ...battle.enemyBoard].some(hasTaunt)
+      ? "taunt"
+      : !tipSeen("fatigue") && (battle.playerFatigue ?? 0) > 0 ? "fatigue" : null)
+    : null;
+  const closeTip = useCallback(() => {
+    if (pendingTip) setClosedTips((current) => new Set(current).add(pendingTip));
+  }, [pendingTip]);
   // The tutorial's hero power step explains instead of waiting when the power cannot be used right now.
   const tutorialHeroPowerUnavailable = Boolean(battle && (battle.playerMana.current < 2 || battle.heroPowerCooldown > 0
     || (run?.playerClass === "demonist" && (battle.soulShards < gameConstants.soulShardHeroPowerCost || battle.playerBoard.length >= gameConstants.maxBoard))));
@@ -356,6 +376,16 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       };
     }
   }, [auth.userId, dispatchGameAction, run, screen, tutorialMode]);
+
+  // A tip counts as seen as soon as it is shown, so a reload never repeats it.
+  useEffect(() => {
+    if (!pendingTip || !auth.userId) return;
+    try {
+      markTipSeen(window.localStorage, auth.userId, pendingTip);
+    } catch {
+      // The tip may show once more after a reload; nothing else depends on it.
+    }
+  }, [auth.userId, pendingTip]);
 
   useEffect(() => {
     const pending = tutorialActionRef.current;
@@ -838,6 +868,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         onAction={advanceTutorial}
         onSkip={finishTutorial}
       />}
+      {pendingTip && <TutorialTip tip={pendingTip} onClose={closeTip} />}
       {tutorialNotice && <aside className="first-run-tutorial-notice" role="status">{tutorialNotice}<button type="button" onClick={() => setTutorialNotice(null)}>닫기</button></aside>}
       {session.victoryPresentation === "enemy-defeat" && <EnemyHeroDefeatEffect onComplete={() => dispatchGameAction({ type: "enemy-defeat-effect-complete" })} />}
       {session.victoryPresentation === "victory-reveal" && <VictoryScreen overlay disabled={sync.status !== "ready" && sync.status !== "saving"} onConfirm={acknowledgeVictory} />}

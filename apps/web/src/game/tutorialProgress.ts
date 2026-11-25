@@ -69,3 +69,37 @@ export function markTutorialCompleted(
     return { status: "error", error };
   }
 }
+
+/** One-time tips shown the first time a rule comes up in play. */
+export type TutorialTipId = "taunt" | "fatigue";
+
+const TIP_IDS: readonly TutorialTipId[] = ["taunt", "fatigue"];
+const TIPS_KEY_PREFIX = "board-card-roguelike:tutorial-tips:v1:";
+
+function tipsKey(userId: string): string {
+  return `${TIPS_KEY_PREFIX}${encodeURIComponent(userId)}`;
+}
+
+/** Tips this account has already seen. Storage errors and bad data count as "none seen". */
+export function loadSeenTips(storage: Storage, userId: string): Set<TutorialTipId> {
+  try {
+    const serialized = storage.getItem(tipsKey(userId));
+    if (serialized === null) return new Set();
+    const value: unknown = JSON.parse(serialized);
+    if (!isRecord(value) || value.schemaVersion !== 1 || value.userId !== userId || !Array.isArray(value.seen)) return new Set();
+    return new Set(TIP_IDS.filter((tip) => (value.seen as unknown[]).includes(tip)));
+  } catch {
+    return new Set();
+  }
+}
+
+export function markTipSeen(storage: Storage, userId: string, tip: TutorialTipId): { status: "saved" } | { status: "error"; error: unknown } {
+  try {
+    const seen = loadSeenTips(storage, userId);
+    seen.add(tip);
+    storage.setItem(tipsKey(userId), JSON.stringify({ schemaVersion: 1, userId, seen: TIP_IDS.filter((id) => seen.has(id)) }));
+    return { status: "saved" };
+  } catch (error) {
+    return { status: "error", error };
+  }
+}

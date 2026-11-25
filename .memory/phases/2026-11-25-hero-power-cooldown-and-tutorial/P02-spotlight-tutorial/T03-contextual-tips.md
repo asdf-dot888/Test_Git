@@ -1,6 +1,6 @@
 # Task: T03 One-Time Taunt and Fatigue Tips
 
-## Status: pending
+## Status: done
 
 ## Goal
 The first time a taunt minion is on either board, and the first time the player takes fatigue damage, a short tip appears once per account and never again. These two rules cannot be forced in the tutorial battle because the enemy deck is random.
@@ -47,8 +47,8 @@ The first time a taunt minion is on either board, and the first time the player 
 - `apps/web/src/App.tutorial.test.tsx` (or a new `App.tips.test.tsx`): a completed account whose battle has a taunt minion sees the taunt tip once; after closing and another run update it does not come back; a stored "seen" flag suppresses it. Fatigue: set `playerFatigue = 1` in the restored run → fatigue tip.
 
 ## Acceptance Criteria
-- [ ] Each tip shows once per account on its first occurrence and never again (also after reload).
-- [ ] Tips never overlap the spotlight tutorial and never block play.
+- [x] Each tip shows once per account on its first occurrence and never again (also after reload).
+- [x] Tips never overlap the spotlight tutorial and never block play.
 
 ## Validation
 - `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"; npm test` — all pass.
@@ -67,6 +67,7 @@ Task: T03-contextual-tips
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (1278 tests / 106 files twice in a row, lint, web tsc). One run had `App.enemy-turn-playback` hit its 5 s timeout under load (5090 ms); it passes alone and in the two full reruns.
+- Deviation: no `activeTip` state. The tip shown is derived from the battle (`pendingTip`) minus the stored flags and the tips closed in this session, and an effect only writes the "seen" flag (the lint rule forbids setState inside effects). A tip therefore counts as seen as soon as it appears.
+- commit: see git log (feat(web): explain taunt and fatigue once when they first happen)

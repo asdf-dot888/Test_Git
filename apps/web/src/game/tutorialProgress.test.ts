@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadTutorialProgress, markTutorialCompleted } from "./tutorialProgress";
+import { loadSeenTips, loadTutorialProgress, markTipSeen, markTutorialCompleted } from "./tutorialProgress";
 
 function createMemoryStorage(): Storage {
   const values = new Map<string, string>();
@@ -71,5 +71,27 @@ describe("per-user tutorial completion storage", () => {
 
     expect(loadTutorialProgress(throwingStorage, "employee-a")).toEqual({ status: "error", error: failure });
     expect(markTutorialCompleted(throwingStorage, "employee-a")).toEqual({ status: "error", error: failure });
+  });
+});
+
+describe("one-time tip flags", () => {
+  it("remembers each seen tip per account", () => {
+    const storage = createMemoryStorage();
+    expect([...loadSeenTips(storage, "a")]).toEqual([]);
+    expect(markTipSeen(storage, "a", "taunt")).toEqual({ status: "saved" });
+    expect(markTipSeen(storage, "a", "fatigue")).toEqual({ status: "saved" });
+    expect([...loadSeenTips(storage, "a")].sort()).toEqual(["fatigue", "taunt"]);
+    expect([...loadSeenTips(storage, "b")]).toEqual([]);
+  });
+
+  it("treats corrupt data, unknown ids and failing storage as nothing seen", () => {
+    const storage = createMemoryStorage();
+    storage.setItem("board-card-roguelike:tutorial-tips:v1:a", "{not json");
+    expect(loadSeenTips(storage, "a").size).toBe(0);
+    storage.setItem("board-card-roguelike:tutorial-tips:v1:a", JSON.stringify({ schemaVersion: 1, userId: "a", seen: ["taunt", "dragon"] }));
+    expect([...loadSeenTips(storage, "a")]).toEqual(["taunt"]);
+    const failing = { ...createMemoryStorage(), getItem: () => { throw new Error("blocked"); }, setItem: () => { throw new Error("blocked"); } } as Storage;
+    expect(loadSeenTips(failing, "a").size).toBe(0);
+    expect(markTipSeen(failing, "a", "taunt").status).toBe("error");
   });
 });
