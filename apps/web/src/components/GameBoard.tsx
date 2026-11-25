@@ -95,7 +95,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
   const showTimerWarning = turnTimer.visible && turnTimer.remainingSeconds <= 5;
   const turnOrderPending = battle.firstSide === null;
   const actionsDisabled = syncDisabled || isResolving || turnOrderPending || battle.activeSide !== "player" || battle.status !== "active" || Boolean(battle.pendingDiscardBeforeDraw);
-  const fieldActionsDisabled = actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "attack" && !(tutorialStep === "play-card" && targetMode === "spell"));
+  const fieldActionsDisabled = actionsDisabled || (tutorialStep !== undefined && tutorialStep !== "attack" && !(tutorialStep === "play-card" && targetMode === "spell") && !(tutorialStep === "hero-power" && targetMode === "hero-power"));
   const canEndTurn = tutorialStep === undefined || tutorialStep === "end-first-turn" || tutorialStep === "end-second-turn";
   const readyMinionCount = battle.playerBoard.filter((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")).length;
   // Hearthstone attack rules: a taunt minion must be attacked first; without one any minion or the hero can be attacked.
@@ -171,7 +171,7 @@ export function GameBoard({ run, turnTimer, combatEffects = [], combatEffectsPau
                 currentMana={battle.playerMana.current}
                 used={battle.heroPowerUsed}
                 cooldown={battle.heroPowerCooldown}
-                active={tutorialStep === undefined && battle.activeSide === "player" && battle.status === "active"}
+                active={(tutorialStep === undefined || tutorialStep === "hero-power") && battle.activeSide === "player" && battle.status === "active"}
                 resolving={isResolving || syncDisabled}
                 shardCount={battle.soulShards}
                 boardSize={battle.playerBoard.length}

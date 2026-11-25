@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CARD_BY_ID, ENEMY_BY_ID, type PlayerClass } from "@board-game/game-core";
+import { CARD_BY_ID, ENEMY_BY_ID, gameConstants, type PlayerClass } from "@board-game/game-core";
 import { AbandonRunDialog } from "./components/AbandonRunDialog.js";
 import { VictoryScreen } from "./components/VictoryScreen.js";
 import { EnemyHeroDefeatEffect } from "./components/EnemyHeroDefeatEffect.js";
@@ -91,7 +91,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const [audioController, setAudioController] = useState<AudioController | null>(null);
   const [autoplayHintVisible, setAutoplayHintVisible] = useState(false);
   const [tutorialMode, setTutorialMode] = useState<"inactive" | "first-run" | "replay">("inactive");
-  const [tutorialStep, setTutorialStep] = useState<TutorialStepId>("inspect-hand");
+  const [tutorialStep, setTutorialStep] = useState<TutorialStepId>("turn-order");
   const [tutorialNotice, setTutorialNotice] = useState<string | null>(null);
   const [turnOrderPick, setTurnOrderPick] = useState<TurnOrderPick | null>(null);
   const tutorialCheckedKey = useRef<string | null>(null);
@@ -124,6 +124,9 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const musicKind: MusicKind = hasBattlePresentation ? (enemyKind === "boss" ? "boss" : "normal") : "menu";
   const tutorialAttackUnavailable = Boolean(tutorialMode !== "inactive" && battle
     && !battle.playerBoard.some((minion) => minion.summonedTurn < battle.turnNumber && !minion.hasAttacked && !minion.statusEffects?.some((status) => status.kind === "root")));
+  // The tutorial's hero power step explains instead of waiting when the power cannot be used right now.
+  const tutorialHeroPowerUnavailable = Boolean(battle && (battle.playerMana.current < 2 || battle.heroPowerCooldown > 0
+    || (run?.playerClass === "demonist" && (battle.soulShards < gameConstants.soulShardHeroPowerCost || battle.playerBoard.length >= gameConstants.maxBoard))));
   // The enemy turn is replayed step by step; its banner shows once for the playback of each enemy turn.
   const enemyTurnBattle = playback?.steps[0]?.beforeRun.battle;
   const enemyTurnKey = enemyTurnBattle ? `enemy-${enemyTurnBattle.battleId}:${enemyTurnBattle.turnNumber}` : null;
@@ -343,10 +346,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       let cancelled = false;
       queueMicrotask(() => {
         if (cancelled) return;
-        // The first-run tutorial always starts as the first player: it picks the "first" card without showing the picker.
-        const waiting = run.battle;
-        if (waiting?.firstSide === null && waiting.turnOrderCards) dispatchGameAction({ type: "choose-turn-order", cardIndex: waiting.turnOrderCards[0] === "first" ? 0 : 1 });
-        setTutorialStep("inspect-hand");
+        // The tutorial starts at the turn-order cards (it always ends up first); a reload after the pick starts at the mana step.
+        setTutorialStep(run.battle?.firstSide === null ? "turn-order" : "mana");
         setTutorialMode("first-run");
       });
       return () => {
@@ -378,7 +379,7 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
       const remaining = currentBattle.playerBoard.find((minion) => minion.instanceId === pending.attackerId);
       if (!remaining || remaining.hasAttacked) {
         tutorialActionRef.current = null;
-        setTutorialStep("end-second-turn");
+        setTutorialStep("hero-power");
       }
       return;
     }
@@ -398,6 +399,15 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     const currentBattle = run?.battle;
     const role = currentBattle?.turnOrderCards?.[index];
     if (!currentBattle || currentBattle.firstSide !== null || !role) return;
+    if (tutorialMode !== "inactive") {
+      // In the tutorial whichever card is picked turns out to be "first", so the guided steps stay in order.
+      const firstIndex = currentBattle.turnOrderCards?.indexOf("first");
+      if (firstIndex !== 0 && firstIndex !== 1) return;
+      setTurnOrderPick({ battleId: currentBattle.battleId, index, role: "first" });
+      dispatch({ type: "choose-turn-order", cardIndex: firstIndex });
+      setTutorialStep("mana");
+      return;
+    }
     setTurnOrderPick({ battleId: currentBattle.battleId, index, role });
     dispatch({ type: "choose-turn-order", cardIndex: index });
   };
@@ -431,17 +441,19 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
     if (!syncLoaded) return;
     tutorialReplaySnapshot.current = { run: session.run ? structuredClone(session.run) : null, screen };
     const playerClass = session.run?.playerClass ?? "warrior";
-    const sandbox = createGameRun(20261030, playerClass);
+    const sandbox = createGameRun(20261030, playerClass, "normal", { pickTurnOrder: true });
     dispatchGameAction({ type: "restore-run", run: sandbox });
     tutorialActionRef.current = null;
-    setTutorialStep("inspect-hand");
+    setTutorialStep("turn-order");
     setTutorialNotice(null);
     setTutorialMode("replay");
     setScreen("game");
   };
 
   const tutorialAllows = (action: TutorialAction) => tutorialMode === "inactive"
-    || (tutorialStep === "inspect-hand" && action === "continue")
+    || (tutorialStep === "turn-order" && action === "pick-turn-order")
+    || ((tutorialStep === "mana" || tutorialStep === "hand") && action === "continue")
+    || (tutorialStep === "hero-power" && (action === "hero-power" || (tutorialHeroPowerUnavailable && action === "continue")))
     || (tutorialStep === "play-card" && action === "play-card")
     || (tutorialStep === "end-first-turn" && action === "end-turn")
     || (tutorialStep === "attack" && (action === "attack" || (tutorialAttackUnavailable && (action === "play-card" || action === "end-turn"))))
@@ -450,7 +462,17 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const advanceTutorial = (action: TutorialAction) => {
     if (!tutorialAllows(action)) return;
     if (action === "continue") {
-      setTutorialStep("play-card");
+      if (tutorialStep === "mana") setTutorialStep("hand");
+      else if (tutorialStep === "hand") setTutorialStep("play-card");
+      else if (tutorialStep === "hero-power") setTutorialStep("end-second-turn");
+      return;
+    }
+    if (action === "pick-turn-order") return;
+    // The hero power step is called only when the power is actually used (warrior and demonist on the button press,
+    // the assassin once its target is chosen), so it can move on right away.
+    if (action === "hero-power") {
+      tutorialActionRef.current = null;
+      setTutorialStep("end-second-turn");
       return;
     }
     if (!battle) return;
@@ -584,8 +606,10 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
   const selectTarget = (targetId: string) => {
     if (!run || !battle) return;
     if (tutorialMode !== "inactive" && !((tutorialStep === "attack" && (session.targetMode === "none" || session.targetMode === "attack"))
-      || (tutorialStep === "play-card" && session.targetMode === "spell"))) return;
+      || (tutorialStep === "play-card" && session.targetMode === "spell")
+      || (tutorialStep === "hero-power" && session.targetMode === "hero-power"))) return;
     if (session.targetMode === "hero-power") {
+      if (tutorialMode !== "inactive") advanceTutorial("hero-power");
       dispatch({ type: "use-hero-power", targetId: targetId === battle.enemyHero.id ? "enemy-hero" : targetId });
       return;
     }
@@ -627,8 +651,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
 
   const handleDropInteraction = (payload: DragPayload, target: DropTarget) => {
     if (!run || !battle) return;
-    // The hero power stays blocked during the first-run tutorial, whether it is tapped or dragged.
-    if (payload.kind === "hero-power" && tutorialMode !== "inactive") return;
+    // In the tutorial the hero power works only in its own step, whether it is tapped or dragged.
+    if (payload.kind === "hero-power" && !tutorialAllows("hero-power")) return;
     if (tutorialMode !== "inactive") {
       if (payload.kind === "card" && !tutorialAllows("play-card")) return;
       if (payload.kind === "minion" && tutorialStep !== "attack") return;
@@ -642,6 +666,8 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
         if (pending) tutorialActionRef.current = { ...pending, attackerId: action.attackerId };
       } else if (action.type === "play-minion" || action.type === "cast-spell") {
         advanceTutorial("play-card");
+      } else if (action.type === "use-hero-power") {
+        advanceTutorial("hero-power");
       }
     }
     dispatch(action);
@@ -795,13 +821,20 @@ function GameSessionContent({ sync }: { sync: LocalRunController }) {
           onPickTurnOrder={pickTurnOrder}
           turnOrderPick={turnOrderPick}
           onMenu={() => { if (tutorialMode === "inactive") setMenuView("choices"); }}
-          onUseHeroPower={() => { if (tutorialMode === "inactive") activateHeroPower(); }}
+          onUseHeroPower={() => {
+            if (!tutorialAllows("hero-power")) return;
+            // The assassin first picks a target; its step moves on in selectTarget.
+            if (tutorialMode !== "inactive" && run?.playerClass !== "assassin") advanceTutorial("hero-power");
+            activateHeroPower();
+          }}
           onDropInteraction={handleDropInteraction}
           enemyIntentStep={playback?.stage === "intent" ? playbackStep ?? null : null}
         />
       {tutorialMode !== "inactive" && screen === "game" && <FirstRunTutorial
         step={tutorialStep}
         attackUnavailable={tutorialStep === "attack" && tutorialAttackUnavailable}
+        heroPowerUnavailable={tutorialStep === "hero-power" && tutorialHeroPowerUnavailable}
+        {...(run?.playerClass ? { playerClass: run.playerClass } : {})}
         onAction={advanceTutorial}
         onSkip={finishTutorial}
       />}

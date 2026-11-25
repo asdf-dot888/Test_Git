@@ -1,6 +1,6 @@
 # Task: T02 Eight-Step Spotlight Tutorial Flow
 
-## Status: pending
+## Status: done
 
 ## Goal
 The first-run tutorial (and its replay from the game guide) runs 8 spotlight steps: turn-order cards (always first), mana, hand and cost, play a minion, end turn, attack, hero power, end turn. The old top text box is replaced by `TutorialSpotlight`. New players learn every core rule by doing it.
@@ -87,10 +87,10 @@ The first-run tutorial (and its replay from the game guide) runs 8 spotlight ste
 - Update existing tests that referenced `inspect-hand` or "전투 안내 · 1 / 5".
 
 ## Acceptance Criteria
-- [ ] New accounts see the picker in the first battle; the tutorial always ends up first.
-- [ ] Each of the 8 steps highlights the right element on PC and phone and advances on the described action.
-- [ ] The hero power can be used in its step and only there; unusable cases explain why and continue.
-- [ ] Skip, replay, completion record and health restore still work.
+- [x] New accounts see the picker in the first battle; the tutorial always ends up first.
+- [x] Each of the 8 steps highlights the right element on PC and phone and advances on the described action.
+- [x] The hero power can be used in its step and only there; unusable cases explain why and continue.
+- [x] Skip, replay, completion record and health restore still work.
 
 ## Validation
 - `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"; npm test` — all pass.
@@ -110,6 +110,11 @@ Task: T02-tutorial-flow
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (1274 tests / 105 files, lint, web tsc)
+- Deviations from the blueprint, for the lint rule against setState inside effects:
+  - turn-order → mana is set directly in `pickTurnOrder` (no effect).
+  - the hero-power step moves on in `advanceTutorial("hero-power")`, called when the power is actually used: on the button press for warrior/demonist, in `selectTarget` for the assassin, and on a hero-power drop. No pending action.
+  - The spotlight title of step 1 is "선후공 카드 고르기" because the picker dialog itself is already named "선후공 정하기" (duplicate accessible names).
+  - `TUTORIAL_STEPS` lives in `apps/web/src/game/tutorialSteps.ts` (react-refresh lint: component files export components only).
+- commit: see git log (feat(web): turn the first-run tutorial into an 8-step spotlight guide)

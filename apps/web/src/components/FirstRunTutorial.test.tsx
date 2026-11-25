@@ -1,47 +1,65 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { TUTORIAL_STEPS } from "../game/tutorialSteps.js";
 import { FirstRunTutorial } from "./FirstRunTutorial.js";
 
 afterEach(cleanup);
 
 describe("FirstRunTutorial", () => {
-  it("shows the current instruction, progress, and an always-available skip", () => {
+  it("has eight steps and shows the current one with its progress and an always-available skip", () => {
+    expect(TUTORIAL_STEPS).toEqual(["turn-order", "mana", "hand", "play-card", "end-first-turn", "attack", "hero-power", "end-second-turn"]);
     const onSkip = vi.fn();
-    render(<FirstRunTutorial step="attack" onAction={vi.fn()} onSkip={onSkip} />);
+    render(<FirstRunTutorial step="attack" inputMode="pointer" onAction={vi.fn()} onSkip={onSkip} />);
 
     expect(screen.getByRole("dialog", { name: "하수인 공격" })).toBeTruthy();
-    expect(screen.getByText("전투 안내 · 4 / 5")).toBeTruthy();
+    expect(screen.getByText("6 / 8")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
     expect(onSkip).toHaveBeenCalledOnce();
   });
 
-  it("lets the player continue after inspecting mana and hand", () => {
+  it("offers continue only on the mana and hand steps", () => {
     const onAction = vi.fn();
-    render(<FirstRunTutorial step="inspect-hand" onAction={onAction} onSkip={vi.fn()} />);
+    const { rerender } = render(<FirstRunTutorial step="mana" inputMode="pointer" onAction={onAction} onSkip={vi.fn()} />);
+    expect(screen.getByText(/매 턴 1씩 늘어 최대 10/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "계속" }));
+    expect(onAction).toHaveBeenCalledWith("continue");
 
+    rerender(<FirstRunTutorial step="hand" inputMode="pointer" onAction={onAction} onSkip={vi.fn()} />);
+    expect(screen.getByText(/왼쪽 위 숫자가 비용/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "계속" })).toBeTruthy();
+
+    for (const step of ["turn-order", "play-card", "end-first-turn", "attack", "hero-power", "end-second-turn"] as const) {
+      rerender(<FirstRunTutorial step={step} inputMode="pointer" onAction={onAction} onSkip={vi.fn()} />);
+      expect(screen.queryByRole("button", { name: "계속" })).toBeNull();
+    }
+  });
+
+  it("teaches the hero power cooldown and explains when the power cannot be used", () => {
+    const onAction = vi.fn();
+    const { rerender } = render(<FirstRunTutorial step="hero-power" playerClass="warrior" inputMode="pointer" onAction={onAction} onSkip={vi.fn()} />);
+    expect(screen.getByText(/한 번 쓰면 내 턴 2번을 쉰 뒤/)).toBeTruthy();
+
+    rerender(<FirstRunTutorial step="hero-power" playerClass="assassin" inputMode="touch" onAction={onAction} onSkip={vi.fn()} />);
+    expect(screen.getByText(/적 하수인이나 적 영웅을 골라 씁니다\. 버튼을 적 위로 끌어 놓아도 됩니다/)).toBeTruthy();
+
+    rerender(<FirstRunTutorial step="hero-power" playerClass="demonist" heroPowerUnavailable inputMode="pointer" onAction={onAction} onSkip={vi.fn()} />);
+    expect(screen.getByRole("dialog", { name: "영웅 능력은 다음에" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "계속" }));
     expect(onAction).toHaveBeenCalledWith("continue");
   });
 
-  it("keeps the mouse wording on pointer devices", () => {
+  it("keeps the mouse wording on pointer devices and drag wording on touch devices", () => {
     const { rerender } = render(<FirstRunTutorial step="play-card" inputMode="pointer" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText("마나가 충분한 카드 한 장을 손패에서 선택해 사용하세요.")).toBeTruthy();
-    rerender(<FirstRunTutorial step="attack" inputMode="pointer" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText("공격 가능한 아군 하수인을 선택한 뒤 적 하수인 또는 적 영웅을 공격하세요. 도발 하수인이 있으면 도발부터 공격해야 합니다.")).toBeTruthy();
-  });
-
-  it("explains tap-for-details and drag-to-act on touch devices instead of selecting", () => {
-    const { rerender } = render(<FirstRunTutorial step="inspect-hand" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText(/카드를 탭하면 자세히 볼 수 있습니다/)).toBeTruthy();
+    expect(screen.getByText(/하수인 카드를 골라 내 전장에 내세요/)).toBeTruthy();
     rerender(<FirstRunTutorial step="play-card" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText(/끌어 놓아 사용하세요/)).toBeTruthy();
-    expect(screen.queryByText(/선택해 사용/)).toBeNull();
+    expect(screen.getByText(/위로 끌어 내 전장의 빈 칸에 놓으세요/)).toBeTruthy();
     rerender(<FirstRunTutorial step="attack" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText(/끌어 적 하수인 또는 적 영웅 위에 놓아 공격/)).toBeTruthy();
-    expect(screen.queryByText(/선택한 뒤/)).toBeNull();
-    rerender(<FirstRunTutorial step="end-first-turn" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText("턴 종료를 눌러 적의 행동을 확인하세요.")).toBeTruthy();
+    expect(screen.getByText(/끌어 적 하수인이나 적 영웅 위에 놓으세요/)).toBeTruthy();
+    rerender(<FirstRunTutorial step="turn-order" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
+    expect(screen.getByText(/카드 한 장을 탭해/)).toBeTruthy();
+    rerender(<FirstRunTutorial step="hand" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
+    expect(screen.getByText(/카드를 탭하면 자세히 볼 수 있습니다/)).toBeTruthy();
   });
 
   it("follows the device when no input mode is given", () => {
@@ -49,7 +67,7 @@ describe("FirstRunTutorial", () => {
     Object.defineProperty(window, "matchMedia", { configurable: true, value: () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }) });
     try {
       render(<FirstRunTutorial step="play-card" onAction={vi.fn()} onSkip={vi.fn()} />);
-      expect(screen.getByText(/끌어 놓아 사용하세요/)).toBeTruthy();
+      expect(screen.getByText(/위로 끌어/)).toBeTruthy();
     } finally {
       if (original) Object.defineProperty(window, "matchMedia", original);
       else Reflect.deleteProperty(window, "matchMedia");

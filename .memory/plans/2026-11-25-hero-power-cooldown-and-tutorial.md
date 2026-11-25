@@ -10,8 +10,8 @@ Decisions: [2026-11-25-hero-power-cooldown-and-tutorial](../decisions/2026-11-25
 ## Phases
 | Phase | Status | Summary | Blueprint |
 | :--- | :--- | :--- | :--- |
-| P01 | `in_progress` | Engine cooldown, API schema, bot + measurement report, cooldown on the hero power button and in the texts | [P01](../phases/2026-11-25-hero-power-cooldown-and-tutorial/P01-hero-power-cooldown/phase.md) |
-| P02 | `pending` | Spotlight overlay, 8-step tutorial flow with the turn-order pick and hero power, taunt/fatigue tips, audit and close-out | [P02](../phases/2026-11-25-hero-power-cooldown-and-tutorial/P02-spotlight-tutorial/phase.md) |
+| P01 | `done` | Engine cooldown, API schema, bot + measurement report, cooldown on the hero power button and in the texts | [P01](../phases/2026-11-25-hero-power-cooldown-and-tutorial/P01-hero-power-cooldown/phase.md) |
+| P02 | `in_progress` | Spotlight overlay, 8-step tutorial flow with the turn-order pick and hero power, taunt/fatigue tips, audit and close-out | [P02](../phases/2026-11-25-hero-power-cooldown-and-tutorial/P02-spotlight-tutorial/phase.md) |
 
 ## Boundaries
 - No release, version bump or patch-note entry in this plan. Releases only when the user asks.

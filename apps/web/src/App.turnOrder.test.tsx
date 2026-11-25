@@ -61,13 +61,17 @@ describe("turn-order pick on the game screen", () => {
     expect(await screen.findByRole("button", { name: /동전/ })).toBeTruthy();
   });
 
-  it("lets the first-run tutorial start as the first player without showing the picker", async () => {
+  it("shows the picker in the first-run tutorial and makes the player first whichever card is picked", async () => {
     window.localStorage.clear();
     const run = createRun(16, "warrior", "normal", { pickTurnOrder: true });
     renderWithTestAuth(<GameSessionView sync={makeReadySync(run)} />);
     enterActiveEncounter();
-    expect(await screen.findByRole("dialog", { name: /전투 안내|손패와 마나 확인/ })).toBeTruthy();
-    expect(screen.queryByRole("dialog", { name: "선후공 정하기" })).toBeNull();
+    expect(await screen.findByRole("dialog", { name: "선후공 카드 고르기" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "선후공 정하기" })).toBeTruthy();
+    const secondIndex = run.battle!.turnOrderCards!.indexOf("second");
+    fireEvent.click(screen.getByRole("button", { name: `카드 ${secondIndex + 1} 선택` }));
+    expect(await screen.findByRole("dialog", { name: "마나" })).toBeTruthy();
+    expect(screen.getByText("선공입니다")).toBeTruthy();
     expect(document.querySelectorAll(".hand-card-inspection").length).toBeGreaterThan(0);
   });
 });

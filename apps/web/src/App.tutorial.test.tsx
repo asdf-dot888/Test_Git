@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import { createRun, type RunState } from "@board-game/game-core";
+import { createRun, type PlayerClass, type RunState } from "@board-game/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameSessionView } from "./App.js";
 import { renderWithTestAuth } from "./App.testUtils.js";
@@ -14,8 +14,8 @@ function makeSync(run = createRun(55)): LocalRunController {
   };
 }
 
-function makeDamagedTutorialRun() {
-  const run = createRun(55);
+function makeDamagedTutorialRun(playerClass: PlayerClass = "warrior") {
+  const run = createRun(55, playerClass);
   const battle = run.battle!;
   battle.playerHero.health = 12;
   battle.enemyHero.health -= 5;
@@ -36,7 +36,8 @@ function makeDamagedTutorialRun() {
 async function openActiveBattleTutorial() {
   fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
   fireEvent.click(screen.getByRole("button", { name: /페이즈 1, 1번째 전투/ }));
-  expect(await screen.findByRole("dialog", { name: /손패와 마나 확인/ })).toBeTruthy();
+  // The saved battle already has its turn order, so the tutorial resumes at the mana step.
+  expect(await screen.findByRole("dialog", { name: "마나" })).toBeTruthy();
 }
 
 function latestSavedRun(sync: LocalRunController, runId: string): RunState | undefined {
@@ -49,16 +50,25 @@ afterEach(() => {
 });
 
 describe("first battle tutorial lifecycle", () => {
-  it("starts for an account without a completion record and skip persists completion", async () => {
-    renderWithTestAuth(<GameSessionView sync={makeSync()} />);
+  it("starts at the turn-order cards, always makes the player first, and skip persists completion", async () => {
+    const run = createRun(55, "warrior", "normal", { pickTurnOrder: true });
+    const secondIndex = run.battle!.turnOrderCards!.indexOf("second");
+    const sync = makeSync(run);
+    renderWithTestAuth(<GameSessionView sync={sync} />);
 
     fireEvent.click(screen.getByRole("button", { name: "원정 계속하기" }));
     fireEvent.click(screen.getByRole("button", { name: /페이즈 1, 1번째 전투/ }));
-    expect(await screen.findByRole("dialog", { name: /손패와 마나 확인/ })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "선후공 카드 고르기" })).toBeTruthy();
+    expect(screen.getByText("1 / 8")).toBeTruthy();
+
+    // Even the card that hides "second" turns out first in the tutorial.
+    fireEvent.click(screen.getByRole("button", { name: `카드 ${secondIndex + 1} 선택` }));
+    expect(await screen.findByRole("dialog", { name: "마나" })).toBeTruthy();
+    await waitFor(() => expect(latestSavedRun(sync, run.runId)?.battle?.firstSide).toBe("player"));
 
     fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
     await waitFor(() => expect(JSON.parse(window.localStorage.getItem("board-card-roguelike:tutorial:v1:test-employee") ?? "null").completed).toBe(true));
-    expect(screen.queryByRole("dialog", { name: /손패와 마나 확인/ })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "마나" })).toBeNull();
   });
 
   it("restores player-side health after skipping the first-run tutorial", async () => {
@@ -86,14 +96,23 @@ describe("first battle tutorial lifecycle", () => {
     await openActiveBattleTutorial();
 
     fireEvent.click(screen.getByRole("button", { name: "계속" }));
+    expect(await screen.findByRole("dialog", { name: "손패와 비용" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "계속" }));
+    expect(await screen.findByRole("dialog", { name: "하수인 내기" })).toBeTruthy();
+    // The hero power waits for its own step.
+    fireEvent.click(screen.getByRole("button", { name: /방패 다지기/ }));
+    expect(screen.getByRole("dialog", { name: "하수인 내기" })).toBeTruthy();
     fireEvent.click(document.querySelector(".game-card")!);
-    expect(await screen.findByRole("dialog", { name: /첫 턴 종료/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /턴 종료/ }));
-    expect(await screen.findByRole("dialog", { name: /하수인 공격/ })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "턴 종료" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^턴 종료/ }));
+    expect(await screen.findByRole("dialog", { name: "하수인 공격" })).toBeTruthy();
     fireEvent.click(screen.getAllByRole("button", { name: /아군 하수인/ })[0]!);
     fireEvent.click(screen.getByRole("button", { name: /대상으로 선택/ }));
-    expect(await screen.findByRole("dialog", { name: /두 번째 턴 종료/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /턴 종료/ }));
+    expect(await screen.findByRole("dialog", { name: "영웅 능력" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /방패 다지기/ }));
+    expect(await screen.findByRole("dialog", { name: "마무리" })).toBeTruthy();
+    await waitFor(() => expect(latestSavedRun(sync, run.runId)?.battle?.heroPowerCooldown).toBe(2));
+    fireEvent.click(screen.getByRole("button", { name: /^턴 종료/ }));
 
     await waitFor(() => {
       const saved = latestSavedRun(sync, run.runId);
@@ -106,6 +125,24 @@ describe("first battle tutorial lifecycle", () => {
     expect(saved.battle?.battleId).toBe(run.battle?.battleId);
   });
 
+  it("explains and moves on when the Demonist has no soul shards for the hero power", async () => {
+    const run = makeDamagedTutorialRun("demonist");
+    run.battle!.soulShards = 0;
+    renderWithTestAuth(<GameSessionView sync={makeSync(run)} />);
+    await openActiveBattleTutorial();
+
+    fireEvent.click(screen.getByRole("button", { name: "계속" }));
+    fireEvent.click(await screen.findByRole("button", { name: "계속" }));
+    fireEvent.click(document.querySelector(".game-card")!);
+    fireEvent.click(await screen.findByRole("button", { name: /^턴 종료/ }));
+    expect(await screen.findByRole("dialog", { name: "하수인 공격" })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: /아군 하수인/ })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: /대상으로 선택/ }));
+    expect(await screen.findByRole("dialog", { name: "영웅 능력은 다음에" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "계속" }));
+    expect(await screen.findByRole("dialog", { name: "마무리" })).toBeTruthy();
+  });
+
   it("does not auto-start for a completed account and exposes replay in the game guide", async () => {
     window.localStorage.setItem("board-card-roguelike:tutorial:v1:test-employee", JSON.stringify({
       schemaVersion: 1, userId: "test-employee", completed: true, completedAt: "2026-10-30T03:00:00.000Z",
@@ -116,7 +153,7 @@ describe("first battle tutorial lifecycle", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "게임 방법" }));
     fireEvent.click(screen.getByRole("button", { name: "전투 튜토리얼 다시 보기" }));
-    expect(await screen.findByRole("dialog", { name: /손패와 마나 확인/ })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "선후공 카드 고르기" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
     expect(await screen.findByRole("button", { name: "게임 방법" })).toBeTruthy();
     const replayRunId = createRun(20261030).runId;
