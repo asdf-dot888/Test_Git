@@ -56,6 +56,7 @@ const battleSchema = z.object({
   firstSide: z.enum(["player", "enemy"]).nullable().optional(),
   turnOrderCards: z.tuple([z.enum(["first", "second"]), z.enum(["first", "second"])]).optional(),
   playerFatigue: z.number().int().min(0).max(1000).optional(),
+  heroPowerCooldown: z.number().int().min(0).max(10).optional(),
   enemyFatigue: z.number().int().min(0).max(1000).optional(),
   pendingDiscardBeforeDraw: z.boolean().optional().transform((value) => value ?? false),
 });

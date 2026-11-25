@@ -103,6 +103,8 @@ export interface BattleState {
   playerArmor: number;
   soulShards: number;
   heroPowerUsed: boolean;
+  /** Player turns the hero power still has to rest after its last use; 0 = ready. Missing in old saves (treated as 0). */
+  heroPowerCooldown: number;
   hand: CardInstance[];
   drawPile: CardInstance[];
   discardPile: CardInstance[];

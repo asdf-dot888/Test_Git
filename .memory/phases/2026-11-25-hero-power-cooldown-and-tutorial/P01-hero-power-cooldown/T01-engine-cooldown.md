@@ -1,6 +1,6 @@
 # Task: T01 Engine Hero Power Cooldown
 
-## Status: pending
+## Status: done
 
 ## Goal
 After the player uses the hero power, the engine refuses it for the player's next 2 turns and allows it again on the turn after (used on turn 3, refused on turns 4 and 5, allowed on turn 6). Old saves load with the hero power ready. This is the rule every other task builds on.
@@ -77,10 +77,10 @@ After the player uses the hero power, the engine refuses it for the player's nex
 - If the 11 golden enemy-turn hashes change (they should not, the enemy has no hero power), find out why before re-capturing.
 
 ## Acceptance Criteria
-- [ ] Used on turn N: refused on N+1 and N+2, allowed on N+3; refused message names the remaining turns.
-- [ ] New battles and hydrated old saves start with `heroPowerCooldown = 0`.
-- [ ] The API keeps `heroPowerCooldown` through a save.
-- [ ] All existing tests pass; golden hashes unchanged.
+- [x] Used on turn N: refused on N+1 and N+2, allowed on N+3; refused message names the remaining turns.
+- [x] New battles and hydrated old saves start with `heroPowerCooldown = 0`.
+- [x] The API keeps `heroPowerCooldown` through a save.
+- [x] All existing tests pass; golden hashes unchanged.
 
 ## Validation
 - `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"; npm test` — all test files pass (104+ files).
@@ -100,6 +100,6 @@ Task: T01-engine-cooldown
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (1264 tests / 104 files, lint, tsc for game-core, web and api; golden hashes unchanged)
+- commit: see git log (feat(core): give the hero power a two-turn cooldown)

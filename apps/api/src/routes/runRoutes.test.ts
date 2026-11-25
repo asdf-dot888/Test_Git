@@ -271,6 +271,20 @@ describe("authenticated Run API", () => {
     expect(repository.save.mock.calls[0]?.[3].battle?.enemyFatigue).toBe(2);
   });
 
+  it("keeps the hero power cooldown of a battle through a save", async () => {
+    await repository.create(userId, createRun(17), ownerId, instant);
+    const run = createRun(92);
+    run.battle!.heroPowerCooldown = 2;
+    const response = await fetch(`${baseUrl}/api/run`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": "etag-1", "x-run-owner": ownerId },
+      body: JSON.stringify({ run }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(repository.save.mock.calls[0]?.[3].battle?.heroPowerCooldown).toBe(2);
+  });
+
   it("keeps a pending turn-order pick and the chosen side through a save", async () => {
     await repository.create(userId, createRun(17), ownerId, instant);
     const pending = createRun(91, "warrior", "normal", { pickTurnOrder: true });

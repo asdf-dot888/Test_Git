@@ -35,6 +35,8 @@ const CHEAP_CARD_COST = 5;
 /** The boss area attack comes every Nth turn: every 4th on normal, every 3rd on hard. */
 export const BOSS_AREA_ATTACK_EVERY_N_TURNS: Record<RunDifficulty, number> = { normal: 4, hard: 3 };
 const SOUL_SHARD_HERO_POWER_COST = 2;
+/** After a use, the hero power rests for this many of the player's own turns. */
+const HERO_POWER_COOLDOWN_TURNS = 2;
 type PhaseTable = Record<RunState["phase"], number>;
 interface EnemyPhaseBonus {
   heroHealth: PhaseTable;
@@ -196,7 +198,7 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   const battle = run.battle;
   if (!battle || run.status !== "active" || battle.status !== "active") return run;
   const hasEnemyZones = Boolean(battle.enemyMana && battle.enemyStarterDeck && battle.enemyHand && battle.enemyDrawPile && battle.enemyDiscardPile);
-  const hasClassResources = Number.isInteger(battle.playerArmor) && Number.isInteger(battle.soulShards) && typeof battle.heroPowerUsed === "boolean";
+  const hasClassResources = Number.isInteger(battle.playerArmor) && Number.isInteger(battle.soulShards) && typeof battle.heroPowerUsed === "boolean" && Number.isInteger(battle.heroPowerCooldown);
   const hasTemporaryMana = Number.isInteger(battle.playerMana?.temporary) && Number.isInteger(battle.enemyMana?.temporary);
   const hasObsoleteCharge = Object.prototype.hasOwnProperty.call(battle, "pendingEnemyCharge");
   const hasFatigue = Number.isInteger(battle.playerFatigue) && Number.isInteger(battle.enemyFatigue);
@@ -222,6 +224,7 @@ export function hydrateRunForCurrentBattle(run: RunState): RunState {
   current.playerArmor ??= 0;
   current.soulShards ??= 0;
   current.heroPowerUsed ??= false;
+  current.heroPowerCooldown ??= 0;
   current.playerFatigue ??= 0;
   current.enemyFatigue ??= 0;
   // A battle saved before the turn-order pick existed was always player-first.
@@ -675,6 +678,8 @@ function startPlayerTurn(run: RunState, advanceRound = true): RunState {
   const playerCap = manaCapForTurn(battle.turnNumber);
   battle.playerMana = { current: playerCap, max: playerCap, temporary: 0 };
   battle.playerBoard = battle.playerBoard.map((minion) => ({ ...minion, hasAttacked: false }));
+  // The turn of use does not count; every later player turn takes one off the rest.
+  if (battle.heroPowerCooldown > 0 && !battle.heroPowerUsed) battle.heroPowerCooldown -= 1;
   battle.heroPowerUsed = false;
   return drawIntoHand(run, "player");
 }
@@ -1333,6 +1338,7 @@ function beginEncounter(run: RunState, encounterIndex: number, battleSeed: numbe
     playerArmor: 0,
     soulShards: 0,
     heroPowerUsed: false,
+    heroPowerCooldown: 0,
     // The hands are dealt when the turn order is chosen (3 cards for the first side, 4 and the Coin for the second).
     hand: [],
     drawPile: shuffled.items,
@@ -1451,6 +1457,7 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
   const battle = assertPlayerTurn(next);
   if (!next.playerClass) fail("INVALID_ACTION", "Legacy runs do not have a hero power.");
   if (battle.heroPowerUsed) fail("INVALID_ACTION", "The hero power was already used this turn.");
+  if (battle.heroPowerCooldown > 0) fail("INVALID_ACTION", `The hero power is recharging for ${battle.heroPowerCooldown} more turn(s).`);
   if (battle.playerMana.current < 2) fail("INSUFFICIENT_MANA", "A hero power costs 2 mana.");
 
   if (next.playerClass === "assassin") {
@@ -1468,6 +1475,7 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
 
   spendMana(battle, "player", 2);
   battle.heroPowerUsed = true;
+  battle.heroPowerCooldown = HERO_POWER_COOLDOWN_TURNS;
   if (next.playerClass === "assassin") {
     if (targetId === "enemy-hero") return consumeOpeningHandRedraw(dealDamageToEnemyHero(next, 2));
     const target = battle.enemyBoard.find((minion) => minion.instanceId === targetId)!;
@@ -1802,6 +1810,7 @@ export const gameConstants = {
   initialMana: INITIAL_MANA,
   maxMana: MAX_MANA,
   soulShardHeroPowerCost: SOUL_SHARD_HERO_POWER_COST,
+  heroPowerCooldownTurns: HERO_POWER_COOLDOWN_TURNS,
   hardAiBeamWidth,
   normalAiBeamWidth,
   enemyPhaseBonus: ENEMY_PHASE_BONUS,

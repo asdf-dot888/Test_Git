@@ -660,6 +660,41 @@ describe("class hero powers and battle resources", () => {
     expect(nextBattle.battle?.playerArmor).toBe(0);
     expect(nextBattle.battle?.soulShards).toBe(0);
     expect(nextBattle.battle?.heroPowerUsed).toBe(false);
+    expect(nextBattle.battle?.heroPowerCooldown).toBe(0);
+  });
+
+  it("rests the hero power for the player's next two turns after a use", () => {
+    expect(gameConstants.heroPowerCooldownTurns).toBe(2);
+    const fresh = createRun(1251, "warrior");
+    expect(fresh.battle?.heroPowerCooldown).toBe(0);
+    const withMana = (run: RunState): RunState => {
+      const next = copyRun(run);
+      activeBattle(next).playerMana = { current: 10, max: 10, temporary: 0 };
+      return next;
+    };
+    const nextPlayerTurn = (run: RunState): RunState => {
+      const next = endPlayerTurn(run);
+      expect(next.battle?.activeSide).toBe("player");
+      return next;
+    };
+
+    const used = useHeroPower(withMana(fresh));
+    expect(used.battle?.heroPowerCooldown).toBe(2);
+    expect(used.battle?.heroPowerUsed).toBe(true);
+
+    const secondTurn = withMana(nextPlayerTurn(used));
+    expect(secondTurn.battle?.heroPowerCooldown).toBe(2);
+    expect(() => useHeroPower(secondTurn)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION", message: expect.stringContaining("2 more turn") }));
+
+    const thirdTurn = withMana(nextPlayerTurn(secondTurn));
+    expect(thirdTurn.battle?.heroPowerCooldown).toBe(1);
+    expect(() => useHeroPower(thirdTurn)).toThrowError(expect.objectContaining({ code: "INVALID_ACTION" }));
+
+    const fourthTurn = withMana(nextPlayerTurn(thirdTurn));
+    expect(fourthTurn.battle?.heroPowerCooldown).toBe(0);
+    const reused = useHeroPower(fourthTurn);
+    expect(reused.battle?.playerArmor).toBeGreaterThan(fourthTurn.battle!.playerArmor);
+    expect(reused.battle?.heroPowerCooldown).toBe(2);
   });
 
   it("hydrates class resources for an older active schema-v1 battle", () => {
@@ -668,8 +703,9 @@ describe("class hero powers and battle resources", () => {
     delete oldBattle.playerArmor;
     delete oldBattle.soulShards;
     delete oldBattle.heroPowerUsed;
+    delete oldBattle.heroPowerCooldown;
     const hydrated = hydrateRunForCurrentBattle(oldRun);
-    expect(hydrated.battle).toMatchObject({ playerArmor: 0, soulShards: 0, heroPowerUsed: false });
+    expect(hydrated.battle).toMatchObject({ playerArmor: 0, soulShards: 0, heroPowerUsed: false, heroPowerCooldown: 0 });
     expect(oldBattle).not.toEqual(hydrated.battle);
   });
 });
