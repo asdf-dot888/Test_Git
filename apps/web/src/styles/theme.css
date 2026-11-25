@@ -141,75 +141,21 @@ button:focus-visible, a:focus-visible { outline-color: var(--soul); }
 .turn-badge.is-player { color: #bff0e6; border-color: rgb(88 191 174 / 70%); background: rgb(24 60 56 / 70%); }
 .turn-badge.is-enemy { color: #ffb4a0; border-color: rgb(196 71 45 / 75%); background: rgb(80 22 14 / 75%); }
 
-/* The battle board is a slab of black altar stone, built in CSS instead of the old beige art:
-   stone grain and clouding, a faint brass ritual sigil in the middle, an ember rift between the two sides,
-   a cold red haze over the enemy half and candlelight rising under the player's half. */
+/* The battle board keeps the original parchment-stone art; only depth is added:
+   a soft vignette, a warm glow under the player's side and a bevelled brass edge. */
 .game-shell {
   background:
     linear-gradient(180deg, rgb(14 11 17 / 88%), rgb(14 11 17 / 94%)),
     #0e0b11 url("/art/expedition-route-background.png") center 35% / cover no-repeat;
 }
 .battle-board {
-  --sigil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' fill='none' stroke='%23c9a25e'%3E%3Cdefs%3E%3Cpath id='r' d='M200 15a185 185 0 1 1 -0.1 0'/%3E%3C/defs%3E%3Ccircle cx='200' cy='200' r='196' stroke-opacity='.2'/%3E%3Ccircle cx='200' cy='200' r='172' stroke-opacity='.16'/%3E%3Ctext fill='%23c9a25e' fill-opacity='.2' stroke='none' font-size='13' letter-spacing='6.4' font-family='serif'%3E%3CtextPath href='%23r'%3E%E1%9A%A0%E1%9A%A2%E1%9A%A6%E1%9A%A8%E1%9A%B1%E1%9A%B2%E1%9A%B7%E1%9A%B9%E1%9A%BA%E1%9A%BE%E1%9B%81%E1%9B%83%E1%9B%87%E1%9B%88%E1%9B%89%E1%9B%8A%E1%9B%8F%E1%9B%92%E1%9B%96%E1%9B%97%E1%9B%9A%E1%9B%9C%E1%9B%9E%E1%9B%9F%E1%9A%A0%E1%9A%A2%E1%9A%A6%E1%9A%A8%E1%9A%B1%E1%9A%B2%E1%9A%B7%E1%9A%B9%E1%9A%BA%E1%9A%BE%E1%9B%81%E1%9B%83%E1%9B%87%E1%9B%88%E1%9B%89%E1%9B%8A%E1%9B%8F%E1%9B%92%E1%9B%96%E1%9B%97%E1%9B%9A%E1%9B%9C%E1%9B%9E%E1%9B%9F%3C/textPath%3E%3C/text%3E%3Ccircle cx='200' cy='200' r='128' stroke-opacity='.2'/%3E%3Ccircle cx='200' cy='200' r='122' stroke-opacity='.1' stroke-dasharray='1 6'/%3E%3Ccircle cx='200' cy='200' r='60' stroke-opacity='.16'/%3E%3Cpath stroke-opacity='.14' d='M200 28v344M28 200h344M78 78l244 244M322 78L78 322'/%3E%3Cpath stroke-opacity='.26' d='M200 72L236 164L328 200L236 236L200 328L164 236L72 200L164 164Z'/%3E%3Cpath stroke-opacity='.2' d='M200 140L215 185L260 200L215 215L200 260L185 215L140 200L185 185Z'/%3E%3Ccircle cx='372.0' cy='200.0' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3Ccircle cx='321.6' cy='321.6' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3Ccircle cx='200.0' cy='372.0' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3Ccircle cx='78.4' cy='321.6' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3Ccircle cx='28.0' cy='200.0' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3Ccircle cx='78.4' cy='78.4' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3Ccircle cx='200.0' cy='28.0' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3Ccircle cx='321.6' cy='78.4' r='3' fill='%23c9a25e' fill-opacity='.3' stroke='none'/%3E%3C/svg%3E");
-  border: 1px solid rgb(168 132 79 / 42%);
-  border-radius: 4px;
   background:
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") 0 0 / 220px 220px,
-    radial-gradient(60% 42% at 50% 104%, rgb(224 128 64 / 20%), transparent 70%),
-    radial-gradient(70% 40% at 50% -6%, rgb(150 28 36 / 26%), transparent 72%),
-    var(--sigil) center / auto 96% no-repeat,
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='600'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='.006 .011' numOctaves='4' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .55 0 0 0 0 .5 0 0 0 0 .6 0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23c)'/></svg>") center / cover,
-    radial-gradient(120% 110% at 50% 50%, #261f2b 0%, #18131c 55%, #0b090d 100%);
-  box-shadow: 0 0 0 1px #07060a, 0 0 0 6px #120f15, 0 0 0 7px rgb(168 132 79 / 22%), 0 30px 80px rgb(0 0 0 / 70%), inset 0 0 90px rgb(0 0 0 / 70%);
+    radial-gradient(130% 120% at 50% 50%, transparent 55%, rgb(40 26 12 / 45%) 100%),
+    radial-gradient(60% 40% at 50% 105%, rgb(255 190 110 / 14%), transparent 70%),
+    #75624a url("/art/board-surface.png") center / cover no-repeat;
+  box-shadow: 0 0 0 1px #07060a, 0 0 0 5px #19141c, 0 0 0 6px rgb(214 180 122 / 30%), 0 26px 70px rgb(0 0 0 / 65%), inset 0 0 0 1px rgb(255 240 210 / 18%), inset 0 0 50px rgb(35 23 10 / 35%);
 }
-/* Brass corner brackets frame the slab. */
-.battle-board::before {
-  --b: rgb(214 180 122 / 55%);
-  inset: 10px;
-  background:
-    linear-gradient(var(--b), var(--b)) left top / 44px 1px,
-    linear-gradient(var(--b), var(--b)) left top / 1px 44px,
-    linear-gradient(var(--b), var(--b)) right top / 44px 1px,
-    linear-gradient(var(--b), var(--b)) right top / 1px 44px,
-    linear-gradient(var(--b), var(--b)) left bottom / 44px 1px,
-    linear-gradient(var(--b), var(--b)) left bottom / 1px 44px,
-    linear-gradient(var(--b), var(--b)) right bottom / 44px 1px,
-    linear-gradient(var(--b), var(--b)) right bottom / 1px 44px;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-.battle-board.is-player-turn { border-color: rgb(88 191 174 / 55%); box-shadow: 0 0 0 1px #07060a, 0 0 0 6px #120f15, 0 0 0 7px rgb(88 191 174 / 28%), 0 0 34px rgb(88 191 174 / 12%), 0 30px 80px rgb(0 0 0 / 70%), inset 0 0 90px rgb(0 0 0 / 70%); }
-.battle-board.is-enemy-turn { border-color: rgb(196 71 45 / 70%); box-shadow: 0 0 0 1px #07060a, 0 0 0 6px #120f15, 0 0 0 7px rgb(196 71 45 / 40%), 0 0 34px rgb(196 71 45 / 20%), 0 30px 80px rgb(0 0 0 / 70%), inset 0 0 90px rgb(0 0 0 / 70%); }
-
-/* The rift between the sides: a thin crack of ember light with a seal at its centre. */
-.board-divider {
-  height: 2px;
-  background: linear-gradient(90deg, transparent 2%, rgb(196 71 45 / 70%) 22%, #ff9a6a 50%, rgb(196 71 45 / 70%) 78%, transparent 98%);
-  box-shadow: 0 0 10px 1px rgb(226 98 58 / 55%), 0 0 42px 8px rgb(196 71 45 / 18%);
-}
-.board-divider span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  color: #ffb58c;
-  font-size: 13px;
-  background: radial-gradient(circle at 50% 40%, #3a1a14, #120f15 70%);
-  border: 1px solid #e0794f;
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px #120f15, 0 0 18px rgb(226 98 58 / 60%);
-}
-.lane-enemy::before { background: radial-gradient(ellipse, rgb(170 36 30 / 22%), rgb(170 36 30 / 6%) 54%, transparent 76%); }
-
-/* Empty slots are carved hollows in the stone, not dashed outlines. */
-.empty-slot {
-  border: 0;
-  border-radius: 5px;
-  background: linear-gradient(180deg, rgb(4 3 6 / 70%), rgb(16 12 19 / 45%));
-  box-shadow: inset 0 3px 8px rgb(0 0 0 / 80%), inset 0 0 0 1px rgb(0 0 0 / 60%), 0 1px 0 rgb(214 180 122 / 10%);
-}
-.lane-slot.is-drop-valid .empty-slot { box-shadow: inset 0 3px 8px rgb(0 0 0 / 80%), 0 0 0 1px rgb(88 191 174 / 70%), 0 0 16px rgb(88 191 174 / 35%); }
+.empty-slot { box-shadow: inset 0 2px 6px rgb(60 40 18 / 22%), 0 1px 0 rgb(255 245 225 / 25%); }
 
 /* Hero plaques */
 .hero-panel {
@@ -426,8 +372,6 @@ button:focus-visible, a:focus-visible { outline-color: var(--soul); }
 }
 .mana-orb { border-color: #3a3340; background: radial-gradient(circle at 40% 35%, #2a2430, #0e0b11); box-shadow: inset 0 1px 2px #000; }
 
-/* Each empty hollow carries a faint engraved diamond so the board reads as worked stone. */
-.empty-slot { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 1L19 10L10 19L1 10Z' fill='none' stroke='%23d6b47a' stroke-opacity='.16'/%3E%3Cpath d='M10 6L14 10L10 14L6 10Z' fill='%23d6b47a' fill-opacity='.08'/%3E%3C/svg%3E") center / 22px 22px no-repeat, linear-gradient(180deg, rgb(4 3 6 / 70%), rgb(16 12 19 / 45%)); }
 
 /* Enemy intent preview matches the plaques. */
 .enemy-intent-preview { border-color: rgb(196 71 45 / 60%); border-radius: 4px; background: linear-gradient(180deg, rgb(255 255 255 / 4%), transparent 40%), linear-gradient(180deg, #221820, #100c12); box-shadow: inset 0 0 0 3px #100c12, inset 0 0 0 4px rgb(196 71 45 / 18%), 0 14px 34px rgb(0 0 0 / 70%); }
@@ -435,3 +379,6 @@ button:focus-visible, a:focus-visible { outline-color: var(--soul); }
 @media (prefers-reduced-motion: reduce) {
   .menu-card h1 { animation: none; }
 }
+
+/* Enemy deck counts sit on the light board art, so give them a small dark plaque to stay readable. */
+.enemy-deck-counts { padding: 4px 9px; color: var(--ash); border: 1px solid rgb(214 180 122 / 35%); border-radius: 3px; background: rgb(16 12 18 / 82%); }
