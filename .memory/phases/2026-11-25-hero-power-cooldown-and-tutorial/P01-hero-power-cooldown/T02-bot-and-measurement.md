@@ -1,6 +1,6 @@
 # Task: T02 Simulation Bot Cooldown and Measurement
 
-## Status: pending
+## Status: done
 
 ## Goal
 The balance simulation bot stops trying the hero power while it is recharging, and a 1000-run measurement of both difficulties and all three classes is written to `docs/balance/2026-11-25-hero-power-cooldown.md` and reported to the user. No balance numbers change.
@@ -32,9 +32,9 @@ The balance simulation bot stops trying the hero power while it is recharging, a
 3. Append a short "Comparison" section by hand at the end of the generated file: a table with normal/hard average completion and class gap, before (2026-11-24 final) and after, plus 1-3 proposed adjustments if a value left its target (for example "lower boss health by 1-2 on normal", "Demonist hero power cost"), each marked "proposal, not applied".
 
 ## Acceptance Criteria
-- [ ] The bot never throws or wastes an action on a recharging hero power.
-- [ ] The 1000-run report exists with the comparison section; no balance constant or card stat changed in this commit.
-- [ ] The numbers and proposals are reported to the user, who decides on tuning.
+- [x] The bot never throws or wastes an action on a recharging hero power.
+- [x] The 1000-run report exists with the comparison section; no balance constant or card stat changed in this commit.
+- [x] The numbers and proposals are reported to the user, who decides on tuning.
 
 ## Validation
 - `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"; npm test` — all pass.
@@ -53,6 +53,6 @@ Task: T02-bot-and-measurement
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (bot test added; 1000-run report: normal 53.3 %, hard 8.1 %, class gap normal 12.0 / hard 6.7 %p; proposals in the report, nothing tuned)
+- commit: see git log (docs(balance): measure the hero power cooldown (no tuning))

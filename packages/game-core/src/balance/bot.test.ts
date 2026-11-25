@@ -99,6 +99,26 @@ describe("turn order and taunt", () => {
     expect(secondCount).toBeLessThan(30);
   });
 
+  it("uses the hero power only when it is not recharging", () => {
+    const quietTurn = (cooldown: number) => {
+      const run = createRun(23, "warrior", "normal");
+      const battle = run.battle!;
+      battle.turnNumber = 3;
+      battle.hand = [];
+      battle.playerMana = { current: 10, max: 10, temporary: 0 };
+      battle.enemyBoard = [];
+      battle.enemyHand = [];
+      battle.heroPowerCooldown = cooldown;
+      return playBotTurn(run).run.battle!;
+    };
+    // Ready: the warrior gains 4 armor and the power starts its rest.
+    expect(quietTurn(0).playerArmor).toBe(4);
+    // Recharging: no armor, and the rest counts down at the next player turn instead of being wasted on a refused action.
+    const recharging = quietTurn(2);
+    expect(recharging.playerArmor).toBe(0);
+    expect(recharging.heroPowerCooldown).toBe(1);
+  });
+
   it("attacks the taunt minion first, and goes for the hero when nothing blocks it", () => {
     const makeMinion = (instanceId: string, cardId: string, owner: "player" | "enemy", attack: number, health: number) =>
       ({ instanceId, cardId, owner, attack, health, maxHealth: health, summonedTurn: 0, hasAttacked: false });

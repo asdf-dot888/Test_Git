@@ -339,7 +339,7 @@ function spendPhase(ctx: TurnContext): void {
 function heroPowerPhase(ctx: TurnContext): void {
   const battle = activeBattle(ctx);
   const playerClass = ctx.run.playerClass;
-  if (!battle || !playerClass || battle.heroPowerUsed || battle.playerMana.current < 2) return;
+  if (!battle || !playerClass || battle.heroPowerUsed || battle.heroPowerCooldown > 0 || battle.playerMana.current < 2) return;
   if (playerClass === "warrior") {
     attempt(ctx, (run) => useHeroPower(run));
   } else if (playerClass === "demonist") {
