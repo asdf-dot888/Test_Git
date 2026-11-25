@@ -27,6 +27,14 @@ describe("MainMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
   });
 
+  it("links the version label to the patch notes in a new tab", () => {
+    render(<MainMenu canContinue={false} onStart={vi.fn()} onContinue={vi.fn()} onLeaderboard={vi.fn()} onAudioSettings={vi.fn()} />);
+    const link = screen.getByRole("link", { name: /패치노트/ });
+    expect(link.getAttribute("href")).toBe("/changelog.html");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+  });
+
   it("keeps continue before new expedition and the guide immediately after it", () => {
     const { container } = render(<MainMenu canContinue onStart={vi.fn()} onContinue={vi.fn()} onLeaderboard={vi.fn()} onAudioSettings={vi.fn()} />);
     const menuButtons = within(container.querySelector(".menu-card")!).getAllByRole("button");
