@@ -47,6 +47,8 @@ export function TutorialSpotlight({ target, title, description, stepLabel, conti
   const [box, setBox] = useState<Box | null>(() => measure(target, padding));
   const [viewport, setViewport] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
   const continueRef = useRef<HTMLButtonElement>(null);
+  const calloutRef = useRef<HTMLElement>(null);
+  const [calloutHeight, setCalloutHeight] = useState(SPACE_BELOW_NEEDED);
 
   useLayoutEffect(() => {
     let frame = 0;
@@ -55,6 +57,8 @@ export function TutorialSpotlight({ target, title, description, stepLabel, conti
       const next = measure(target, padding);
       setBox((current) => (sameBox(current, next) ? current : next));
       setViewport((current) => (current.width === window.innerWidth && current.height === window.innerHeight ? current : { width: window.innerWidth, height: window.innerHeight }));
+      const height = calloutRef.current?.offsetHeight;
+      if (height) setCalloutHeight((current) => (Math.abs(current - height) < 1 ? current : height));
     };
     // Cards animate in and the hand grows, so the target is re-measured a few times a second while the step is shown.
     const tick = (time: number) => {
@@ -95,10 +99,12 @@ export function TutorialSpotlight({ target, title, description, stepLabel, conti
     const left = Math.min(Math.max(centre - calloutWidth / 2, EDGE), viewport.width - calloutWidth - EDGE);
     arrowLeft = Math.min(Math.max(centre - left, 18), calloutWidth - 18);
     const spaceBelow = viewport.height - (box.top + box.height);
-    if (spaceBelow >= SPACE_BELOW_NEEDED) {
+    // The callout goes below the target when it fits there, otherwise above, otherwise in the middle of the screen.
+    const needed = calloutHeight + 14 + EDGE;
+    if (spaceBelow >= needed) {
       calloutStyle = { top: box.top + box.height + 14, left, width: calloutWidth };
       arrow = "up";
-    } else if (box.top >= SPACE_BELOW_NEEDED) {
+    } else if (box.top >= needed) {
       calloutStyle = { bottom: viewport.height - box.top + 14, left, width: calloutWidth };
       arrow = "down";
     } else {
@@ -113,7 +119,7 @@ export function TutorialSpotlight({ target, title, description, stepLabel, conti
       {box
         ? <div className="tutorial-spotlight-hole" data-testid="tutorial-spotlight-hole" style={{ top: box.top, left: box.left, width: box.width, height: box.height }} />
         : <div className="tutorial-spotlight-dim" />}
-      <aside className="tutorial-spotlight-callout" role="dialog" aria-modal="false" aria-labelledby={titleId} aria-describedby={descriptionId} style={calloutStyle}>
+      <aside ref={calloutRef} className="tutorial-spotlight-callout" role="dialog" aria-modal="false" aria-labelledby={titleId} aria-describedby={descriptionId} style={calloutStyle}>
         {arrow && <span className={`tutorial-spotlight-arrow is-${arrow}`} aria-hidden="true" style={{ left: arrowLeft }} />}
         <div className="tutorial-spotlight-heading">
           <span className="tutorial-spotlight-step">{stepLabel}</span>

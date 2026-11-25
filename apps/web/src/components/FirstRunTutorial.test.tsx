@@ -51,9 +51,9 @@ describe("FirstRunTutorial", () => {
 
   it("keeps the mouse wording on pointer devices and drag wording on touch devices", () => {
     const { rerender } = render(<FirstRunTutorial step="play-card" inputMode="pointer" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText(/하수인 카드를 골라 내 전장에 내세요/)).toBeTruthy();
+    expect(screen.getByText(/한 장을 골라 내세요/)).toBeTruthy();
     rerender(<FirstRunTutorial step="play-card" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
-    expect(screen.getByText(/위로 끌어 내 전장의 빈 칸에 놓으세요/)).toBeTruthy();
+    expect(screen.getByText(/카드를 위로 끌어 놓으세요/)).toBeTruthy();
     rerender(<FirstRunTutorial step="attack" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);
     expect(screen.getByText(/끌어 적 하수인이나 적 영웅 위에 놓으세요/)).toBeTruthy();
     rerender(<FirstRunTutorial step="turn-order" inputMode="touch" onAction={vi.fn()} onSkip={vi.fn()} />);

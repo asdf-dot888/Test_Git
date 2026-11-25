@@ -98,10 +98,10 @@ describe("first battle tutorial lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "계속" }));
     expect(await screen.findByRole("dialog", { name: "손패와 비용" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "계속" }));
-    expect(await screen.findByRole("dialog", { name: "하수인 내기" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "카드 내기" })).toBeTruthy();
     // The hero power waits for its own step.
     fireEvent.click(screen.getByRole("button", { name: /방패 다지기/ }));
-    expect(screen.getByRole("dialog", { name: "하수인 내기" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "카드 내기" })).toBeTruthy();
     fireEvent.click(document.querySelector(".game-card")!);
     expect(await screen.findByRole("dialog", { name: "턴 종료" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^턴 종료/ }));

@@ -1,6 +1,6 @@
 # Task: T04 Audit and Close-Out
 
-## Status: pending
+## Status: done
 
 ## Goal
 Every tutorial step and the hero power cooldown are checked on real screens (PC 1440x900 and phone 390x844), the docs match the new rules, and the plan is closed with a checklist the user can try. No release.
@@ -41,8 +41,8 @@ Every tutorial step and the hero power cooldown are checked on real screens (PC 
   5. Taunt and fatigue tips appear once.
 
 ## Acceptance Criteria
-- [ ] All 8 steps verified on PC and phone screenshots for three classes; no leftover headless Chrome.
-- [ ] Docs consistent; current.md closed out with the measurement and pending proposals.
+- [x] All 8 steps verified on PC and phone screenshots for three classes; no leftover headless Chrome.
+- [x] Docs consistent; current.md closed out with the measurement and pending proposals.
 
 ## Validation
 - `export PATH="$HOME/.local/node-v24.22.3-darwin-arm64/bin:$PATH"; npm test && npm run lint && npm run build` — all pass.
@@ -60,6 +60,17 @@ Task: T04-audit-and-close-out
 ```
 
 ## Progress
-- [ ] 구현 완료
-- [ ] 검증 통과
-- commit: pending
+- [x] 구현 완료
+- [x] 검증 통과 (1278 tests / 106 files, lint, web tsc). Muted headless Chrome runs (no autoplay flag, process group killed; `pgrep` empty afterwards):
+  - Warrior PC 1440x900 and phone 390x844, assassin PC, demonist phone: all 8 steps reached in order; the right element is lit; after the tutorial the hero power button shows cooldown 2 on the next turn. Demonist (no shards on turn 2) gets "영웅 능력은 다음에" with 계속, as designed.
+- Found and fixed during the audit:
+  - Step 4 asked for a minion, but a turn-1 hand can hold only a 1-cost spell. The step is now "카드 내기" (minion or spell), matching what the flow already accepted.
+  - On phones the callout could run off the bottom: it is now placed below/above the target using its measured height.
+- README describes the tutorial.
+- User checklist (not verified by Claude: real touch feel, sound):
+  1. New browser profile: the first battle shows the two cards; either card gives 선공.
+  2. Each spotlight step points at the right place on PC and phone.
+  3. Hero power: use it, check the button shows 2 then 1 on the next turns and is ready on the third.
+  4. Replay from 게임 방법 runs the same 8 steps.
+  5. Taunt and fatigue tips appear once.
+- commit: see git log (docs: close out the hero power cooldown and spotlight tutorial plan)
