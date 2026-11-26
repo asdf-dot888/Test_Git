@@ -27,8 +27,13 @@
     },
     {
       "version": "1.0.7",
-      "deployedAtUtc": "2026-11-25T02:21:34.0831120+00:00",
+      "deployedAtUtc": "2026-11-25T11:21:34.083112+09:00",
       "sourceCommit": "04e403484220a874647ee01e62da48521c8d9dc6"
+    },
+    {
+      "version": "1.0.8",
+      "deployedAtUtc": "2026-11-26T10:50:10.0675290+00:00",
+      "sourceCommit": "d45a158bb403e4bee010e09ba6f765d331f69263"
     }
   ]
 }
