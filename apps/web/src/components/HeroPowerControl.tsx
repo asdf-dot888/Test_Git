@@ -95,7 +95,7 @@ export function HeroPowerControl({ playerClass, currentMana, used, cooldown = 0,
           <span className="hero-power-cost-badge is-mana"><i aria-hidden="true">◆</i> 마나 <b>2</b></span>
           {playerClass === "demonist" && <span className="hero-power-cost-badge is-shard"><i aria-hidden="true">✦</i> 영혼 조각 <b>{gameConstants.soulShardHeroPowerCost}</b></span>}
         </div>
-        <small className="hero-power-cooldown-note">사용 후 {gameConstants.heroPowerCooldownTurns}턴 동안 쉽니다</small>
+        <small className="hero-power-cooldown-note">사용 후 {gameConstants.heroPowerCooldownTurns[playerClass]}턴 동안 쉽니다</small>
         {playerClass === "demonist" && <small className="hero-power-shard-total">보유 영혼 조각 {shardCount}/6</small>}
         <p>{definition.heroPowerDescription}</p>
         <small className="hero-power-status">{targetMode ? "대상을 선택하세요" : status}</small>

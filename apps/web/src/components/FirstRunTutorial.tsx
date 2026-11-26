@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { PlayerClass } from "@board-game/game-core";
+import { gameConstants, type PlayerClass } from "@board-game/game-core";
 import { useTouchGuidance } from "../game/inputMode.js";
 import { TUTORIAL_STEPS } from "../game/tutorialSteps.js";
 import { TutorialSpotlight } from "./TutorialSpotlight.js";
@@ -54,11 +54,13 @@ const TOUCH_STEP_COPY: Record<TutorialStepId, StepCopy> = {
 };
 
 const ATTACK_UNAVAILABLE: StepCopy = { title: "공격할 하수인이 없어요", description: "적이 공격 가능한 하수인을 모두 처치했습니다. 이번 턴을 종료하고 공격할 하수인을 다시 준비해 보세요." };
-const HERO_POWER_UNAVAILABLE: StepCopy = { title: "영웅 능력은 다음에", description: "영웅 능력은 마나 2가 있어야 쓸 수 있고, 악마술사는 영혼 조각 2개도 필요합니다. 지금은 조건이 안 되니 계속을 눌러 넘어가세요. 한 번 쓰면 내 턴 2번을 쉰 뒤 다시 쓸 수 있습니다." };
+const HERO_POWER_UNAVAILABLE: StepCopy = { title: "영웅 능력은 다음에", description: "영웅 능력은 마나 2가 있어야 쓸 수 있고, 악마술사는 영혼 조각 2개도 필요합니다. 지금은 조건이 안 되니 계속을 눌러 넘어가세요. 한 번 쓰면 내 턴 2번을 쉰 뒤 다시 쓸 수 있습니다(암살자는 1번)." };
 
 function heroPowerCopy(base: StepCopy, playerClass: PlayerClass | undefined, touch: boolean): StepCopy {
   if (playerClass !== "assassin") return base;
-  return { ...base, description: `${base.description} 그림자 습격은 적 하수인이나 적 영웅을 골라 씁니다.${touch ? " 버튼을 적 위로 끌어 놓아도 됩니다." : ""}` };
+  const rest = gameConstants.heroPowerCooldownTurns.assassin;
+  const description = base.description.replace("내 턴 2번을", `내 턴 ${rest}번을`);
+  return { ...base, description: `${description} 그림자 습격은 적 하수인이나 적 영웅을 골라 씁니다.${touch ? " 버튼을 적 위로 끌어 놓아도 됩니다." : ""}` };
 }
 
 export function FirstRunTutorial({ step, attackUnavailable = false, heroPowerUnavailable = false, playerClass, inputMode, onAction, onSkip }: FirstRunTutorialProps): ReactElement {

@@ -42,6 +42,7 @@ describe("FirstRunTutorial", () => {
 
     rerender(<FirstRunTutorial step="hero-power" playerClass="assassin" inputMode="touch" onAction={onAction} onSkip={vi.fn()} />);
     expect(screen.getByText(/적 하수인이나 적 영웅을 골라 씁니다\. 버튼을 적 위로 끌어 놓아도 됩니다/)).toBeTruthy();
+    expect(screen.getByText(/한 번 쓰면 내 턴 1번을 쉰 뒤/)).toBeTruthy();
 
     rerender(<FirstRunTutorial step="hero-power" playerClass="demonist" heroPowerUnavailable inputMode="pointer" onAction={onAction} onSkip={vi.fn()} />);
     expect(screen.getByRole("dialog", { name: "영웅 능력은 다음에" })).toBeTruthy();

@@ -280,7 +280,7 @@ const classCards = (classId: PlayerClass): readonly string[] => STARTER_CLASS_CA
 
 export const PLAYER_CLASS_DEFINITIONS: readonly PlayerClassDefinition[] = [
   { id: "warrior", name: "전사", archetype: "체력과 방어력이 높은 하수인", heroPowerName: "방패 다지기", heroPowerDescription: "영웅에게 방어도 4를 부여합니다.", starterCardIds: classCards("warrior") },
-  { id: "assassin", name: "암살자", archetype: "공격력과 특수 효과가 강한 하수인", heroPowerName: "그림자 습격", heroPowerDescription: "선택한 적 하수인 또는 적 영웅에게 피해 2를 줍니다.", starterCardIds: classCards("assassin") },
+  { id: "assassin", name: "암살자", archetype: "공격력과 특수 효과가 강한 하수인", heroPowerName: "그림자 습격", heroPowerDescription: "선택한 적 하수인 또는 적 영웅에게 피해 3을 줍니다.", starterCardIds: classCards("assassin") },
   { id: "demonist", name: "악마술사", archetype: "악마 소환과 하수인 연계", heroPowerName: "하급 악마 소환", heroPowerDescription: "하급 임프 1마리를 소환합니다.", starterCardIds: classCards("demonist") },
 ];
 

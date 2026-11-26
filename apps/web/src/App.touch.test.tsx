@@ -132,7 +132,7 @@ describe("touch play through the whole game screen", () => {
 
     touchDrag(document.querySelector(".hero-power-button")!, ".lane-enemy .lane-slot[data-drop-target='minion:enemy:enemy-0']");
     await waitFor(() => expect(manaLabel()).toBe("마나 8/10"));
-    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("8");
+    expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("7");
     // The drag never switched on target mode, and the power cannot be used twice in a turn.
     expect(screen.queryByText("영웅 능력 대상을 선택하세요")).toBeNull();
     expect((document.querySelector(".hero-power-button") as HTMLButtonElement).disabled).toBe(true);
@@ -145,7 +145,7 @@ describe("touch play through the whole game screen", () => {
 
     touchDrag(document.querySelector(".hero-power-button")!, ".hero-enemy");
     await waitFor(() => expect(manaLabel()).toBe("마나 8/10"));
-    expect(document.querySelector(".hero-enemy")?.textContent).toContain("28");
+    expect(document.querySelector(".hero-enemy")?.textContent).toContain("27");
     expect(document.querySelector(".lane-enemy .minion-stats b:last-child")?.textContent).toContain("10");
   });
 

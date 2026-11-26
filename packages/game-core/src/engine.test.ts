@@ -600,11 +600,12 @@ describe("class hero powers and battle resources", () => {
     heroBattle.enemyBoard.push({ instanceId: "blocker", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false });
     heroBattle.enemyHero.health = 10;
     const hitHero = useHeroPower(heroTarget, "enemy-hero");
-    expect(hitHero.battle?.enemyHero.health).toBe(8);
+    expect(gameConstants.assassinHeroPowerDamage).toBe(3);
+    expect(hitHero.battle?.enemyHero.health).toBe(7);
     expect(hitHero.battle?.enemyBoard).toHaveLength(1);
 
     const minionTarget = copyRun(createRun(1221, "assassin"));
-    activeBattle(minionTarget).enemyBoard.push({ instanceId: "victim", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 2, maxHealth: 2, summonedTurn: 0, hasAttacked: false });
+    activeBattle(minionTarget).enemyBoard.push({ instanceId: "victim", cardId: "ash-wolf", owner: "enemy", attack: 1, health: 3, maxHealth: 3, summonedTurn: 0, hasAttacked: false });
     const killed = useHeroPower(minionTarget, "victim");
     expect(killed.battle?.enemyBoard).toHaveLength(0);
     expect(killed.battle?.enemyDiscardPile.some(({ instanceId }) => instanceId === "victim")).toBe(true);
@@ -663,8 +664,35 @@ describe("class hero powers and battle resources", () => {
     expect(nextBattle.battle?.heroPowerCooldown).toBe(0);
   });
 
+  it("rests the Assassin hero power for only the player's next turn", () => {
+    const fresh = createRun(1252, "assassin");
+    const withMana = (run: RunState): RunState => {
+      const next = copyRun(run);
+      activeBattle(next).playerMana = { current: 10, max: 10, temporary: 0 };
+      return next;
+    };
+    const nextPlayerTurn = (run: RunState): RunState => {
+      const next = endPlayerTurn(run);
+      expect(next.battle?.activeSide).toBe("player");
+      return next;
+    };
+
+    const used = useHeroPower(withMana(fresh), "enemy-hero");
+    expect(used.battle?.heroPowerCooldown).toBe(1);
+
+    const secondTurn = withMana(nextPlayerTurn(used));
+    expect(secondTurn.battle?.heroPowerCooldown).toBe(1);
+    expect(() => useHeroPower(secondTurn, "enemy-hero")).toThrowError(expect.objectContaining({ code: "INVALID_ACTION", message: expect.stringContaining("1 more turn") }));
+
+    const thirdTurn = withMana(nextPlayerTurn(secondTurn));
+    expect(thirdTurn.battle?.heroPowerCooldown).toBe(0);
+    const reused = useHeroPower(thirdTurn, "enemy-hero");
+    expect(reused.battle?.enemyHero.health).toBe(thirdTurn.battle!.enemyHero.health - gameConstants.assassinHeroPowerDamage);
+    expect(reused.battle?.heroPowerCooldown).toBe(1);
+  });
+
   it("rests the hero power for the player's next two turns after a use", () => {
-    expect(gameConstants.heroPowerCooldownTurns).toBe(2);
+    expect(gameConstants.heroPowerCooldownTurns).toEqual({ warrior: 2, assassin: 1, demonist: 2 });
     const fresh = createRun(1251, "warrior");
     expect(fresh.battle?.heroPowerCooldown).toBe(0);
     const withMana = (run: RunState): RunState => {

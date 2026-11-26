@@ -83,14 +83,14 @@ afterEach(() => {
 });
 
 describe("dropping the hero power on the game screen", () => {
-  it("uses the Assassin hero power on an enemy minion: mana −2, 2 damage, no target mode left behind", async () => {
+  it("uses the Assassin hero power on an enemy minion: mana −2, 3 damage, no target mode left behind", async () => {
     await openBoard("assassin");
     expect(stub().getAttribute("data-mana")).toBe("10");
 
     drop(heroPower, enemyMinion);
     await waitFor(() => expect(stub().getAttribute("data-mana")).toBe("8"));
     expect(stub().getAttribute("data-hero-power-used")).toBe("true");
-    expect(stub().getAttribute("data-enemy-minion-health")).toBe("8");
+    expect(stub().getAttribute("data-enemy-minion-health")).toBe("7");
     expect(stub().getAttribute("data-target-mode")).toBe("none");
   });
 
@@ -98,7 +98,7 @@ describe("dropping the hero power on the game screen", () => {
     await openBoard("assassin");
 
     drop(heroPower, { kind: "hero", side: "enemy" });
-    await waitFor(() => expect(stub().getAttribute("data-enemy-hero-health")).toBe("28"));
+    await waitFor(() => expect(stub().getAttribute("data-enemy-hero-health")).toBe("27"));
     expect(stub().getAttribute("data-mana")).toBe("8");
     expect(stub().getAttribute("data-enemy-minion-health")).toBe("10");
   });
@@ -132,7 +132,7 @@ describe("dropping the hero power on the game screen", () => {
 
     drop(heroPower, enemyMinion);
     await waitFor(() => expect(stub().getAttribute("data-mana")).toBe("8"));
-    expect(stub().getAttribute("data-enemy-minion-health")).toBe("8");
+    expect(stub().getAttribute("data-enemy-minion-health")).toBe("7");
     expect(stub().getAttribute("data-target-mode")).toBe("none");
   });
 

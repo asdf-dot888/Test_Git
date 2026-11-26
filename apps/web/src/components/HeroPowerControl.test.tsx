@@ -61,7 +61,7 @@ describe("HeroPowerControl", () => {
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(view.container.querySelector(".hero-power-cooldown")?.textContent).toBe("2");
     expect(screen.getByText("재사용까지 2턴")).toBeTruthy();
-    expect(screen.getByText(`사용 후 ${gameConstants.heroPowerCooldownTurns}턴 동안 쉽니다`)).toBeTruthy();
+    expect(screen.getByText(`사용 후 ${gameConstants.heroPowerCooldownTurns.warrior}턴 동안 쉽니다`)).toBeTruthy();
 
     view.rerender(<HeroPowerControl playerClass="warrior" currentMana={3} used cooldown={2} active resolving={false} shardCount={0} boardSize={0} targetMode={false} onActivate={onActivate} />);
     expect(screen.getByText("사용 완료 · 2턴 쉰 뒤 다시 사용")).toBeTruthy();

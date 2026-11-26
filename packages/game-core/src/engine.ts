@@ -35,8 +35,10 @@ const CHEAP_CARD_COST = 5;
 /** The boss area attack comes every Nth turn: every 4th on normal, every 3rd on hard. */
 export const BOSS_AREA_ATTACK_EVERY_N_TURNS: Record<RunDifficulty, number> = { normal: 4, hard: 3 };
 const SOUL_SHARD_HERO_POWER_COST = 2;
-/** After a use, the hero power rests for this many of the player's own turns. */
-const HERO_POWER_COOLDOWN_TURNS = 2;
+/** After a use, the hero power rests for this many of the player's own turns (the Assassin rests 1, the others 2). */
+const HERO_POWER_COOLDOWN_TURNS: Record<PlayerClass, number> = { warrior: 2, assassin: 1, demonist: 2 };
+/** Damage of the Assassin hero power. */
+const ASSASSIN_HERO_POWER_DAMAGE = 3;
 type PhaseTable = Record<RunState["phase"], number>;
 interface EnemyPhaseBonus {
   heroHealth: PhaseTable;
@@ -1475,11 +1477,11 @@ export function useHeroPower(run: RunState, targetId?: string): RunState {
 
   spendMana(battle, "player", 2);
   battle.heroPowerUsed = true;
-  battle.heroPowerCooldown = HERO_POWER_COOLDOWN_TURNS;
+  battle.heroPowerCooldown = HERO_POWER_COOLDOWN_TURNS[next.playerClass];
   if (next.playerClass === "assassin") {
-    if (targetId === "enemy-hero") return consumeOpeningHandRedraw(dealDamageToEnemyHero(next, 2));
+    if (targetId === "enemy-hero") return consumeOpeningHandRedraw(dealDamageToEnemyHero(next, ASSASSIN_HERO_POWER_DAMAGE));
     const target = battle.enemyBoard.find((minion) => minion.instanceId === targetId)!;
-    target.health -= 2;
+    target.health -= ASSASSIN_HERO_POWER_DAMAGE;
     return consumeOpeningHandRedraw(removeDeadMinions(next, "enemy"));
   }
   if (next.playerClass === "warrior") {
@@ -1811,6 +1813,7 @@ export const gameConstants = {
   maxMana: MAX_MANA,
   soulShardHeroPowerCost: SOUL_SHARD_HERO_POWER_COST,
   heroPowerCooldownTurns: HERO_POWER_COOLDOWN_TURNS,
+  assassinHeroPowerDamage: ASSASSIN_HERO_POWER_DAMAGE,
   hardAiBeamWidth,
   normalAiBeamWidth,
   enemyPhaseBonus: ENEMY_PHASE_BONUS,
